@@ -1,16 +1,9 @@
 <template>
   <section class="history-page">
 
-    <div class="flex-row flex-top flex-stretch">
-      <div class="flex-1 push-right">
-        Your custom alarms and price watch alerts will be added to this list in case you miss any.
-        Use the flush button to delete all entries.
-      </div>
-      <button class="form-btn bg-danger-hover icon-reset iconLeft"
-        :disabled="!history.length"
-        @click="flushHistory()">
-          Flush
-      </button>
+    <div class="text-grey">
+      Your custom alarms and price watch alerts will be added to this list in case you miss any. &nbsp;
+      <a class="icon-reset iconLeft text-danger-hover text-nowrap" href="#" :disabled="!history.length" @click.prevent="flushHistory()">Delete all entries</a>
     </div>
 
     <hr />
@@ -22,10 +15,10 @@
     <div class="flex-list">
       <div v-for="e in history" :key="e.id" class="flex-item">
         <div class="flex-1 text-clip push-right">
-          <span class="text-bright">{{ e.title }}</span> <br />
+          <small class="text-bright">{{ e.title }}</small> <br />
           <small class="text-default">{{ e.info }}</small>
         </div>
-        <div class="text-clip push-right">
+        <div class="text-clip push-right if-medium">
           <span class="text-grey">{{ e.time | toElapsed }} ago</span>
         </div>
         <div class="text-clip">
