@@ -1,0 +1,107 @@
+// topbar size
+$topbarHeight: 4em;
+
+// list icons fixed size (w|h px)
+$iconSize: 46px;
+
+// spacing and padding
+$padSpace: 1em;
+$colSpace: 1.0em;
+$rowSpace: 1.2em;
+$listSpace: 0.4em;
+
+// borders and lines
+$lineWidth: 2px;
+$lineStyle: solid;
+$lineColor: rgba( 255, 255, 255, 0.065 );
+$lineJoin: 4px;
+
+// common z-index values
+$zindexUnder: -1;
+$zindexElements: 100;
+$zindexModals: 8888;
+$zindexAlerts: 9999;
+
+// base font options
+$fontSize: 18px;
+$fontSpace: 1.3em;
+$fontWeight: 700;
+$fontFamily: 'Open Sans Condensed', 'Contrail One', Capriola, Consolas, Monaco, monospace;
+$fontFixed: Consolas, "Andale Mono", Monaco, "Courier New", monospace;
+
+// document colors
+$colorDocument: #192029;
+$colorDocumentText: #babbbc;
+$colorDocumentLight: lighten( $colorDocument, 3% );
+
+// default colors
+$colorDefault: #828a98;
+$colorDefaultText: #dae5ed;
+
+// primary colors
+$colorGain: #74a700;
+$colorGainText: #f0fada;
+
+// primary colors
+$colorLoss: #d60360;
+$colorLossText: #ffe3f1;
+
+// primary colors
+$colorPrimary: #f0b90b;
+$colorPrimaryText: darken( $colorPrimary, 40% );
+
+// secondary colors
+$colorSecondary: #20acea;
+$colorSecondaryText: darken( $colorSecondary, 40% );
+
+// success colors
+$colorSuccess: #456730;
+$colorSuccessText: lighten( $colorSuccess, 40% );
+
+// warning colors
+$colorWarning: #826d2b;
+$colorWarningText: lighten( $colorWarning, 40% );
+
+// danger colors
+$colorDanger: #8c3333;
+$colorDangerText: lighten( $colorDanger, 40% );
+
+// info colors
+$colorInfo: #425470;
+$colorInfoText: lighten( $colorInfo, 40% );
+
+// grey colors
+$colorGrey: #4c5766;
+$colorGreyText: lighten( $colorGrey, 40% );
+
+// bright colors
+$colorBright: #f0f0f0;
+$colorBrightText: #1f2833;
+
+// other colors
+$colorText: #f0f0f0;
+$colorOverlay: rgba( 0, 0, 0, 0.5 );
+
+// common shadow styles
+$shadowHollow: inset 0 1px 4px rgba( 0, 0, 0, 0.15 );
+$shadowBubble: inset 0 -20px 20px rgba( 0, 0, 0, 0.1 );
+$shadowPaper: 0 1px 2px rgba( 0, 0, 0, 0.2 );
+$shadowDark: 0 1px 3px rgba( 0, 0, 0, 0.3 );
+$shadowGlow: 0 0 10px rgba( 0, 0, 0, 0.2 );
+$shadowBold: 0 2px 12px rgba( 0, 0, 0, 0.4 );
+$shadowText: 1px 1px 0 rgba( 0, 0, 0, 0.3 );
+
+// common speed for most small ui transition animations
+$fxSpeed: 300ms;
+$fxEase: cubic-bezier( 0.215, 0.610, 0.355, 1.000 );
+$fxEaseBounce: cubic-bezier( 0.640, -0.280, 0.050, 1.405 );
+
+// screen sizes
+$sizeSmall: 420px;
+$sizeMedium: 720px;
+$sizeLarge: 1200px;
+
+// screen breakpoints
+$screenSmall: "only screen and (min-width : #{$sizeSmall})";
+$screenMedium: "only screen and (min-width : #{$sizeMedium})";
+$screenLarge: "only screen and (min-width : #{$sizeLarge})";

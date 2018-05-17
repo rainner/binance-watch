@@ -1,0 +1,204 @@
+// base elements
+button,
+input,
+select,
+optgroup,
+option,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: normal;
+  line-height: inherit;
+  text-align: left;
+  color: inherit;
+  outline: none;
+  background: transparent;
+  width: auto;
+}
+
+// inputs
+input,
+textarea {
+  display: block;
+  width: 100%;
+  flex: 1;
+}
+
+// add drop arrow to select menus
+select {
+  position: relative;
+  padding-left: .7em;
+  background-repeat: no-repeat;
+
+  background-image:
+    linear-gradient( 45deg, transparent 50%, rgba( 255, 255, 255, 0.5 ) 50% ),
+    linear-gradient( 135deg, rgba( 255, 255, 255, 0.5 ) 50%, transparent 50% );
+
+  background-position:
+    0px calc( #{$fontSpace} / 1.8 ),
+    5px calc( #{$fontSpace} / 1.8 );
+
+  background-size:
+    5px 5px,
+    5px 5px;
+}
+
+// buttons
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+  cursor: pointer;
+}
+
+// row container for a form element
+.form-row {
+  display: block;
+  margin: 0 0 ( $padSpace / 2 ) 0;
+
+  &:last-of-type {
+    margin: 0;
+  }
+}
+
+// common form element label text style
+.form-label {
+  display: block;
+  margin: 0 0 .5em 0;
+  text-transform: uppercase;
+  font-weight: normal;
+  font-size: 90%;
+  opacity: 0.6;
+
+  &:before {
+    display: inline-block;
+    margin: 0 0.5em 0 0;
+    opacity: 0.5;
+  }
+}
+
+// form buttons
+.form-btn {
+  display: inline-block;
+  padding: ( $padSpace / 2 ) $padSpace;
+  line-height: inherit;
+  border-radius: 100px;
+  background-color: $colorDefault;
+  color: $colorDefaultText;
+  box-shadow: $shadowPaper;
+  @include textNoWrap;
+
+  &:hover {
+    background-color: darken( $colorDefault, 5% );
+  }
+}
+
+// custom inputs
+.form-input {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: stretch;
+  overflow: hidden;
+  position: relative;
+  padding: ( $padSpace / 2 ) $padSpace;
+  line-height: inherit;
+  color: $colorBright;
+  background-color: darken( $colorDocument, 2% );
+  border-radius: 100px;
+  box-shadow: $shadowHollow;
+  flex: auto;
+  @include textClip;
+
+  &:hover, &:active, &:focus {
+    background-color: darken( $colorDocument, 4% );
+  }
+
+  & > select > option {
+    color: $colorDocument;
+    padding: 0 1em 0 0;
+  }
+}
+textarea.form-input {
+  overflow: auto;
+  min-width: 100%;
+  max-width: 100%;
+  min-height: 80px;
+}
+
+// custom toggle button
+.form-toggle {
+  display: block;
+  position: relative;
+
+  span {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    @include textNoSelect;
+
+    &:before {
+      content: "";
+      display: inline-block;
+      cursor: pointer;
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      width: 1.2em;
+      height: 1.2em;
+      border-radius: 100px;
+      border: $lineWidth $lineStyle rgba( 255, 255, 255, 0 );
+      background-color: lighten( $colorDocument, 20% );
+      box-shadow: $shadowHollow;
+    }
+  }
+  span:hover:before {
+    background-color: lighten( $colorDocument, 30% );
+  }
+  input[type="radio"],
+  input[type="checkbox"] {
+    display: inline;
+    position: absolute;
+    visibility: hidden;
+    left: -1000px;
+    top: 0;
+  }
+  input[type="radio"]:checked ~ span:before,
+  input[type="checkbox"]:checked ~ span:before {
+    background-color: lighten( $colorSuccess, 12% );
+    border-color: rgba( 255, 255, 255, 0.5 );
+  }
+}
+
+// back-to-top scroller btn
+#btt {
+  display: block;
+  position: fixed;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  bottom: .5em;
+  left: 50%;
+  transform: translateX( -50% );
+  text-align: center;
+  font-size: 140%;
+  width: 2em;
+  height: 2em;
+  line-height: 1em;
+  border-radius: 100px;
+  background-color: lighten( $colorDocumentLight, 5% );
+  color: $colorDocumentText;
+  box-shadow: $shadowBold;
+  z-index: ( $zindexAlerts - 1 );
+  cursor: pointer;
+
+  &.visible {
+    pointer-events: auto;
+    opacity: 1;
+  }
+  &:hover, &:active, &:focus {
+    background-color: lighten( $colorDocumentLight, 10% );
+  }
+}
+
+
+

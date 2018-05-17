@@ -1,0 +1,132 @@
+/**
+ * Align children vertically (column)
+ */
+.flex-column {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+/**
+ * Align children horizontally (row)
+ */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+/**
+ * Flex items alignment and space distribution
+ */
+ .flex-wrap {
+  flex-wrap: wrap;
+}
+.flex-left {
+  justify-content: flex-start;
+}
+.flex-center {
+  justify-content: center;
+}
+.flex-right {
+  justify-content: flex-end;
+}
+.flex-space {
+  justify-content: space-between;
+}
+.flex-around {
+  justify-content: space-around;
+}
+.flex-top {
+  align-items: flex-start;
+}
+.flex-middle {
+  align-items: center;
+}
+.flex-bottom {
+  align-items: flex-end;
+}
+
+/**
+ * Flex items sizing
+ */
+.flex-1 {
+  flex: 1;
+}
+.flex-2 {
+  flex: 2;
+}
+.flex-3 {
+  flex: 3;
+}
+.flex-4 {
+  flex: 4;
+}
+.flex-5 {
+  flex: 5;
+}
+
+/**
+ * Fixed with labels
+ */
+.flex-label {
+  width: 100px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/**
+ * Table-like lists
+ */
+.flex-list {
+  display: block;
+  position: relative;
+
+  & > .flex-item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    margin: 0 0 $lineWidth 0;
+    padding: ( $padSpace / 2 );
+    border-radius: $lineJoin;
+    line-height: 1.2em;
+    @include textClip;
+
+    &:nth-child( odd ) {
+      background-color: rgba( 0, 0, 0, 0.1 );
+    }
+    &:nth-child( even ) {
+      background-color: rgba( 0, 0, 0, 0.04 );
+    }
+    &:hover {
+      background-color: rgba( 0, 0, 0, 0.2 );
+    }
+
+  }
+}
+
+/**
+ * Basic grid
+ */
+.flex-grid {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: stretch;
+  width: 100%;
+
+  .flex-grid-item {
+    margin: 0 0 $padSpace 0;
+  }
+
+  @media #{$screenMedium} {
+    flex-direction: row;
+
+    .flex-grid-item {
+      margin: 0 $padSpace 0 0;
+    }
+  }
+}
+

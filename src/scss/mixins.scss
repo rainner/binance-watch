@@ -1,0 +1,162 @@
+
+// prevent text from being selected
+@mixin textNoSelect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none;
+}
+
+// prevent text from wrapping
+@mixin textNoWrap {
+  white-space: nowrap;
+}
+
+// clip text and add ellipsis
+@mixin textClip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// appearance of list rows
+@mixin listRow {
+  border-top: 1px $lineStyle lighten( $colorDocument, 4% );
+  background-color: lighten( $colorDocument, 10% );
+  color: lighten( $colorDocumentText, 10% );
+
+  &:hover {
+    background-color: lighten( $colorDocument, 6% );
+    color: lighten( $colorDocumentText, 4% );
+  }
+  &:first-of-type {
+    border-top: none;
+  }
+}
+
+// add border accent to containers
+@mixin borderAccent {
+  border-bottom: $lineWidth solid rgba( 0, 0, 0, 0.1 );
+}
+
+// common top header bar styles
+@mixin headerBar {
+  position: relative;
+  vertical-align: middle;
+  padding: 0 $padSpace;
+  height: $topbarHeight;
+  background-color: $colorPrimary;
+  border-bottom: $lineWidth $lineStyle rgba( 0, 0, 0, 0.1 );
+  color: $colorBright;
+  box-shadow: $shadowPaper;
+  z-index: 100;
+
+  .clickable:hover {
+    color: lighten( $colorPrimary, 50% );
+  }
+}
+
+// common outer page wrapper
+@mixin contentWrapper {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  height: calc( 100vh - #{$topbarHeight} );
+}
+
+// common scrollable page wrapper
+@mixin contentScroller {
+  @include contentWrapper;
+  overflow-y: auto;
+}
+
+// common container box
+@mixin containerBox {
+  padding: $padSpace;
+  background-color: lighten( $colorDocument, 10% );
+  box-shadow: $shadowPaper;
+  border-radius: $lineJoin;
+  // @include borderAccent;
+}
+
+// common small headings
+@mixin smallHeading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 $padSpace 0;
+  padding: 0;
+  height: ( $padSpace * 2 );
+  font-size: 75%;
+  font-weight: normal;
+  line-height: 1.4em;
+}
+
+// fullscreen modifiers
+@mixin fullScreen( $fixed: 0 ) {
+  display: block;
+  overflow: hidden;
+  @if $fixed == 1 { position: fixed; }
+  @else { position: absolute; }
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// radial gradient background color
+@mixin bgRadial( $color ) {
+  $dark: saturate( darken( $color, 8% ), 8% );
+  $image: radial-gradient( circle, $color 0%, $dark 55% );
+  background-color: $dark;
+  background-image: $image;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+// radial background image gradiant effect
+@mixin colorImage( $color, $text ) {
+  background-color: $color !important;
+  background-image: radial-gradient( circle, rgba( 255, 255, 255, 0 ) 0%, rgba( 255, 255, 255, 0.1 ) 100% ) !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  color: $text !important;
+}
+
+// change background and font color
+@mixin colorBg( $color, $text, $hover: 0 ) {
+  background-color: $color !important;
+  color: $text !important;
+  @if $hover == 1 {
+    &:hover {
+      background-color: darken( $color, 5% ) !important;
+      color: desaturate( darken( $text, 5% ), 10% ) !important;
+    }
+  }
+}
+
+// change border color
+@mixin colorBorder( $color, $hover: 0 ) {
+  border-color: $color !important;
+  @if $hover == 1 {
+    &:hover {
+      border-color: desaturate( darken( $color, 8% ), 10% ) !important;
+    }
+  }
+}
+
+// change text color
+@mixin colorText( $color, $hover: 0 ) {
+  color: lighten( $color, 5% ) !important;
+  @if $hover == 1 {
+    &:hover {
+      color: darken( $color, 8% ) !important;
+    }
+  }
+}
+

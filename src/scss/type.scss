@@ -1,0 +1,199 @@
+// horizontal lines
+hr {
+  display: block;
+  margin: $padSpace 0;
+  border: 0;
+  border-top: 1px $lineStyle $lineColor;
+}
+
+// links
+a {
+  position: relative;
+  text-decoration: none;
+  color: $colorPrimary;
+  opacity: 1;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// paragraphs
+p {
+  margin-bottom: $padSpace;
+}
+* > p:last-of-type {
+  margin-bottom: 0;
+}
+p > a {
+  text-decoration: underline;
+}
+
+// headings
+h1, h2, h3, h4, h5, h6 {
+  display: block;
+  font-weight: normal;
+}
+
+// horizontal lines
+hr {
+  display: block;
+  overflow: hidden;
+  height: 0;
+  border: 0;
+  border-bottom: $lineWidth $lineStyle rgba( $colorGrey, .1 );
+}
+
+// lists
+ul {
+  list-style: circle;
+
+  li {
+    margin: 0 0 .6em 2em;
+    line-height: 1.2em;
+  }
+}
+
+// adds underline effect to element on hover
+.underline {
+  position: relative;
+
+  &:after {
+    display: inline-block;
+    position: absolute;
+    width: 0%;
+    height: 0;
+    left: 50%;
+    bottom: -6px;
+    border-bottom: 1px solid $colorPrimary;
+    transform: translateX( -50% );
+    transition: width $fxSpeed $fxEaseBounce;
+    content: '';
+  }
+  &:hover:after {
+    width: 100%;
+  }
+}
+
+// badge text containers
+.text-badge {
+  display: inline-block;
+  padding: 0 .5em;
+  font-size: 90%;
+  background-color: rgba( 0, 0, 0, 0.1 );
+  border-radius: 100px;
+}
+
+// pill style wrappers for text elements
+.text-pill {
+  display: inline-block;
+  font-size: 80%;
+  line-height: 1.2em;
+  padding: .2em .6em;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  background: $colorBright linear-gradient( 180deg, transparent, rgba(0,0,0,0.2) );
+  color: $colorBrightText;
+  border-radius: 100px;
+  box-shadow: $shadowPaper;
+}
+
+// text display styles
+.text-reset {
+  font-family: $fontFamily;
+  font-size: $fontSize;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1.5em;
+  text-transform: none;
+}
+.text-left {
+  text-align: left;
+}
+.text-right {
+  text-align: right;
+}
+.text-center {
+  text-align: center;
+}
+.text-justify {
+  text-align: justify;
+}
+.text-top {
+  vertical-align: top;
+}
+.text-middle {
+  vertical-align: middle;
+}
+.text-bottom {
+  vertical-align: bottom;
+}
+.text-baseline {
+  vertical-align: baseline;
+}
+.text-uppercase {
+  text-transform: uppercase;
+}
+.text-lowercase {
+  text-transform: lowercase;
+}
+.text-capitalize {
+  text-transform: capitalize;
+}
+.text-underline {
+  text-decoration: underline;
+}
+.text-italic {
+  font-style: italic;
+}
+.text-bold {
+  font-weight: bold;
+}
+.text-nowrap {
+  @include textNoWrap;
+}
+.text-clip {
+  @include textClip;
+}
+.text-noselect {
+  @include textNoSelect;
+}
+.text-flip {
+  text-align: left;
+  direction: rtl;
+}
+.text-faded {
+  opacity: 0.5;
+}
+.text-big {
+  font-size: 120%;
+}
+.text-bigger {
+  font-size: 160%;
+}
+.text-huge {
+  font-size: 260%;
+}
+.text-small {
+  font-size: 90%;
+}
+.text-smaller {
+  font-size: 70%;
+}
+.text-tiny {
+  font-size: 50%;
+}
+.text-collapse {
+  line-height: 1em;
+}
+.text-label {
+  font: inherit;
+  font-size: 80%;
+  letter-spacing: 1px;
+  font-weight: normal;
+  text-transform: uppercase;
+  line-height: 1.5em;
+  color: $colorBright;
+  opacity: 0.4;
+}
+

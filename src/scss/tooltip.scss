@@ -1,0 +1,86 @@
+/**
+ * Tooltips
+ */
+$tipColor: lighten( $colorDocument, 20% );
+$tipTextColor: lighten( $colorDocument, 60% );
+
+@keyframes tooltipShowLeft {
+    0%   { opacity: 0; transform: translateX( -20px ); }
+    100% { opacity: 1; transform: translateX( -10px ); }
+}
+@keyframes tooltipShowRight {
+    0%   { opacity: 0; transform: translateX( 20px ); }
+    100% { opacity: 1; transform: translateX( 10px ); }
+}
+@keyframes tooltipShowTop {
+    0%   { opacity: 0; transform: translateY( -20px ); }
+    100% { opacity: 1; transform: translateY( -10px ); }
+}
+@keyframes tooltipShowBottom {
+    0%   { opacity: 0; transform: translateY( 20px ); }
+    100% { opacity: 1; transform: translateY( 10px ); }
+}
+.tooltip-wrap {
+  display: block;
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: none;
+  border: none;
+  border-radius: $lineJoin;
+  max-width: 500px;
+  margin: 0;
+  padding: ( $padSpace / 2 ) $padSpace;
+  font-size: 80%;
+  line-height: 1.2em;
+  color: $tipTextColor;
+  background-color: $tipColor;
+  box-shadow: $shadowBold;
+  left: 0;
+  top: 0;
+  z-index: ( $zindexModals + 10 );
+
+  &.tooltip-left { animation: tooltipShowLeft $fxSpeed $fxEaseBounce forwards; }
+  &.tooltip-right { animation: tooltipShowRight $fxSpeed $fxEaseBounce forwards; }
+  &.tooltip-top { animation: tooltipShowTop $fxSpeed $fxEaseBounce forwards; }
+  &.tooltip-bottom { animation: tooltipShowBottom $fxSpeed $fxEaseBounce forwards; }
+
+  &:after { // arrow
+    content: " ";
+    position: absolute;
+    height: 0;
+    width: 0;
+    pointer-events: none;
+    transition: none;
+    border: solid transparent;
+    border-color: transparent;
+    border-width: 5px;
+  }
+
+  &.tooltip-left:after { // arrow on right
+    left: 100%;
+    top: 50%;
+    border-left-color: $tipColor;
+    margin-top: -5px;
+  }
+  &.tooltip-right:after { // arrow on left
+    right: 100%;
+    top: 50%;
+    border-right-color: $tipColor;
+    margin-top: -5px;
+  }
+  &.tooltip-top:after { // arrow on bottom
+    top: 100%;
+    left: 50%;
+    border-top-color: $tipColor;
+    margin-left: -5px;
+  }
+  &.tooltip-bottom:after { // arrow on top
+    bottom: 100%;
+    left: 50%;
+    border-bottom-color: $tipColor;
+    margin-left: -5px;
+  }
+}

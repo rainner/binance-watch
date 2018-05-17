@@ -1,0 +1,142 @@
+// props
+$fxSpeedOffset: calc( #{$fxSpeed} / 4 );
+$fxSlideDist: 100px;
+$fxShrinkScale: .5;
+$fxGrowScale: 1.5;
+$fxRotateAmount: 8deg;
+
+// animations on
+.fx-on {
+  animation-direction: normal;
+  animation-duration: $fxSpeed;
+  animation-timing-function: $fxEase;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+// effect delays
+@for $i from 1 through 5 {
+  .fx-delay-#{$i} {
+    animation-delay: calc( #{$fxSpeedOffset} * #{$i} );
+  }
+}
+
+// spin right animation
+@keyframes spinRight {
+    0% { transform: rotate( 0deg ); }
+  100% { transform: rotate( 359deg ); }
+}
+.fx-spin-right {
+  animation-name: spinRight;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+// spin right animation
+@keyframes spinLeft {
+    0% { transform: rotate( 359deg ); }
+  100% { transform: rotate( 0deg ); }
+}
+.fx-spin-left {
+  animation-name: spinLeft;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+// fade-in animation
+@keyframes fadeIn {
+    0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.fx-fade-in {
+  opacity: 0;
+  animation-name: fadeIn;
+}
+
+// fade-out animation
+@keyframes fadeOut {
+    0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.fx-fade-out {
+  opacity: 1;
+  animation-name: fadeOut;
+}
+
+// drop-in animation (scale)
+@keyframes dropIn {
+    0% { opacity: 0; transform: scale( $fxGrowScale ); }
+  100% { opacity: 1; transform: scale( 1 ); }
+}
+.fx-drop-in {
+  animation-name: dropIn;
+}
+
+// zoom-in animation (modal, alert, etc)
+@keyframes zoomIn {
+    0% { opacity: 0; transform: scale( $fxShrinkScale ); }
+  100% { opacity: 1; transform: scale( 1 ); }
+}
+.fx-zoom-in {
+  animation-name: zoomIn;
+}
+
+// fade-out animation (modal, alert, etc)
+@keyframes zoomOut {
+    0% { opacity: 1; transform: scale( 1 ); }
+  100% { opacity: 0; transform: scale( $fxShrinkScale ); }
+}
+.fx-zoom-out {
+  animation-name: zoomOut;
+}
+
+// slide in to the left
+@keyframes slideLeft {
+    0% { opacity: 0; transform: translateX( $fxSlideDist ); }
+  100% { opacity: 1; transform: translateX( 0 ); }
+}
+.fx-slide-left {
+  animation-name: slideLeft;
+}
+
+// slide in to the right
+@keyframes slideRight {
+    0% { opacity: 0; transform: translateX( calc( 0 - #{$fxSlideDist} ) ); }
+  100% { opacity: 1; transform: translateX( 0 ); }
+}
+.fx-slide-right {
+  animation-name: slideRight;
+}
+
+// slide in to the top
+@keyframes slideUp {
+    0% { opacity: 0; transform: translateY( $fxSlideDist ); }
+  100% { opacity: 1; transform: translateY( 0 ); }
+}
+.fx-slide-up {
+  animation-name: slideUp;
+}
+
+// slide in to the bottom
+@keyframes slideDown {
+    0% { opacity: 0; transform: translateY( calc( 0 - #{$fxSlideDist} ) ); }
+  100% { opacity: 1; transform: translateY( 0 ); }
+}
+.fx-slide-down {
+  animation-name: slideDown;
+}
+
+// pulse opacity
+@keyframes pulseFade {
+    0% { opacity: 0.7; }
+   50% { opacity: 1.0; }
+  100% { opacity: 0.7; }
+}
+.fx-pulse {
+  animation-name: pulseFade;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}

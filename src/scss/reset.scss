@@ -1,0 +1,72 @@
+/**
+ * Global resets and documet setup.
+ */
+
+*, *:before, *:after {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background-color: transparent;
+  text-transform: none;
+  text-shadow: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform-style: flat;
+  transition:
+    border-color $fxSpeed $fxEase,
+    background-color $fxSpeed $fxEase,
+    opacity $fxSpeed $fxEase,
+    transform $fxSpeed $fxEase;
+}
+
+// remove ouline fro active elements
+*:active, *:hover, *:focus {
+  outline: none !important;
+}
+
+// Block types
+article, aside, details, figcaption, figure, footer, header, hgroup,
+menu, nav, section, main, summary, div, h1, h2, h3, h4, h5, h6, hr,
+p, ol, ul, form, img {
+  display: block;
+}
+
+// Document
+html, body {
+  display: block;
+  position: relative;
+  max-width: 100vw;
+  min-height: 100vh;
+}
+html {
+  overflow: hidden;
+  overflow-y: scroll;
+}
+body {
+  font-family: $fontFamily;
+  font-weight: $fontWeight;
+  font-size: calc( #{$fontSize} - 6px );
+  line-height: $fontSpace;
+  background-color: $colorDocument;
+  background-attachment: fixed;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: 100%;
+  color: $colorDocumentText;
+
+  @media #{$screenSmall} {
+    font-size: calc( #{$fontSize} - 4px );
+  }
+  @media #{$screenMedium} {
+    font-size: calc( #{$fontSize} - 2px );
+  }
+  @media #{$screenLarge} {
+    font-size: $fontSize;
+  }
+}
+

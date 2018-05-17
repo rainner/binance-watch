@@ -1,0 +1,145 @@
+
+// cursor for clickable elements
+.clickable, [clickable] {
+  cursor: pointer;
+}
+
+// not rendered
+.hidden, [hidden] {
+  display: none;
+}
+
+// visible but not usable
+.disabled, [disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+// rendered but not visible or usable
+.cloaked, [cloaked], [v-cloak] {
+  pointer-events: none;
+  opacity: 0.0000000000001;
+}
+
+// background color for testing elements
+.bgtest {
+  background-color: rgba( pink, .1 ) !important;
+}
+
+// common inner container
+.container {
+  display: block;
+  position: relative;
+  margin: 0 auto;
+  padding: 0 $padSpace;
+  width: 100%;
+  max-width: $sizeLarge;
+}
+
+// common card style
+.card {
+  padding: $padSpace;
+  background-color: lighten( $colorDocument, 10% );
+  border-radius: $lineJoin;
+  box-shadow: $shadowPaper;
+}
+
+// horizontail container for inline nav links
+.navlinks {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0 0 $padSpace 0;
+  padding: ( $padSpace / 2 ) $padSpace;
+  line-height: 2em;
+}
+
+// alert circle within elements
+.alert-bubble {
+  position: relative;
+
+  &:before {
+    content: '';
+    display: block;
+    position: absolute;
+    pointer-events: none;
+    right: -0.3em;
+    top: 0;
+    width: 1em;
+    height: 1em;
+    background-color: lighten( $colorDanger, 5% );
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.5 );
+    animation: pulseFade 1s linear infinite;
+    z-index: 10;
+  }
+}
+
+// common margins
+.push-top {
+  margin-top: $padSpace;
+}
+.push-right {
+  margin-right: $padSpace;
+}
+.push-bottom {
+  margin-bottom: $padSpace;
+}
+.push-left {
+  margin-left: $padSpace;
+}
+.push-all {
+  margin: $padSpace;
+}
+
+// common paddings
+.pad-top {
+  padding-top: $padSpace;
+}
+.pad-right {
+  padding-right: $padSpace;
+}
+.pad-bottom {
+  padding-bottom: $padSpace;
+}
+.pad-left {
+  padding-left: $padSpace;
+}
+.pad-all {
+  padding: $padSpace;
+}
+
+// common borders
+.border-top {
+  border-top: $lineWidth $lineStyle $lineColor;
+}
+.border-right {
+  border-right: $lineWidth $lineStyle $lineColor;
+}
+.border-bottom {
+  border-bottom: $lineWidth $lineStyle $lineColor;
+}
+.border-left {
+  border-left: $lineWidth $lineStyle $lineColor;
+}
+
+// media query helpers
+.if-small {
+  display: none;
+  @media #{$screenSmall} {
+    display: initial;
+  }
+}
+.if-medium {
+  display: none;
+  @media #{$screenMedium} {
+    display: initial;
+  }
+}
+.if-large {
+  display: none;
+  @media #{$screenLarge} {
+    display: initial;
+  }
+}
+
