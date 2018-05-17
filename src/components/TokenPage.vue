@@ -162,12 +162,11 @@ export default {
 
     // fetch token data from api
     fetchGlobalData() {
-      const endpoint = 'http://coincap.io/page/'+ this.data.token;
+      const endpoint = 'https://coincap.io/page/'+ this.data.token;
 
       this.spinner( 'show', 'loading market data' );
       this.$ajax.get( endpoint, {
         type: 'json',
-        proxy: '',
         cache: 3600,
 
         error: ( xhr, status, error ) => {
