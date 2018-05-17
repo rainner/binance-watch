@@ -28,7 +28,7 @@ export default {
     imageError( e ) {
       // try a default token image file
       if ( !this.giveup ) {
-        this.imgfile = 'public/images/icons/_default_.png';
+        this.imgfile = 'public/images/icons/default_.png';
         this.giveup = true;
         return;
       }

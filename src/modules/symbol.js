@@ -11,7 +11,7 @@ module.exports = function( symbol, merge ) {
   let token = symbol.replace( reg, '$1' );
   let asset = symbol.replace( reg, '$2' );
   let pair  = token +'/'+ asset;
-  let icon  = 'public/images/icons/_'+ String( token ).toLowerCase() +'_.png';
+  let icon  = 'public/images/icons/'+ String( token ).toLowerCase() +'_.png';
   let route = '/symbol/'+ symbol;
 
   // merge optional data and return
