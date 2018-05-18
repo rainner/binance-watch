@@ -2,7 +2,7 @@
   <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="close">
     <section class="modal-container" ref="container" @click.stop>
       <header class="modal-header">
-        <div class="modal-title text-clip icon-info iconLeft">{{ title }}</div>
+        <div class="modal-title text-clip">{{ title }}</div>
         <button class="modal-close icon-close" @click.stop="close"></button>
       </header>
       <main class="modal-body">
