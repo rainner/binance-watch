@@ -188,6 +188,7 @@ export default {
       let seconds  = ( Date.now() - this.start ) / 1000;
       let elapsed  = utils.elapsed( seconds );
       this.elapsed = elapsed ? elapsed : '0s';
+      this.$bus.emit( 'setTitle', '● Watching '+ this.pairsCount() );
     },
 
     // start price watch
@@ -221,6 +222,7 @@ export default {
       this.snapshot = {};
       this.$emit( 'onStopWatch' );
       this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
+      this.$bus.emit( 'setTitle', '' );
     },
 
     // toggle price watch
@@ -241,7 +243,7 @@ export default {
     },
 
     // compare watch form options against pair data from price list, snapshot, or both
-    _checkFormOptions( p ) {
+    checkFormOptions( p ) {
       let _asset  = String( this.options.asset || '' );
       let _pcheck = String( this.options.priceCheck || '' );
       let _price  = parseFloat( this.options.price ) || 0;
@@ -260,7 +262,7 @@ export default {
     pairsCount() {
       let _count = 0;
       let _asset = String( this.options.asset || '' );
-      this.priceData.forEach( p => { if ( this._checkFormOptions( p ) ) _count++ } );
+      this.priceData.forEach( p => { if ( this.checkFormOptions( p ) ) _count++ } );
       return utils.noun( _count, _asset +' pair', _asset +' pairs' );
     },
 
@@ -278,7 +280,7 @@ export default {
         let c = {};
 
         // filter checks
-        if ( !this._checkFormOptions( p ) ) return;
+        if ( !this.checkFormOptions( p ) ) return;
         if ( _notify === 'once' && s.checked ) return;
         if ( _target === 'price' )  c = utils.percent( p.close, s.close );
         if ( _target === 'volume' ) c = utils.percent( p.assetVolume, s.assetVolume );
