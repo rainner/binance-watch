@@ -142,6 +142,8 @@ export default {
   data() {
     return {
       // app options
+      title: 'Binance Watch',
+      optKey: 'app_options_data',
       options: {
         // play notification sounds
         playSound: true,
@@ -158,14 +160,11 @@ export default {
         // email address for notifications
         emailAddress: '',
       },
-      // key used to store options
-      optKey: 'app_options_data',
-      // price watch status
-      watching: false,
       // app data
+      watching: false,
+      priceData: [],
       assetsList: [],
       historyData: [],
-      priceData: [],
       alarmsData: {},
       eventsData: {},
       newsData: {},
@@ -203,6 +202,7 @@ export default {
     this.$history.loadData();
     // setup global event bus handlers
     this.$bus.on( 'setOptions', this.setOptions );
+    this.$bus.on( 'setTitle', this.setTitle );
     this.$bus.on( 'setRoute', this.setRoute );
     this.$bus.on( 'resetCounts', this.resetCounts );
     this.$bus.on( 'toggleSocket', this.toggleSocket );
@@ -230,6 +230,7 @@ export default {
     this.loadHistory();
     this.loadAlarms();
     this.checkAlarms();
+    this.setTitle();
     setTimeout( () => { this.parseRoute( window.location.hash || '' ); }, 1000 );
     window.addEventListener( 'hashchange', this.hashChange );
   },
@@ -409,6 +410,16 @@ export default {
       }
     },
 
+    // build page title
+    setTitle( title ) {
+      // don't do anything if there's a modal open
+      if ( this.modalComp ) return;
+      let list = [ this.title ];
+      title = String( title || '' ).trim();
+      if ( title ) list.unshift( title );
+      document.title = list.join( ' | ' );
+    },
+
     // set a url hash route
     setRoute( hash ) {
       window.location.hash = '#'+ String( hash || '/home' );
@@ -432,11 +443,8 @@ export default {
 
       // symbol info page ( /symbol/ABCBTC )
       if ( first === 'symbol' && second ) {
-        for ( let i = 0; i < this.priceData.length; ++i ) {
-          let d = this.priceData[ i ]; // token data from price list
-          if ( d.symbol === second ) return this.showModal( 'TokenPage', d.token +' / '+ d.asset, d );
-        }
-        return this.showNotice( 'Symbol ('+ second +') not yet loaded.', 'warning' );
+        let d = this.priceData.filter( p => p.symbol === second ).shift();
+        if ( d ) return this.showModal( 'TokenPage', d.arrow +' '+ d.token +' / '+ d.asset, d );
       }
       // all else..
       return this.closeModal();
@@ -463,9 +471,11 @@ export default {
     // show modal window
     showModal( component, title, data ) {
       if ( !this.$refs.modal ) return;
+      title = title || component;
+      this.setTitle( title );
       this.modalComp = component;
       this.modalData = Object.assign( {}, data );
-      this.$refs.modal.show( title || component );
+      this.$refs.modal.show( title );
     },
 
     // close modal window, if open
@@ -479,6 +489,7 @@ export default {
       this.modalComp = '';
       this.modalData = {};
       this.setRoute( '/' );
+      this.setTitle();
     },
 
     // show css alert
