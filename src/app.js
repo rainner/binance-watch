@@ -2,6 +2,7 @@
  * Main client web app entry file for webpack.
  */
 import './modules/polyfills';
+import Router from './modules/router';
 import Ajax from './modules/ajax';
 import Notify from './modules/notify';
 import Tooltip from './modules/tooltip';
@@ -13,12 +14,14 @@ import App from './components/App.vue';
 import Vue from 'vue';
 
 // helper class instances
+const _router = new Router();
 const _ajax = new Ajax();
 const _notify = new Notify();
 const _tooltip = new Tooltip();
 
 // create custom global vue properties
 Object.defineProperties( Vue.prototype, {
+  $router: { get: function() { return _router; } },
   $ajax: { get: function() { return _ajax; } },
   $notify: { get: function() { return _notify; } },
   $store: { get: function() { return store; } },
