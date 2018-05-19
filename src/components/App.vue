@@ -191,56 +191,6 @@ export default {
     }
   },
 
-  // init app data and handlers
-  beforeMount() {
-    // load data from store and set some options
-    this.loadOptions();
-    this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
-    this.$notify.setOptions( { soundEnabled: this.options.playSound } );
-    this.$notify.permission();
-    this.$notify.loadAlarms();
-    this.$history.loadData();
-    // setup global event bus handlers
-    this.$bus.on( 'setOptions', this.setOptions );
-    this.$bus.on( 'setTitle', this.setTitle );
-    this.$bus.on( 'setRoute', this.setRoute );
-    this.$bus.on( 'resetCounts', this.resetCounts );
-    this.$bus.on( 'toggleSocket', this.toggleSocket );
-    this.$bus.on( 'showModal', this.showModal );
-    this.$bus.on( 'closeModal', this.closeModal );
-    this.$bus.on( 'showNotice', this.showNotice );
-    this.$bus.on( 'handleClick', this.handleClick );
-    this.$bus.on( 'loadHistory', this.loadHistory );
-    this.$bus.on( 'loadAlarms', this.loadAlarms );
-    // setup socket handlers
-    _stream.on( 'open', this.onSocketOpen );
-    _stream.on( 'error', this.onSocketError );
-    _stream.on( 'close', this.onSocketClose );
-    // setup scroller handlers
-    _scroller.onChange( pos => { this.scrollPos = pos; } );
-    _scroller.onDown( pos => { this.scrollDir = 'down'; } );
-    _scroller.onUp( pos => { this.scrollDir = 'up'; } );
-  },
-
-  // start socket and other external data
-  mounted() {
-    this.toggleSocket( true );
-    this.loadEvents( true );
-    this.loadNews( true );
-    this.loadHistory();
-    this.loadAlarms();
-    this.checkAlarms();
-    this.setTitle();
-    setTimeout( () => { this.parseRoute( window.location.hash || '' ); }, 1000 );
-    window.addEventListener( 'hashchange', this.hashChange );
-  },
-
-  // cleanup and close connetions
-  destroyed() {
-    this.toggleSocket( false );
-    window.removeEventListener( 'hashchange', this.hashChange );
-  },
-
   // custom methods
   methods: {
 
@@ -258,6 +208,31 @@ export default {
         this.$notify.setOptions( { soundEnabled: this.options.playSound } );
         this.$store.setData( this.optKey, this.options );
       }, 100 );
+    },
+
+    // set a url hash route
+    setRoute( route ) {
+      this.$router.setRoute( route );
+    },
+
+    // setup app routes
+    setupRoutes() {
+      // default route
+      this.$router.on( '/', () => { this.closeModal() } );
+      // common modal routes
+      this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
+      this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
+      this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
+      this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
+      this.$router.on( '/events', () => { this.showModal( 'EventsList', 'Upcoming Crypto Events' ) } );
+      this.$router.on( '/news', () => { this.showModal( 'NewsList', 'Latest Crypto News' ) } );
+      this.$router.on( '/donate', () => { this.showModal( 'DonatePage', 'Make a Donation' ) } );
+
+      // symbol modal route
+      this.$router.on( '/symbol/([A-Z]+)', symbol => {
+        let d = this.priceData.filter( p => p.symbol === symbol ).shift();
+        if ( d ) this.showModal( 'TokenPage', d.arrow +' '+ d.token +' / '+ d.asset, d );
+      });
     },
 
     // turn off notification bubble thingy for news, events and other external syncd data
@@ -323,10 +298,6 @@ export default {
       utils.delay( 'alarms', 10, this.checkAlarms );
       this.priceData.forEach( p => {
         this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-          // alarm triggered for symbol...
-
-          // send email, tweet, etc...
-
           // add alert to history
           this.$history.add( title, info );
         });
@@ -412,47 +383,11 @@ export default {
 
     // build page title
     setTitle( title ) {
-      // don't do anything if there's a modal open
       if ( this.modalComp ) return;
       let list = [ this.title ];
       title = String( title || '' ).trim();
       if ( title ) list.unshift( title );
       document.title = list.join( ' | ' );
-    },
-
-    // set a url hash route
-    setRoute( hash ) {
-      window.location.hash = '#'+ String( hash || '/home' );
-    },
-
-    // parse url hash and load something for it
-    parseRoute( hash ) {
-      let args   = String( hash || '' ).replace( /^[\#\/]+|[\/]+$/g, '' ).split( '/' );
-      let first  = args.length ? args.shift() : '';
-      let second = args.length ? args.shift() : '';
-      let third  = args.length ? args.shift() : '';
-
-      // common modal pages
-      if ( first === 'about' )   return this.showModal( 'AboutPage', 'About This App' );
-      if ( first === 'options' ) return this.showModal( 'OptionsPage', 'Options & Settings' );
-      if ( first === 'history' ) return this.showModal( 'HistoryPage', 'Recent Alert History' );
-      if ( first === 'alarms' )  return this.showModal( 'AlarmsList', 'Active Price Alarms' );
-      if ( first === 'events' )  return this.showModal( 'EventsList', 'Upcoming Crypto Events' );
-      if ( first === 'news' )    return this.showModal( 'NewsList', 'Latest Crypto News' );
-      if ( first === 'donate' )  return this.showModal( 'DonatePage', 'Make a Donation' );
-
-      // symbol info page ( /symbol/ABCBTC )
-      if ( first === 'symbol' && second ) {
-        let d = this.priceData.filter( p => p.symbol === second ).shift();
-        if ( d ) return this.showModal( 'TokenPage', d.arrow +' '+ d.token +' / '+ d.asset, d );
-      }
-      // all else..
-      return this.closeModal();
-    },
-
-    // handle page hash change event
-    hashChange( e ) {
-      this.parseRoute( window.location.hash || '' );
     },
 
     // handler for click events passed through the event bus
@@ -497,7 +432,55 @@ export default {
       if ( !this.$refs.notify ) return;
       this.$refs.notify.show( message, type, timeout );
     },
+  },
 
+  // init app data and handlers
+  beforeMount() {
+    this.loadOptions();
+    this.setupRoutes();
+    // config global shared objects
+    this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
+    this.$notify.setOptions( { soundEnabled: this.options.playSound } );
+    this.$notify.permission();
+    this.$notify.loadAlarms();
+    this.$history.loadData();
+    // setup global event bus handlers
+    this.$bus.on( 'setOptions', this.setOptions );
+    this.$bus.on( 'setTitle', this.setTitle );
+    this.$bus.on( 'setRoute', this.setRoute );
+    this.$bus.on( 'resetCounts', this.resetCounts );
+    this.$bus.on( 'toggleSocket', this.toggleSocket );
+    this.$bus.on( 'showModal', this.showModal );
+    this.$bus.on( 'closeModal', this.closeModal );
+    this.$bus.on( 'showNotice', this.showNotice );
+    this.$bus.on( 'handleClick', this.handleClick );
+    this.$bus.on( 'loadHistory', this.loadHistory );
+    this.$bus.on( 'loadAlarms', this.loadAlarms );
+    // setup socket handlers
+    _stream.on( 'open', this.onSocketOpen );
+    _stream.on( 'error', this.onSocketError );
+    _stream.on( 'close', this.onSocketClose );
+    // setup scroller handlers
+    _scroller.onChange( pos => { this.scrollPos = pos; } );
+    _scroller.onDown( pos => { this.scrollDir = 'down'; } );
+    _scroller.onUp( pos => { this.scrollDir = 'up'; } );
+  },
+
+  // start socket and other external data
+  mounted() {
+    this.setTitle();
+    this.toggleSocket( true );
+    this.loadEvents( true );
+    this.loadNews( true );
+    this.loadHistory();
+    this.loadAlarms();
+    this.checkAlarms();
+    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 1000 );
+  },
+
+  // cleanup and close connetions
+  destroyed() {
+    this.toggleSocket( false );
   },
 }
 </script>
