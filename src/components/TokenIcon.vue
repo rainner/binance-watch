@@ -1,6 +1,6 @@
 <template>
   <div class="tokenicon-wrap">
-    <img class="tokenicon-image" @error="imageError" :src="imgfile" :alt="data.token" />
+    <img class="tokenicon-image" @error="imageError" :src="imgfile" :alt="tokenName" />
   </div>
 </template>
 
@@ -10,13 +10,14 @@ export default {
 
   // component props
   props: {
-    data: { type: Object, default: {}, required: true },
+    data: { type: Object, default() { return {} } },
   },
 
   // component data
   data() {
     return {
       imgfile: '',
+      tokenName: '',
       giveup: false,
     }
   },
@@ -41,6 +42,7 @@ export default {
   // component mounted
   mounted() {
     this.imgfile = this.data.icon || '';
+    this.tokenName = this.data.token || 'N/A';
   },
 }
 </script>
