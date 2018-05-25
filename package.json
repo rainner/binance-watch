@@ -17,14 +17,14 @@
     "mailgun-js": "^0.16.0",
     "node-notifier": "^5.2.1",
     "vue": "^2.5.11",
-    "ws": "^5.1.1"
+    "ws": "^5.2.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.2",
     "babel-preset-env": "^1.7.0",
     "babel-preset-stage-3": "^6.24.1",
-    "cross-env": "^5.1.5",
+    "cross-env": "^5.1.6",
     "css-loader": "^0.28.7",
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^1.1.4",
