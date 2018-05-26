@@ -27,6 +27,28 @@
 
           <!-- control dropdown menus -->
           <div class="tokenlist-controls-filters text-nowrap">
+
+            <!-- limit menu -->
+            <Dropdown>
+              <button slot="trigger" class="form-btn bg-grey-hover icon-down-open" title="List Limit" v-tooltip>
+                {{ limitCountLabel }}
+              </button>
+              <ul slot="list">
+                <li class="clickable" @click="limitList( 10 )">
+                  <i class="icon-list-add iconLeft"></i> 10 tokens
+                </li>
+                <li class="clickable" @click="limitList( 50 )">
+                  <i class="icon-list-add iconLeft"></i> 50 tokens
+                </li>
+                <li class="clickable" @click="limitList( 100 )">
+                  <i class="icon-list-add iconLeft"></i> 100 tokens
+                </li>
+                <li class="clickable" @click="limitList( 0 )">
+                  <i class="icon-list-add iconLeft"></i> All tokens
+                </li>
+              </ul>
+            </Dropdown>&nbsp;
+
             <!-- sort menu -->
             <Dropdown>
               <button slot="trigger" class="form-btn bg-grey-hover iconLeft"
@@ -77,7 +99,7 @@
     <div class="tokenlist-list">
       <div class="container">
 
-        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="searchToken && !filterList.length">
+        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="searchToken && !listCount">
           <div class="tokenlist-item-icon icon-help iconLarge push-right"></div>
           <div class="tokenlist-item-symbol text-clip flex-1">
             <big class="text-danger">Found nothing matching: {{ searchToken }}.</big> <br />
@@ -85,7 +107,7 @@
           </div>
         </div>
 
-        <div v-for="p in filterList"
+        <div v-for="p in tickerList"
           class="tokenlist-item flex-row flex-middle flex-stretch clickable"
           :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }"
           @click="$emit( 'setRoute', '/symbol/'+ p.symbol )"
@@ -117,6 +139,18 @@
           </div>
 
         </div>
+
+        <!-- if there are more items not included in list due to limit option -->
+        <div class="tokenlist-item flex-row flex-middle flex-stretch" v-if="listLeft">
+          <div class="tokenlist-item-icon text-clip">
+            <TokenIcon></TokenIcon>
+          </div>
+          <div class="tokenlist-item-price text-clip text-grey flex-1">
+            <span class="text-default">{{ listLeftText }} more ...</span> <br />
+            <button class="text-secondary-hover icon-list-add iconLeft" @click="limitList( 0 )">Show all</button>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -149,10 +183,17 @@ export default {
   // comonent data
   data() {
     return {
+      // filter/sorting/limit options
       filterAsset: 'BTC',
       searchToken: '',
       sortOrder: 'desc',
       sortBy: 'assetVolume',
+      limitMin: 10,
+      limitMax: 200,
+      limitCount: 50,
+      // filtered list data
+      listCount: 0,
+      listLeft: 0,
     }
   },
 
@@ -165,11 +206,54 @@ export default {
       if ( this.socketStatus === 0 ) return this.$refs.spinner.error( 'Socket API not connected' );
       if ( this.socketStatus === 1 ) return this.$refs.spinner.show( 'Waiting for price data' );
       if ( this.socketStatus === 2 ) return this.$refs.spinner.hide();
-    }
+    },
   },
 
   // computed methods
   computed: {
+
+    // get filtered and sorted ticker list for display
+    tickerList() {
+      let list  = this.priceData.slice(); // copy
+      let limit = parseInt( this.limitCount ) | 0;
+
+      // sort list based column and order
+      list = list.sort( ( a, b ) => {
+        let _a = a[ this.sortBy ];
+        let _b = b[ this.sortBy ];
+
+        if ( this.sortOrder === 'asc' ) {
+          if ( _a < _b ) return -1;
+          if ( _a > _b ) return 1;
+        }
+        if ( this.sortOrder === 'desc' ) {
+          if ( _a > _b ) return -1;
+          if ( _a < _b ) return 1;
+        }
+        return 0;
+      });
+
+      // filter by trading asset
+      if ( this.filterAsset ) {
+        list = list.filter( p => p.asset === this.filterAsset );
+      }
+      // filter by serach text
+      if ( this.searchToken ) {
+        list = list.filter( p => p.token.indexOf( this.searchToken.toUpperCase() ) !== -1 );
+      }
+      // compute list totals before cutting the list
+      let total = list.length;
+      this.limitMax  = total;
+      this.listCount = total;
+      this.listLeft  = 0;
+
+      // limit list to a number of entries
+      if ( total && limit && limit < total ) {
+        list = list.slice( 0, limit );
+        this.listLeft = ( total - list.length );
+      }
+      return list;
+    },
 
     // sort-by label for buttons, etc
     sortByLabel() {
@@ -185,36 +269,29 @@ export default {
       }
     },
 
-    // filter and search ticker list
-    filterList() {
-      let list = this.priceData;
+    // text to show in limit filter controls
+    limitCountLabel() {
+      if ( this.limitCount && this.limitCount < this.listCount ) {
+        return this.limitCount +'/'+ this.listCount;
+      }
+      return 'All '+ this.listCount;
+    },
 
-      let compare = ( a, b ) => {
-        let _a = a[ this.sortBy ];
-        let _b = b[ this.sortBy ];
-
-        if ( this.sortOrder === 'asc' ) {
-          if ( _a < _b ) return -1;
-          if ( _a > _b ) return 1;
-        }
-        if ( this.sortOrder === 'desc' ) {
-          if ( _a > _b ) return -1;
-          if ( _a < _b ) return 1;
-        }
-        return 0;
-      }
-      if ( this.filterAsset ) {
-        list = list.filter( p => p.asset === this.filterAsset );
-      }
-      if ( this.searchToken ) {
-        list = list.filter( p => p.token.indexOf( this.searchToken.toUpperCase() ) !== -1 );
-      }
-      return list.sort( compare );
+    // text about hidden list pair
+    listLeftText() {
+      let count = this.listLeft;
+      let asset = this.filterAsset;
+      return utils.noun( count, asset +' pair', asset +' pairs' );
     }
   },
 
   // custom mounted
   methods: {
+
+    // set list limit value
+    limitList( num ) {
+      this.limitCount = parseInt( num ) | 0;
+    },
 
     // change list sort order for selected key
     toggleSort( sortBy ) {
@@ -230,7 +307,7 @@ export default {
   // waiting for socket
   mounted() {
     if ( !this.$refs.spinner ) return;
-    this.$refs.spinner.show( 'Connecting to socket API' );
+    // this.$refs.spinner.show( 'Connecting to socket API' );
   }
 }
 </script>
