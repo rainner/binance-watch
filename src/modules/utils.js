@@ -13,6 +13,15 @@ module.exports = {
     this._sto[ name ] = setTimeout( callback, 1000 * ( seconds | 0 ) );
   },
 
+  // convert url string into an anchor element (parser)
+  parseUrl( url, prop ) {
+    let link = document.createElement( 'a' );
+    link.href = url;
+    let data = link[ prop ] || '';
+    link = null;
+    return data;
+  },
+
   // to trimmed string
   toStr( input, deft ) {
     return String( String( input ) || deft ).trim();
