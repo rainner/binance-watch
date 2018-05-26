@@ -6,6 +6,7 @@ export default class Router {
   // constructor
   constructor() {
     this._routes = {};
+    this._history = [];
     this._init();
   }
 
@@ -14,10 +15,23 @@ export default class Router {
     return this._routes;
   }
 
+  // get last route from history
+  getLastRoute() {
+    let total = this._history.length;
+    if ( total > 1 ) return this._history[ total - 2 ];
+    if ( total > 0 ) return this._history[ total - 1 ];
+    return '';
+  }
+
   // set a url hash route
   setRoute( route ) {
     route = this._path( route );
     window.location.hash = route;
+    this._history.push( route );
+
+    if ( this._history.length > 5 ) {
+      this._history = this._history.slice( 0, 5 );
+    }
   }
 
   // add custom route and callback to list
