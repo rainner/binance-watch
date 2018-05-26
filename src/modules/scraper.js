@@ -31,7 +31,7 @@ export default function scraper( dom, options ) {
         if ( !elm || !elm.tagName ) { skip = true; return; }
         if ( /^(IMG|I?FRAME|AUDIO|VIDEO|EMBED)$/.test( elm.tagName ) ) { val = elm.src; } else
         if ( /^(INPUT|SELECT|TEXTAREA)$/.test( elm.tagName ) ) { val = elm.value; } else
-        if ( elm.tagName === 'A' ) { val = elm.href; }
+        if ( elm.tagName === 'A' ) { val = ( p === 'link' || p === 'href' ) ? elm.href : elm.innerHTML; }
         else { val = elm.innerHTML; }
 
         item[ p ] = String( val || '' ).replace( /<[^>]*>/g, '' ).replace( /\s\s+/g, ' ' ).trim();
