@@ -30,14 +30,13 @@
       @onStopWatch="watching = false">
     </WatchForm>
 
-    <!--  main app pages wrapper -->
-    <main id="app-main" class="app-main">
+    <!-- main app pages wrapper -->
+    <main class="app-main">
 
       <!-- main ticker list component -->
       <TokenList
-        id="tokenlist"
         class="app-page"
-        :class="{ 'visible': mainComp === 'tokenlist' }"
+        :class="{ 'visible': mainComp === 'TokenList' }"
         :options="options"
         :socketStatus="socketStatus"
         :scrollDir="scrollDir"
@@ -49,9 +48,8 @@
 
       <!-- news aggregator page -->
       <NewsPage
-        id="newspage"
         class="app-page"
-        :class="{ 'visible': mainComp === 'newspage' }"
+        :class="{ 'visible': mainComp === 'NewsPage' }"
         :options="options"
         :scrollDir="scrollDir"
         :scrollPos="scrollPos"
@@ -119,8 +117,6 @@ import Notify from './Notify.vue';
 import WatchForm from './WatchForm.vue';
 import TokenList from './TokenList.vue';
 import NewsPage from './NewsPage.vue';
-
-// modal components
 import AboutPage from './AboutPage.vue';
 import OptionsPage from './OptionsPage.vue';
 import HistoryPage from './HistoryPage.vue';
@@ -179,7 +175,7 @@ export default {
       alarmsData: {},
       newsData: {},
       // page and modal related
-      mainComp: 'tokenlist',
+      mainComp: '',
       modalComp: '',
       modalData: {},
       // socket related data
@@ -229,8 +225,8 @@ export default {
     // setup app routes
     setupRoutes() {
       // default route
-      this.$router.on( '/', () => { this.togglePageView( 'tokenlist' ) } );
-      this.$router.on( '/news', () => { this.togglePageView( 'newspage' ) } );
+      this.$router.on( '/', () => { this.showPage( 'TokenList' ) } );
+      this.$router.on( '/news', () => { this.showPage( 'NewsPage' ) } );
       // common modal routes
       this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
       this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
@@ -242,12 +238,6 @@ export default {
         let d = this.priceData.filter( p => p.symbol === symbol ).shift();
         if ( d ) this.showModal( 'TokenPage', d.arrow +' '+ d.token +' / '+ d.asset, d );
       });
-    },
-
-    // change visible page component
-    togglePageView( name ) {
-      this.mainComp = name;
-      this.closeModal();
     },
 
     // handler for news data, from component
@@ -375,6 +365,12 @@ export default {
       if ( action === 'return' )  return window.history.back();
     },
 
+    // change visible page component
+    showPage( component ) {
+      this.mainComp = component;
+      this.closeModal();
+    },
+
     // show modal window
     showModal( component, title, data ) {
       if ( !this.$refs.modal ) return;
@@ -457,6 +453,8 @@ export default {
 <style lang="scss">
 
 .app-main {
+  display: block;
+  position: relative;
 
   .app-page {
     display: none;
