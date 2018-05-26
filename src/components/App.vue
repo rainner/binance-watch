@@ -11,7 +11,6 @@
       :scrollPos="scrollPos"
       :history="historyData"
       :alarms="alarmsData"
-      :events="eventsData"
       :news="newsData"
       @setRoute="setRoute"
       @toggleWatchform="toggleWatchform">
@@ -31,17 +30,37 @@
       @onStopWatch="watching = false">
     </WatchForm>
 
-    <!-- main ticker list component -->
-    <TokenList
-      :options="options"
-      :watching="watching"
-      :socketStatus="socketStatus"
-      :scrollDir="scrollDir"
-      :scrollPos="scrollPos"
-      :assetsList="assetsList"
-      :priceData="priceData"
-      @setRoute="setRoute">
-    </TokenList>
+    <!--  main app pages wrapper -->
+    <main id="app-main" class="app-main">
+
+      <!-- main ticker list component -->
+      <TokenList
+        id="tokenlist"
+        class="app-page"
+        :class="{ 'visible': mainComp === 'tokenlist' }"
+        :options="options"
+        :socketStatus="socketStatus"
+        :scrollDir="scrollDir"
+        :scrollPos="scrollPos"
+        :assetsList="assetsList"
+        :priceData="priceData"
+        @setRoute="setRoute">
+      </TokenList>
+
+      <!-- news aggregator page -->
+      <NewsPage
+        id="newspage"
+        class="app-page"
+        :class="{ 'visible': mainComp === 'newspage' }"
+        :options="options"
+        :scrollDir="scrollDir"
+        :scrollPos="scrollPos"
+        :priceData="priceData"
+        @newsData="updateNewsData"
+        @setRoute="setRoute">
+      </NewsPage>
+
+    </main>
 
     <!-- common modal component -->
     <Modal ref="modal" @onDone="modalDone">
@@ -53,8 +72,6 @@
         :socketStatus="socketStatus"
         :history="historyData"
         :alarms="alarmsData"
-        :events="eventsData"
-        :news="newsData"
         @setRoute="setRoute"
         @saveOptions="setOptions">
       </component>
@@ -93,8 +110,6 @@
 // custom modules
 import Stream from '../modules/stream';
 import Scroller from '../modules/scroller';
-import eventsScraper from '../modules/events';
-import newsScraper from '../modules/news';
 import utils from '../modules/utils';
 
 // sub components
@@ -103,14 +118,13 @@ import Modal from './Modal.vue';
 import Notify from './Notify.vue';
 import WatchForm from './WatchForm.vue';
 import TokenList from './TokenList.vue';
+import NewsPage from './NewsPage.vue';
 
 // modal components
 import AboutPage from './AboutPage.vue';
 import OptionsPage from './OptionsPage.vue';
 import HistoryPage from './HistoryPage.vue';
 import AlarmsList from './AlarmsList.vue';
-import EventsList from './EventsList.vue';
-import NewsList from './NewsList.vue';
 import DonatePage from './DonatePage.vue';
 import TokenPage from './TokenPage.vue';
 
@@ -132,8 +146,7 @@ export default {
     HistoryPage,
     TokenList,
     AlarmsList,
-    EventsList,
-    NewsList,
+    NewsPage,
     DonatePage,
     TokenPage,
   },
@@ -149,8 +162,6 @@ export default {
         playSound: true,
         // toggle to auto refetch news and events data
         autoRefetch: true,
-        // toggle for latest crypto events notifications
-        notifyEvents: true,
         // toggle for latest news notifications
         notifyNews: true,
         // cors proxy url
@@ -166,9 +177,9 @@ export default {
       assetsList: [],
       historyData: [],
       alarmsData: {},
-      eventsData: {},
       newsData: {},
-      // modal window related
+      // page and modal related
+      mainComp: 'tokenlist',
       modalComp: '',
       modalData: {},
       // socket related data
@@ -218,16 +229,14 @@ export default {
     // setup app routes
     setupRoutes() {
       // default route
-      this.$router.on( '/', () => { this.closeModal() } );
+      this.$router.on( '/', () => { this.togglePageView( 'tokenlist' ) } );
+      this.$router.on( '/news', () => { this.togglePageView( 'newspage' ) } );
       // common modal routes
-      this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
-      this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
       this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
       this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
-      this.$router.on( '/events', () => { this.showModal( 'EventsList', 'Upcoming Crypto Events' ) } );
-      this.$router.on( '/news', () => { this.showModal( 'NewsList', 'Latest Crypto News' ) } );
+      this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
+      this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
       this.$router.on( '/donate', () => { this.showModal( 'DonatePage', 'Make a Donation' ) } );
-
       // symbol modal route
       this.$router.on( '/symbol/([A-Z]+)', symbol => {
         let d = this.priceData.filter( p => p.symbol === symbol ).shift();
@@ -235,52 +244,15 @@ export default {
       });
     },
 
-    // turn off notification bubble thingy for news, events and other external syncd data
-    resetCounts() {
-      this.eventsData.checked = true;
-      this.newsData.checked = true;
+    // change visible page component
+    togglePageView( name ) {
+      this.mainComp = name;
+      this.closeModal();
     },
 
-    // scrape events data from remote site
-    loadEvents( force ) {
-      utils.delay( 'events', 600, this.loadEvents );
-      if ( !this.options.autoRefetch && !force ) return;
-
-      this.$ajax.get( 'https://coinmarketcal.com/?form[filter_by][]=hot_events', {
-        type: 'document',
-        success: ( xhr, status, dom ) => {
-
-          const data = eventsScraper( dom );
-          this.eventsData = Object.assign( {}, data );
-
-          if ( this.options.notifyEvents && data.count && data.count !== data.total ) {
-            let info = data.list[ 0 ].coin +' - '+ data.list[ 0 ].info;
-            let link = data.list[ 0 ].link;
-            this.$notify.add( 'Crypto Events ('+ data.count +')', info, null, link );
-          }
-        }
-      });
-    },
-
-    // scrape news data from remote site
-    loadNews( force ) {
-      utils.delay( 'news', 300, this.loadNews );
-      if ( !this.options.autoRefetch && !force ) return;
-
-      this.$ajax.get( 'https://coinlib.io/news', {
-        type: 'document',
-        success: ( xhr, status, dom ) => {
-
-          const data = newsScraper( dom );
-          this.newsData = Object.assign( {}, data );
-
-          if ( this.options.notifyNews && data.count && data.count !== data.total ) {
-            let info = data.list[ 0 ].title;
-            let link = data.list[ 0 ].link;
-            this.$notify.add( 'Latest News ('+ data.count +')', info, null, link );
-          }
-        }
-      });
+    // handler for news data, from component
+    updateNewsData( data ) {
+      this.newsData = data;
     },
 
     // load history data from handler
@@ -448,7 +420,6 @@ export default {
     this.$bus.on( 'setOptions', this.setOptions );
     this.$bus.on( 'setTitle', this.setTitle );
     this.$bus.on( 'setRoute', this.setRoute );
-    this.$bus.on( 'resetCounts', this.resetCounts );
     this.$bus.on( 'toggleSocket', this.toggleSocket );
     this.$bus.on( 'showModal', this.showModal );
     this.$bus.on( 'closeModal', this.closeModal );
@@ -470,12 +441,10 @@ export default {
   mounted() {
     this.setTitle();
     this.toggleSocket( true );
-    this.loadEvents( true );
-    this.loadNews( true );
     this.loadHistory();
     this.loadAlarms();
     this.checkAlarms();
-    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 1000 );
+    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 100 );
   },
 
   // cleanup and close connetions
@@ -484,5 +453,21 @@ export default {
   },
 }
 </script>
+
+<style lang="scss">
+
+.app-main {
+
+  .app-page {
+    display: none;
+    transition: none;
+    animation: fadeIn $fxSpeed $fxEase forwards;
+
+    &.visible {
+      display: block;
+    }
+  }
+}
+</style>
 
 
