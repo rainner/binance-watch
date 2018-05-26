@@ -20,7 +20,7 @@
     <hr />
 
     <div class="push-bottom">
-      <div class="form-label push-bottom">Notifications</div>
+      <div class="form-label push-bottom">Notification Sound</div>
 
       <label class="form-toggle push-bottom">
         <input type="checkbox" v-model="options.playSound" />
@@ -35,17 +35,12 @@
 
       <label class="form-toggle push-bottom">
         <input type="checkbox" v-model="options.autoRefetch" />
-        <span>Auto re-fetch latest events and news data</span>
-      </label>
-
-      <label class="form-toggle push-bottom">
-        <input type="checkbox" v-model="options.notifyEvents" />
-        <span>Notify when new upcoming events data is available</span>
+        <span>Auto re-fetch latest news data on a timer</span>
       </label>
 
       <label class="form-toggle push-bottom">
         <input type="checkbox" v-model="options.notifyNews" />
-        <span>Notify when new latest news data is available</span>
+        <span>Notify when latest news data is available</span>
       </label>
     </div>
 
