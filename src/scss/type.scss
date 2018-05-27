@@ -1,16 +1,8 @@
-// horizontal lines
-hr {
-  display: block;
-  margin: $padSpace 0;
-  border: 0;
-  border-top: 1px $lineStyle $lineColor;
-}
-
 // links
 a {
   position: relative;
   text-decoration: none;
-  color: $colorPrimary;
+  color: $colorBright;
   opacity: 1;
 
   &:hover {
@@ -25,7 +17,8 @@ p {
 * > p:last-of-type {
   margin-bottom: 0;
 }
-p > a {
+p > a,
+li > a {
   text-decoration: underline;
 }
 
@@ -39,9 +32,10 @@ h1, h2, h3, h4, h5, h6 {
 hr {
   display: block;
   overflow: hidden;
+  margin: $padSpace 0;
   height: 0;
   border: 0;
-  border-bottom: $lineWidth $lineStyle rgba( $colorGrey, .1 );
+  border-bottom: $lineWidth $lineStyle $lineColor;
 }
 
 // lists
@@ -57,6 +51,7 @@ ul {
 // adds underline effect to element on hover
 .underline {
   position: relative;
+  text-decoration: none;
 
   &:after {
     display: inline-block;
