@@ -100,6 +100,13 @@ export default class Ajax {
     xhr.setRequestHeader( 'X-Requested-With', 'XMLHttpRequest' );
     xhr.setRequestHeader( 'Accept', 'application/json, text/plain, text/html, */*' );
 
+    // check for basic auth data and set header
+    if ( options.auth && typeof options.auth === 'object' ) {
+      let username = String( options.auth.username || '' ).trim();
+      let password = String( options.auth.password || '' ).trim();
+      xhr.setRequestHeader( 'Authorization', 'Basic '+ btoa( username +':'+ password ) );
+    }
+
     // custom headers
     Object.keys( headers ).forEach( name => {
       xhr.setRequestHeader( name, headers[ name ] );
