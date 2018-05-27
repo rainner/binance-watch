@@ -1,11 +1,15 @@
 <template>
   <section>
 
-    <h2 class="push-bottom">Help The Developer</h2>
     <div class="push-bottom">
-      If you find this app useful and would like to show your
-      appreciation by making a small donation to help the developer,
-      here are the crypto addresses you can use to send your donations to...
+      <div class="form-label push-bottom">
+        Help The Developer <i class="icon-down-open"></i>
+      </div>
+      <p>
+        If you find this app useful and would like to show your
+        appreciation by making a small donation to help the developer,
+        here are the crypto addresses you can use to send your donations to...
+      </p>
     </div>
 
     <hr />
@@ -13,9 +17,9 @@
     <Tabs ref="tabs">
       <section v-for="d in addrlist" :key="d.symbol" :btn-name="[ d.name + ' ('+ d.symbol +')' ]" :active="d.active">
         <div class="qr-wrap text-center">
-          <div class="text-center push-bottom">Send only <span class="text-primary">{{ d.symbol }}</span> to this address:</div>
           <img class="qr-image push-bottom" :src="[ 'https://chart.googleapis.com/chart?chs=250x250&cht=qr&choe=UTF-8&chl=' + d.address ]" width="250" height="250" :alt="d.name" />
-          <div class="form-input text-center">
+          <div class="text-center push-bottom">Send only <span class="text-primary">{{ d.symbol }}</span> to this address</div>
+          <div class="form-input text-center push-bottom">
             <span class="text-grey push-right">{{ d.symbol }}</span>
             <input class=" push-right text-center text-clip" v-model="d.address" />
             <button class="icon-copy text-primary-hover" @click="copyText( d.address )" title="Copy" v-tooltip></button>
