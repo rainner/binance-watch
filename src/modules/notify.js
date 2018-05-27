@@ -89,7 +89,7 @@ export default class Notify {
 
   // check if alert is triggered for a symbol object
   checkAlarm( symbol, curPrice, callback ) {
-    if ( !this._canNotify() ) return;
+    if ( !this.canNotify() ) return;
     if ( !symbol || !this._alarms.hasOwnProperty( symbol ) ) return;
 
     this._alarms[ symbol ].forEach( a => {
@@ -109,25 +109,30 @@ export default class Notify {
     });
   }
 
+  // check if notification is supported
+  hasSupport() {
+    return ( window && ( 'Notification' in window ) );
+  }
+
+  // check if Notification is possible
+  canNotify() {
+    if ( !this.hasSupport() ) return false;
+    if ( Notification.permission !== 'granted' ) return false;
+    return true;
+  }
+
   // ask for browser notifications permission
   permission( callback ) {
-    if ( !( 'Notification' in window ) ) return;
+    if ( !this.hasSupport() ) return;
     Notification.requestPermission().then( response => {
       if ( typeof callback === 'function' ) callback( response );
     });
   }
 
-  // check if Notification is possible
-  _canNotify() {
-    if ( !( 'Notification' in window ) ) return false;
-    if ( Notification.permission !== "granted" ) return false;
-    return true;
-  }
-
   // create notifications from the queue on a timer
   _watchQueue() {
     setTimeout( this._watchQueue.bind( this ), 1000 );
-    if ( !this._canNotify() || !this._queue.length ) return;
+    if ( !this.canNotify() || !this._queue.length ) return;
 
     let { id, time, title, body, icon, link } = this._queue.shift();
     let a = new Notification( title, { body, icon } );
