@@ -22,8 +22,11 @@
       </div>
       <p>
         This app runs entirely on the browser and only makes external requests to fetch data from various
-        API endpoints related to cryptocurrency. Any persisting data is stored in the browser's localStorage engine.
-        In order to get desktop notifications, you must grant Notification permission in your browser.
+        API endpoints related to cryptocurrency. Any persisting data is stored in the browser's
+        <a href="https://developer.mozilla.org/en-US/docs/Web/API/Storage" target="_blank">localStorage</a> engine.
+        In order to get desktop notifications, you must
+        <a href="https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API" target="_blank">Grant Notification Permission</a>
+        in your browser.
       </p>
     </div>
 
@@ -47,12 +50,20 @@
           <span>Hot upcoming cryptocurrency events and news.</span>
         </li>
         <li>
+          <a href="https://www.reddit.com/r/CryptoCurrency" target="_blank">CryptoCurrency on Reddit</a> &nbsp;
+          <span>The CryptoCurrency subreddit on Reddit.com.</span>
+        </li>
+        <li>
           <a href="https://coinlib.io/news" target="_blank">Coinlib News</a> &nbsp;
           <span>Latest cryptocurrency news and posts.</span>
         </li>
         <li>
           <a href="https://github.com/cjdowner/cryptocurrency-icons" target="_blank">Crypto Icons</a> &nbsp;
           <span>Nice looking crypto icons.</span>
+        </li>
+        <li>
+          <a href="https://www.mailgun.com/" target="_blank">Mailgun API</a> &nbsp;
+          <span>Mailgun API for outgoing notifications by e-mail.</span>
         </li>
       </ul>
     </div>
