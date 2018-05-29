@@ -100,7 +100,7 @@
       <div class="container">
 
         <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="searchToken && !listCount">
-          <div class="tokenlist-item-icon icon-help iconLarge push-right"></div>
+          <div class="tokenlist-item-icon icon-help iconMedium push-right"></div>
           <div class="tokenlist-item-symbol text-clip flex-1">
             <big class="text-danger">Found nothing matching: {{ searchToken }}.</big> <br />
             <span class="text-grey">There are a total of {{ priceData.length }} symbols loaded from the API</span>
@@ -237,9 +237,10 @@ export default {
       if ( this.filterAsset ) {
         list = list.filter( p => p.asset === this.filterAsset );
       }
-      // filter by serach text
-      if ( this.searchToken ) {
-        list = list.filter( p => p.token.indexOf( this.searchToken.toUpperCase() ) !== -1 );
+      // filter by search text
+      if ( this.searchToken && this.searchToken.length > 1 ) {
+        let reg = new RegExp( '\\b'+ this.searchToken, 'gi' );
+        list = list.filter( p => p.token.search( reg ) >= 0 );
       }
       // compute list totals before cutting the list
       let total = list.length;
