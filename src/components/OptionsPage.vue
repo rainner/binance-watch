@@ -2,16 +2,24 @@
   <section>
 
     <div class="push-bottom">
-      <div class="form-label push-bottom">CORS Proxy URL</div>
-      <div class="text-small push-bottom">
-        External proxy server used to route XHR requests from this app to get around the browser's
-        <a class="text-nowrap" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">Cross-Origin Resource Sharing</a>
-        protection.
+      <div class="form-label push-bottom">
+        CORS Proxy URL <i class="icon-down-open"></i>
       </div>
-      <form class="cors-form form-input" action="#" @submit="corsFormSubmit" :disabled="testing">
-        <span class="push-right" :class="{ 'icon-check text-gain': urlSuccess, 'icon-close text-loss': !urlSuccess, 'icon-clock text-warning': testing }"></span>
-        <input type="text" name="proxyurl" placeholder="https://..." v-model="corsProxyUrl" :class="{ 'text-success': urlSuccess, 'text-danger': !urlSuccess, 'text-grey': testing }" />
-        <button class="text-primary-hover push-left" type="submit">
+
+      <div class="text-grey push-bottom">
+        <p>
+          External proxy server used to route outgoing HTTP requests from this app to get around the browser's built-in
+          <a class="text-nowrap" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">Cross-Origin Resource Sharing</a>
+          (CORS) protection.
+        </p>
+      </div>
+
+      <form class="cors-form flex-row flex-middle flex-stretch" action="#" @submit="corsFormSubmit" :disabled="testing">
+        <div class="form-input flex-1 push-right">
+          <span class="push-right" :class="{ 'icon-check text-gain': urlSuccess, 'icon-close text-loss': !urlSuccess, 'icon-clock text-warning': testing }"></span>
+          <input type="text" name="proxyurl" placeholder="https://..." v-model="corsProxyUrl" :class="{ 'text-success': urlSuccess, 'text-danger': !urlSuccess, 'text-grey': testing }" />
+        </div>
+        <button class="form-btn bg-grey-hover" type="submit">
           <i class="icon-reload" :class="{ 'iconSpin': testing }"></i> Test
         </button>
       </form>
@@ -20,47 +28,89 @@
     <hr />
 
     <div class="push-bottom">
-      <div class="form-label push-bottom">Notification Sound</div>
+      <div class="form-label push-bottom">
+        Browser Notifications <i class="icon-down-open"></i>
+      </div>
 
-      <label class="form-toggle push-bottom">
-        <input type="checkbox" v-model="options.playSound" />
-        <span>Play a notification sound</span>
-      </label>
+      <Toggle class="push-bottom"
+        :text="'Grant permission to receive browser notifications'"
+        v-model="canNotify"
+        @click="askNotifyPermission">
+      </Toggle>
+
+      <Toggle class="push-bottom"
+        :text="'Play a notification sound'"
+        v-model="options.playSound"
+        @change="applyOptions">
+      </Toggle>
     </div>
 
     <hr />
 
     <div class="push-bottom">
-      <div class="form-label push-bottom">Events &amp; News</div>
+      <div class="form-label push-bottom">
+        E-mail Notifications with Mailgun API <i class="icon-down-open"></i>
+      </div>
 
-      <label class="form-toggle push-bottom">
-        <input type="checkbox" v-model="options.autoRefetch" />
-        <span>Auto re-fetch latest news data on a timer</span>
-      </label>
+      <div class="text-grey push-bottom">
+        <p>
+          This app runs on the browser, so you will need to use an external service, such as Mailgun to handle outgoing e-mails.
+          Provide your <a class="text-nowrap" href="https://www.mailgun.com/" target="_blank">Mailgun API</a> info here.
+        </p>
+      </div>
 
-      <label class="form-toggle push-bottom">
-        <input type="checkbox" v-model="options.notifyNews" />
-        <span>Notify when latest news data is available</span>
-      </label>
-    </div>
+      <Toggle class="push-bottom"
+        :text="'Enable e-mail notifications using Mailgun API'"
+        v-model="options.mailgunOn">
+      </Toggle>
 
-    <!--
-    <hr />
-    <div class="push-bottom">
-      <div class="form-label push-bottom">Twitter Handle</div>
-      <div class="text-small push-bottom">If you want to receive notifications as tweets, enter your Twitter handle here.</div>
-      <div class="form-input">
-        <span class="icon-twtr push-right"></span>
-        <input type="text" placeholder="@YourName" v-model="options.twitterName" @blur="$emit( 'saveOptions' )" />
+      <div class="form-input push-bottom">
+        <span class="text-nowrap text-grey push-right">Mailgun Domain:</span>
+        <input class="flex-1" type="text" placeholder="mysite.com" v-model="options.mailgunDomain" />
+      </div>
+
+      <div class="form-input push-bottom">
+        <span class="text-nowrap text-grey push-right">Mailgun API Key:</span>
+        <input class="flex-1" type="text" placeholder="key-..." v-model="options.mailgunKey" />
+      </div>
+
+      <div class="form-input push-bottom">
+        <span class="text-nowrap text-grey push-right">Recipient E-mail:</span>
+        <input class="flex-1" type="text" placeholder="me@site.com" v-model="options.mailgunEmail" />
       </div>
     </div>
-    -->
+
+    <hr />
+
+    <div class="push-bottom">
+      <div class="form-label push-bottom">
+        Latest News &amp; Events <i class="icon-down-open"></i>
+      </div>
+
+      <Toggle class="push-bottom"
+        :text="'Auto re-fetch latest news data on a timer'"
+        v-model="options.autoRefetch"
+        @change="applyOptions">
+      </Toggle>
+
+      <Toggle class="push-bottom"
+        :text="'Notify when latest news data is available'"
+        v-model="options.notifyNews"
+        @change="applyOptions">
+      </Toggle>
+    </div>
 
   </section>
 </template>
 
 <script>
+// sub components
+import Toggle from './Toggle.vue';
+
 export default {
+
+   // component list
+  components: { Toggle },
 
   // component props
   props: {
@@ -71,6 +121,7 @@ export default {
   data() {
     return {
       corsProxyUrl: '',
+      canNotify: false,
       urlSuccess: true,
       testing: false,
     }
@@ -109,17 +160,33 @@ export default {
       let url = e.target.proxyurl.value || '';
       this.corsTest( url );
     },
+
+    // ask user for notification permission
+    askNotifyPermission( e ) {
+      e.preventDefault();
+      this.canNotify = false;
+      this.$notify.permission( status => {
+        this.canNotify = ( status === 'granted' ) ? true : false;
+      });
+    },
+
+    // apply options
+    applyOptions() {
+      this.$emit( 'saveOptions', { corsProxyUrl: this.corsProxyUrl } );
+    },
+
   },
 
   // test cors url when component mounts
   mounted() {
     this.corsProxyUrl = this.options.corsProxyUrl;
+    this.canNotify = this.$notify.canNotify();
     // this.corsTest( this.corsProxyUrl );
   },
 
   // save options when component closes
   beforeDestroy() {
-    this.$emit( 'saveOptions', { corsProxyUrl: this.corsProxyUrl } );
+    this.applyOptions();
   },
 }
 </script>
