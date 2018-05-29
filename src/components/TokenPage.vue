@@ -86,7 +86,7 @@
     <hr />
 
     <!-- events and alarms -->
-    <Tabs class="tokenpage-tabs pad-top push-bottom" :data="{ alarmsCount, eventsCount }">
+    <Tabs class="tokenpage-tabs pad-top push-bottom" :data="{ alarmsCount, newsCount }">
 
       <!-- alarms tab -->
       <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Price Alarms ('+ alarmsCount +')' ]" active>
@@ -94,8 +94,8 @@
       </section>
 
       <!-- events tab -->
-      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'Upcoming Events ('+ eventsCount +')' ]">
-        <EventsList :events="events" :data="data" @listCount="onEventsCount"></EventsList>
+      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News & Events ('+ newsCount +')' ]">
+        <NewsList :news="news" :data="data" @listCount="onNewsCount"></NewsList>
       </section>
 
     </Tabs>
@@ -109,19 +109,18 @@ import Tabs from './Tabs.vue';
 import TokenIcon from './TokenIcon.vue';
 import LineChart from './LineChart.vue';
 import AlarmsList from './AlarmsList.vue';
-import EventsList from './EventsList.vue';
+import NewsList from './NewsList.vue';
 
 // component
 export default {
 
   // component list
-  components: { Spinner, Tabs, TokenIcon, LineChart, AlarmsList, EventsList },
+  components: { Spinner, Tabs, TokenIcon, LineChart, AlarmsList, NewsList },
 
   // component props
   props: {
     data: { type: Object, default: {}, required: true },
-    alarms: { type: Object, default: {}, required: false },
-    events: { type: Object, default() { return {} } },
+    alarms: { type: Object, default() { return {} } },
     news: { type: Object, default() { return {} } },
   },
 
@@ -137,7 +136,7 @@ export default {
       curPrice: this.data.close,
       usdPrice: 0,
       alarmsCount: 0,
-      eventsCount: 0,
+      newsCount: 0,
     }
   },
 
@@ -150,8 +149,8 @@ export default {
     },
 
     // update events count for this token
-    onEventsCount( count ) {
-      this.eventsCount = count;
+    onNewsCount( count ) {
+      this.newsCount = count;
     },
 
     // spinner helper
