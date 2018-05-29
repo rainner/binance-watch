@@ -43,6 +43,8 @@
         :scrollPos="scrollPos"
         :assetsList="assetsList"
         :priceData="priceData"
+        :alarms="alarmsData"
+        :news="newsData"
         @setRoute="setRoute">
       </TokenList>
 
@@ -66,10 +68,9 @@
         :is="modalComp"
         :data="modalData"
         :options="options"
-        :watching="watching"
-        :socketStatus="socketStatus"
         :history="historyData"
         :alarms="alarmsData"
+        :news="newsData"
         @setRoute="setRoute"
         @saveOptions="setOptions">
       </component>
@@ -108,6 +109,7 @@
 // custom modules
 import Stream from '../modules/stream';
 import Scroller from '../modules/scroller';
+import mailQueue from '../modules/queue';
 import utils from '../modules/utils';
 
 // sub components
@@ -162,10 +164,11 @@ export default {
         notifyNews: true,
         // cors proxy url
         corsProxyUrl: 'https://cors-anywhere.herokuapp.com/',
-        // twitter name for notifications
-        twitterName: '',
-        // email address for notifications
-        emailAddress: '',
+        // mailgun api config
+        mailgunOn: false,
+        mailgunDomain: '',
+        mailgunKey: '',
+        mailgunEmail: '',
       },
       // app data
       watching: false,
@@ -204,7 +207,7 @@ export default {
     // load saved options data from local store
     loadOptions() {
       let options = this.$store.getData( this.optKey );
-      this.options = Object.assign( this.options, options );
+      this.options = Object.assign( {}, this.options, options );
     },
 
     // merge new options and save
@@ -260,7 +263,8 @@ export default {
       utils.delay( 'alarms', 10, this.checkAlarms );
       this.priceData.forEach( p => {
         this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-          // add alert to history
+          // add alarm data to mail queue and history
+          this.addMailQueue( { title, info } );
           this.$history.add( title, info );
         });
       });
@@ -400,12 +404,64 @@ export default {
       if ( !this.$refs.notify ) return;
       this.$refs.notify.show( message, type, timeout );
     },
+
+    // add data to mail queue
+    addMailQueue( data ) {
+      mailQueue.add( data );
+    },
+
+    // setup mail queue to go off on a timer
+    setupMailer() {
+      mailQueue.onBatch( 60, queue => {
+        let msg = '';
+        queue.forEach( m => { msg += '<hr /> <p><b>'+ m.title +'</b> <br /> '+ m.info +'</p>' } );
+        this.sendEmail( 'Binance Watch Alerts ('+ queue.length +')', msg );
+      });
+    },
+
+    // send notification e-mail using mailgun api
+    sendEmail( subject, message ) {
+      if ( !this.options.mailgunOn ) return;
+
+      const username  = 'api';
+      const password  = String( this.options.mailgunKey || '' ).trim();
+      const recipient = String( this.options.mailgunEmail || '' ).trim();
+      const domain    = String( this.options.mailgunDomain || '' ).trim();
+      const endpoint  = 'https://api.mailgun.net/v3/'+ domain +'/messages';
+      if ( !subject || !message || !domain || !recipient || !password ) return;
+
+      const template = `
+      <!DOCTYPE html>
+      <html lang="en-US">
+        <body style="margin: 0; padding: 0;">
+          <div style="font-family: 'Monaco', 'Consolas', 'Courier New', 'monospace'; font-size: 10px;">
+            <h3>${ subject }</h3>
+            ${ message }
+          </div>
+        </body>
+      </html>`;
+
+      const formdata = new FormData();
+      formdata.append( 'from', 'Binance Watch Alerts <noreply@'+ domain +'>' );
+      formdata.append( 'to', 'Alert Recipient <'+ recipient +'>' );
+      formdata.append( 'subject', subject );
+      formdata.append( 'html', template );
+
+      this.$ajax.post( endpoint, {
+        type: 'json',
+        data: formdata,
+        auth: { username, password },
+        success: ( xhr, status, response ) => { this.showNotice( 'E-mail notifications sent to ('+ recipient +').', 'info' ) },
+        error: ( xhr, status, error ) => { console.warn( 'Mailgun', status, ':', error ) },
+      });
+    },
   },
 
   // init app data and handlers
   beforeMount() {
     this.loadOptions();
     this.setupRoutes();
+    this.setupMailer();
     // config global shared objects
     this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
     this.$notify.setOptions( { soundEnabled: this.options.playSound } );
@@ -423,6 +479,7 @@ export default {
     this.$bus.on( 'handleClick', this.handleClick );
     this.$bus.on( 'loadHistory', this.loadHistory );
     this.$bus.on( 'loadAlarms', this.loadAlarms );
+    this.$bus.on( 'mailQueue', this.addMailQueue );
     // setup socket handlers
     _stream.on( 'open', this.onSocketOpen );
     _stream.on( 'error', this.onSocketError );
