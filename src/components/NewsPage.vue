@@ -56,8 +56,27 @@
       </div>
     </div>
 
+    <!-- news list -->
     <div class="newspage-list">
       <div class="container">
+
+        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="filterSearch && !filterList.length">
+          <div class="tokenlist-item-icon icon-help iconMedium push-right"></div>
+          <div class="tokenlist-item-symbol text-clip flex-1">
+            <big class="text-danger">Found nothing matching: {{ filterSearch }}.</big> <br />
+            <span class="text-grey">There are a total of {{ totalCount }} news and event entries available.</span>
+          </div>
+        </div>
+
+        <div class="newspage-chart push-bottom" v-if="filterList.length">
+          <ul class="newspage-chart-list">
+            <li class="clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.token">
+              <div :class="{ 'bg-primary': d.count > 2 }" :style="{ height: d.height +'px' }"></div>
+              <span>{{ d.token }}</span>
+            </li>
+          </ul>
+        </div>
+
         <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="n in filterList" :key="n.id">
           <div class="flex-1 push-right text-clip">
             <a class="icon-feedback iconLeft" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
@@ -69,6 +88,7 @@
             <a class="text-pill icon-link iconLeft" :href="n.link" target="_blank" rel="noopener">Source</a>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -115,6 +135,8 @@ export default {
       proxyDomain: '',
       working: 0,
       sto: null,
+      // word count chart data
+      chartData: [],
     }
   },
 
@@ -123,16 +145,11 @@ export default {
 
     // build profile after news data has loaded
     working: function() {
-      // still working ...
       if ( this.working > 0 ) return;
-
-      // new entries available
       if ( this.newCount && this.newCount !== this.totalCount ) {
         let n = this.newsList[ 0 ];
         this.$notify.add( 'Latest News ('+ this.newCount +')', n.title, null, n.link );
       }
-      // scan news titles for token mentions
-      // this.buildProfile();
     }
   },
 
@@ -149,13 +166,15 @@ export default {
         list = list.filter( n => n.type === this.filterType );
       }
       // filter by search text
-      if ( this.filterSearch ) {
-        list = list.filter( n => n.title.indexOf( this.filterSearch.toUpperCase() ) !== -1 );
+      if ( this.filterSearch && this.filterSearch.length > 1 ) {
+        let reg = new RegExp( '\\b'+ this.filterSearch, 'gi' );
+        list = list.filter( n => n.title.search( reg ) >= 0 );
       }
       // limit list to a number of entries
       if ( limit && limit < list.length ) {
         list = list.slice( 0, limit );
       }
+      this.updateChart();
       return list;
     },
 
@@ -321,29 +340,28 @@ export default {
     // fetch data from coinmarketcal
     fetchEvents() {
       const type = 'events';
-      const endpoint = 'https://coinmarketcal.com/?form[filter_by][]=hot_events';
+      const atoken = 'ODM0OGY4MWFlNWU3M2I4YThiYTc2ZmQyMTIwMjkyMmQwNjRhZDk4MzA3NTgwODM4ZjkyYzcyZTg1N2NjNDA2Yw';
+      const endpoint = 'https://api.coinmarketcal.com/v1/events?access_token='+ atoken +'&page=1&max=20&showOnly=hot_events';
       const source = utils.parseUrl( endpoint, 'host' );
 
       this.working++;
       this.$ajax.get( endpoint, {
-        type: 'document',
-        done: ( xhr, status, dom ) => { this.working--; },
-        success: ( xhr, status, dom ) => {
+        type: 'json',
+        done: ( xhr, status, list ) => { this.working--; },
+        success: ( xhr, status, list ) => {
 
-          const list = scraper( dom, {
-            items  : '#explore > .container > .row > .content-box',
-            params : {
-              date : 'h5:nth-child(1) > strong',
-              coin : 'h5:nth-child(2) > strong',
-              info : 'h5:nth-child(3)',
-              link : '.content-box-info > a:last-of-type',
-            }
-          });
+          if ( !list || !Array.isArray( list ) ) return;
 
           for ( let i = 0; i < list.length; ++i ) {
             let item = list[ i ];
-            if ( !item.date || !item.coin || !item.info || !item.link ) continue;
-            this.addNews( type, source, item.coin +' - '+ item.info +' - '+ item.date, item.link );
+            if ( !item.title || !item.coins || !item.description || !item.source ) continue;
+
+            let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
+            let date  = [ month, day, year ].join( '/' );
+            let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
+            let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
+
+            this.addNews( type, source, title, item.source );
           }
           this.emitData();
         }
@@ -353,32 +371,37 @@ export default {
     // build token keyword count from loaded news data
     buildProfile() {
       let tokens = {};
+      this.priceData.forEach( p => { tokens[ p.token ] = 0 } );
 
-      // 1. add all available tokens to list
-      this.priceData.forEach( p => { tokens[ p.token ] = 0; } );
-
-      // 2. loop over all loaded news entries
-      this.newsList.forEach( n => {
-
-        // 3. convert news title into list of unique words
-        let words = n.title.replace( /[\(\)]+/g, '' ).split( /\s+/g );
-        words = Array.from( new Set( words ) );
-
-        // 4. loop over each word
-        words.forEach( w => {
-
-          // 5. see if one of the words match a token name
-          if ( tokens.hasOwnProperty( w ) ) tokens[ w ]++;
-        });
+      Object.keys( tokens ).forEach( t => {
+        let reg = new RegExp( '\\b'+ t +'\\b', 'gi' );
+        let count = this.newsList.filter( n => n.title.search( reg ) >= 0 ).length;
+        if ( count < 1 ) { delete tokens[ t ]; return; }
+        tokens[ t ] = count;
       });
+      return tokens;
+    },
 
-      // 6. remove tokens with zero count
-      Object.keys( tokens ).forEach( k => {
-        if ( tokens[ k ] < 1 ) delete tokens[ k ];
-      });
+    // draw token chart from profile data
+    updateChart() {
+      let data   = this.buildProfile();
+      let tokens = Object.keys( data );
+      let values = [];
+      tokens.forEach( t => values.push( data[ t ] ) );
 
-      // 7. save profile data
-      this.profileData = tokens;
+      let size = 100;
+      let len  = values.length;
+      let min  = values.reduce( ( min, val ) => val < min ? val : min, values[ 0 ] );
+      let max  = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
+
+      this.chartData = [];
+      for ( let i = 0; i < tokens.length; ++i ) {
+        let token  = tokens[ i ];
+        let count  = values[ i ];
+        let ratio  = ( count / max );
+        let height = ( ratio * size - 20 );
+        this.chartData.push( { token, count, height } );
+      }
     },
   },
 
@@ -424,6 +447,49 @@ export default {
       display: none;
       @media #{$screenMedium} {
         display: block;
+      }
+    }
+  }
+
+  .newspage-chart {
+    display: block;
+    position: relative;
+    padding: ( $padSpace / 2 ) 0;
+    background-color: $lineColor;
+    border-radius: $lineJoin;
+
+    .newspage-chart-list {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: space-around;
+      list-style: none;
+      height: 100px;
+      overflow: hidden;
+
+      & > li {
+        display: block;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+
+        & > div {
+          margin: 0 auto;
+          width: 4px;
+          min-height: 10px;
+          background-color: $colorSecondary;
+          border-radius: $lineJoin;
+        }
+        & > span {
+          display: block;
+          font-size: 70%;
+          line-height: 1em;
+          margin: .3em 0 0 0;
+
+          &:hover {
+            color: lighten( $colorDocumentText, 20% );
+          }
+        }
       }
     }
   }
