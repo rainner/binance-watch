@@ -119,11 +119,15 @@ module.exports = {
   dateData( time ) {
     let now = Date.now();
 
-    if ( time && typeof time === 'string' ) { // timezone?
-      now = new Date().toLocaleString( 'en-US', { time } );
-    }
-    if ( time && typeof time === 'number' ) { // timestamp?
-      now = time;
+    if ( time ) {
+      // timestamp or datestring, keep as is
+      if ( typeof time === 'number' || /^[\w\-\+\:]+$/.test( time ) ) {
+        now = time;
+      }
+      // other string, assume timezone
+      else if ( typeof time === 'string' ) {
+        now = new Date().toLocaleString( 'en-US', { time } );
+      }
     }
     let _p      = ( n ) => ( n < 10 ) ? '0'+ n : ''+ n;
     let date    = new Date( now );
