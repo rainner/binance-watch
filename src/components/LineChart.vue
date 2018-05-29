@@ -77,8 +77,6 @@ export default {
       let len = data.length;
       let range = max - min;
       let gap = this.width / ( len - 1 );
-      let start = data[ 0 ];
-      let end = data[ data.length - 1 ];
 
       canvas.width = this.width;
       canvas.height = this.height;
