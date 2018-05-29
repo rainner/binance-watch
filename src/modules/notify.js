@@ -100,12 +100,12 @@ export default class Notify {
       if ( curPrice > a.alarmPrice ) diff = 'more than';
       if ( curPrice < a.alarmPrice ) diff = 'less than';
 
-      let title = a.arrow +' '+ a.symbol +' '+ curPrice;
-      let body  = a.symbol +' is now '+ diff +' your alert price of '+ a.alarmPrice +' '+ a.asset +' !!!';
+      let title = [ a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
+      let info  = a.symbol +' is now '+ diff +' your alert price of '+ a.alarmPrice +' '+ a.asset +'.';
 
-      if ( typeof callback === 'function' ) callback( title, body, a );
+      if ( typeof callback === 'function' ) callback( title, info, a );
       this.deleteAlarm( a.symbol, a.id );
-      this.add( title, body, a.icon );
+      this.add( title, info, a.icon );
     });
   }
 
