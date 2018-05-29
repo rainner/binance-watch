@@ -1,26 +1,22 @@
 <template>
   <section>
 
-    <div class="flex-row flex-middle flex-space push-bottom">
-      <div class="flex-1">
-        List of latest crypto news from
-        <a href="https://coinlib.io/news" target="_blank" rel="noopener">coinlib.io</a>.
-      </div>
-      <label class="form-toggle">
-        <input type="checkbox" v-model="options.notifyNews" @click="$emit( 'saveOptions' )" />
-        <span>Notify</span>
-      </label>
+    <div v-if="!data.token" class="push-bottom">
+      List of aggregated news and upcoming crypto events ({{ newsList.length }})
     </div>
 
     <div v-if="!newsList.length" class="icon-close iconLeft text-grey">
-      There are no news loaded.
+      <span v-if="data.token">There are no news/events for {{ data.token }}.</span>
+      <span v-else>There are no news/events loaded.</span>
     </div>
 
     <div class="flex-list">
-      <div v-for="e in newsList" :key="e.uniq" class="flex-item">
-        <div class="flex-1 text-clip">
-          <i class="icon-feedback"></i> &nbsp;
-          <a :href="e.link" target="_blank" rel="noopener">{{ e.title }}</a>
+      <div v-for="n in newsList" :key="n.id" class="flex-item clickable">
+        <div class="flex-1 push-right text-clip">
+          <a class="icon-feedback iconLeft text-primary" :href="n.link" target="_blank">{{ n.title }}</a>
+        </div>
+        <div class="text-clip">
+          <a class="text-pill icon-link iconLeft" :href="n.link" target="_blank" rel="noopener">Source</a>
         </div>
       </div>
     </div>
@@ -34,8 +30,8 @@ export default {
 
   // component props
   props: {
-    options: { type: Object, default() { return {} } },
-    news: { type: Object, required: true },
+    news: { type: Object, default: {}, required: true },
+    data: { type: Object, default: () => { return {} } }, // symbol data
   },
 
   // computed methods
@@ -45,6 +41,11 @@ export default {
     newsList() {
       if ( !this.news.list ) return [];
       let list = this.news.list;
+
+      if ( this.data.token ) {
+        let reg = new RegExp( '\\b'+ this.data.token, 'gi' );
+        list = list.filter( n => n.title.search( reg ) >= 0 );
+      }
       this.$emit( 'listCount', list.length );
       return list;
     },
