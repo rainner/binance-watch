@@ -27,14 +27,14 @@
           <form action="#" class="watchform-controls flex-row flex-top flex-space flex-wrap">
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Asset:</div>
+              <div class="text-grey text-nowrap">Asset: <i class="icon-down-open"></i></div>
               <select v-model="options.asset">
                 <option v-for="asset in assetsList" :key="asset" :value="asset">{{ asset }}</option>
               </select>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Change:</div>
+              <div class="text-grey text-nowrap">Change: <i class="icon-down-open"></i></div>
               <select class="push-right" v-model="options.target">
                 <option value="price">Price</option>
                 <option value="volume">Volume</option>
@@ -44,7 +44,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Type:</div>
+              <div class="text-grey text-nowrap">Type: <i class="icon-down-open"></i></div>
               <select v-model="options.type">
                 <option value="both">Gain/Loss</option>
                 <option value="gain">Gain only</option>
@@ -53,7 +53,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Notify:</div>
+              <div class="text-grey text-nowrap">Notify: <i class="icon-down-open"></i></div>
               <select v-model="options.notify">
                 <option value="repeat">Repeat all</option>
                 <option value="once">Once per pair</option>
@@ -61,7 +61,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Price:</div>
+              <div class="text-grey text-nowrap">Price: <i class="icon-down-open"></i></div>
               <select class="push-right" v-model="options.priceCheck">
                 <option value="above">Above</option>
                 <option value="below">Below</option>
@@ -71,7 +71,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap push-right">Volume:</div>
+              <div class="text-grey text-nowrap">Volume: <i class="icon-down-open"></i></div>
               <select class="push-right" v-model="options.volumeCheck">
                 <option value="above">Above</option>
                 <option value="below">Below</option>
@@ -292,14 +292,10 @@ export default {
         let percent = c.sign + Number( c.percent ).toFixed( 2 ) + '%';
         let price   = Number( p.close ).toFixed( 8 ) +' '+ p.asset;
         let volume  = utils.money( p.assetVolume, 0 ) +' '+ p.asset;
+        let display = ( _target === 'price' ) ? price : volume;
         let elapsed = utils.elapsed( ( _now - s.time ) / 1000 );
-        let title   = [ c.arrow, p.symbol, '(', percent, ')', 'in', _target, '!!!' ].join( ' ' );
-        let message = '';
-
-        // build notification body
-        message += price + ' price. \n';
-        message += volume + ' volume. \n';
-        message += 'Last ' + elapsed + '. \n';
+        let title   = [ p.symbol, _target, c.arrow, percent, '(', display, ')' ].join( ' ' );
+        let info    = [ 'The', _target, 'of', p.symbol, 'has changed', c.arrow, percent, 'in the last', elapsed +'.' ].join( ' ' );
 
         // update symbol snapshot data
         this.snapshot[ p.symbol ].close = p.close;
@@ -307,11 +303,14 @@ export default {
         this.snapshot[ p.symbol ].time = _now;
         this.snapshot[ p.symbol ].checked = true;
 
-        // add to history
-        this.$history.add( title, message );
+        // add to mail queue
+        this.$bus.emit( 'mailQueue', { title, info } );
+
+        // add to history list
+        this.$history.add( title, info );
 
         // add alert to notification queue
-        this.$notify.add( title, message, p.icon, e => {
+        this.$notify.add( title, info, p.icon, e => {
           this.$emit( 'setRoute', p.route );
         });
       });
