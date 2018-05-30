@@ -69,19 +69,14 @@
         </div>
 
         <div class="newspage-chart push-bottom" v-if="filterList.length">
-          <ul class="newspage-chart-list">
-            <li class="clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.token">
-              <div :class="{ 'bg-primary': d.count > 2 }" :style="{ height: d.height +'px' }"></div>
-              <span>{{ d.token }}</span>
-            </li>
-          </ul>
+          <BarChart :data="chartData" :heading="'Most Active Tokens'" @click="chartClick"></BarChart>
         </div>
 
         <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="n in filterList" :key="n.id">
           <div class="flex-1 push-right text-clip">
             <a class="icon-feedback iconLeft" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
           </div>
-          <div class="push-right text-nowrap">
+          <div class="push-right text-nowrap if-medium">
             <span class="text-grey">{{ n.source }}</span>
           </div>
           <div>
@@ -98,6 +93,7 @@
 <script>
 // modules
 import Dropdown from './Dropdown.vue';
+import BarChart from './BarChart.vue';
 import scraper from '../modules/scraper';
 import utils from '../modules/utils';
 
@@ -105,7 +101,7 @@ import utils from '../modules/utils';
 export default {
 
   // component list
-  components: { Dropdown },
+  components: { Dropdown, BarChart },
 
   // component props
   props: {
@@ -125,6 +121,7 @@ export default {
       // count data
       totalCount: 0,
       newCount: 0,
+      lastCount: 0,
       maxCount: 200,
       // list filter options
       filterSearch: '',
@@ -143,12 +140,14 @@ export default {
   // watch
   watch: {
 
-    // build profile after news data has loaded
+    // watch api fetch counter
     working: function() {
+      // still fetching...
       if ( this.working > 0 ) return;
-      if ( this.newCount && this.newCount !== this.totalCount ) {
+      // show notification when something new gets added to the news list
+      if ( this.lastCount && this.lastCount !== this.totalCount ) {
         let n = this.newsList[ 0 ];
-        this.$notify.add( 'Latest News ('+ this.newCount +')', n.title, null, n.link );
+        this.$notify.add( 'Latest News ('+ this.lastCount +')', n.title, null, n.link );
       }
     }
   },
@@ -201,6 +200,7 @@ export default {
 
     // fetch all news
     fetchAll() {
+      this.lastCount = 0;
       this.fetchEvents();
       this.fetchBinance();
       this.fetchCoinlib();
@@ -238,15 +238,14 @@ export default {
       let exist = this.newsList.filter( n => ( n.title === title || n.link === link ) ).length;
       if ( exist ) return;
 
-      let id = utils.randString( 20 );
+      let id   = utils.randString( 20 );
       let time = Date.now();
-      this.newsList.unshift( { id, time, type, source, title, link } );
 
-      if ( this.newsList.length > this.maxCount ) {
-        this.newsList = this.newsList.slice( 0, this.maxCount );
-      }
+      this.newsList.unshift( { id, time, type, source, title, link } );
+      this.newsList   = this.newsList.slice( 0, this.maxCount );
       this.totalCount = this.newsList.length;
-      this.newCount = ( this.newCount >= this.totalCount ) ? this.totalCount : ( this.newCount + 1 );
+      this.newCount   = ( this.newCount >= this.totalCount ) ? this.totalCount : ( this.newCount + 1 );
+      this.lastCount += 1;
     },
 
     // fetch news data from cryptocurrencynews
@@ -309,7 +308,7 @@ export default {
     fetchBinance() {
       const type = 'binance';
       const endpointDomain = 'support.binance.com';
-      const endpoint = 'https://'+ endpointDomain +'/hc/en-us/sections/115000202591-Latest-News';
+      const endpoint = 'https://'+ endpointDomain +'/hc/en-us/sections/115000106672-New-Listings';
       const source = utils.parseUrl( endpoint, 'host' );
 
       this.working++;
@@ -368,40 +367,25 @@ export default {
       });
     },
 
-    // build token keyword count from loaded news data
-    buildProfile() {
-      let tokens = {};
-      this.priceData.forEach( p => { tokens[ p.token ] = 0 } );
-
-      Object.keys( tokens ).forEach( t => {
-        let reg = new RegExp( '\\b'+ t +'\\b', 'gi' );
-        let count = this.newsList.filter( n => n.title.search( reg ) >= 0 ).length;
-        if ( count < 1 ) { delete tokens[ t ]; return; }
-        tokens[ t ] = count;
-      });
-      return tokens;
+    // on chart column click
+    chartClick( data ) {
+      this.filterSearch = data.label;
     },
 
     // draw token chart from profile data
     updateChart() {
-      let data   = this.buildProfile();
-      let tokens = Object.keys( data );
-      let values = [];
-      tokens.forEach( t => values.push( data[ t ] ) );
+      let data = [];
+      let tokens = {};
+      this.priceData.forEach( p => { tokens[ p.token ] = 0 } );
 
-      let size = 100;
-      let len  = values.length;
-      let min  = values.reduce( ( min, val ) => val < min ? val : min, values[ 0 ] );
-      let max  = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
-
-      this.chartData = [];
-      for ( let i = 0; i < tokens.length; ++i ) {
-        let token  = tokens[ i ];
-        let count  = values[ i ];
-        let ratio  = ( count / max );
-        let height = ( ratio * size - 20 );
-        this.chartData.push( { token, count, height } );
-      }
+      Object.keys( tokens ).forEach( t => {
+        let reg = new RegExp( '\\b'+ t +'\\b', 'g' );
+        let count = this.newsList.filter( n => n.title.search( reg ) >= 0 ).length;
+        if ( count < 2 ) return;
+        data.push( { label: t, value: count } );
+      });
+      data.sort( ( a, b ) => b.value - a.value );
+      this.chartData = data;
     },
   },
 
@@ -416,7 +400,6 @@ export default {
   destroyed() {
     this.clearTimeout();
   }
-
 }
 </script>
 
@@ -452,46 +435,9 @@ export default {
   }
 
   .newspage-chart {
-    display: block;
-    position: relative;
-    padding: ( $padSpace / 2 ) 0;
+    padding: $padSpace;
     background-color: $lineColor;
     border-radius: $lineJoin;
-
-    .newspage-chart-list {
-      display: flex;
-      flex-direction: row;
-      align-items: flex-end;
-      justify-content: space-around;
-      list-style: none;
-      height: 100px;
-      overflow: hidden;
-
-      & > li {
-        display: block;
-        margin: 0;
-        padding: 0;
-        text-align: center;
-
-        & > div {
-          margin: 0 auto;
-          width: 4px;
-          min-height: 10px;
-          background-color: $colorSecondary;
-          border-radius: $lineJoin;
-        }
-        & > span {
-          display: block;
-          font-size: 70%;
-          line-height: 1em;
-          margin: .3em 0 0 0;
-
-          &:hover {
-            color: lighten( $colorDocumentText, 20% );
-          }
-        }
-      }
-    }
   }
 
   .newspage-list {
