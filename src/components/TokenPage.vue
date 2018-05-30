@@ -80,7 +80,8 @@
     <!-- draw line chart for symbol using candle data -->
     <div class="tokenpage-chart">
       <div class="text-label text-clip">Price Graph (7d)</div>
-      <LineChart :symbol="data.symbol"></LineChart>
+      <Spinner ref="chartSpinner"></Spinner>
+      <LineChart :width="chartWidth" :height="chartHeight" :values="chartData" v-if="chartData.length"></LineChart>
     </div>
 
     <hr />
@@ -110,6 +111,7 @@ import TokenIcon from './TokenIcon.vue';
 import LineChart from './LineChart.vue';
 import AlarmsList from './AlarmsList.vue';
 import NewsList from './NewsList.vue';
+import utils from '../modules/utils';
 
 // component
 export default {
@@ -137,6 +139,10 @@ export default {
       usdPrice: 0,
       alarmsCount: 0,
       newsCount: 0,
+      // line chart
+      chartWidth: 800,
+      chartHeight: 100,
+      chartData: [],
     }
   },
 
@@ -154,28 +160,28 @@ export default {
     },
 
     // spinner helper
-    spinner( method, message ) {
-      if ( !this.$refs.globalSpinner || !method ) return;
-      this.$refs.globalSpinner[ method ]( message );
+    spinner( name, method, message ) {
+      if ( !this.$refs[ name ] || !method ) return;
+      this.$refs[ name ][ method ]( message );
     },
 
     // fetch token data from api
     fetchGlobalData() {
       const endpoint = 'https://coincap.io/page/'+ this.data.token;
 
-      this.spinner( 'show', 'loading market data' );
+      this.spinner( 'globalSpinner', 'show', 'loading market data' );
       this.$ajax.get( endpoint, {
         type: 'json',
         cache: 3600,
 
         error: ( xhr, status, error ) => {
           this.$bus.emit( 'showNotice', error, 'warning' );
-          this.spinner( 'error', 'error fetching market data' );
+          this.spinner( 'globalSpinner', 'error', 'error fetching market data' );
         },
 
         success: ( xhr, status, response ) => {
-          if ( !response || !response.id ) return this.spinner( 'error', 'No data for '+ this.data.token );
-          this.spinner( 'hide' );
+          if ( !response || !response.id ) return this.spinner( 'globalSpinner', 'error', 'No data for '+ this.data.token );
+          this.spinner( 'globalSpinner', 'hide' );
 
           if ( response.rank )         this.coinRank    = response.rank;
           if ( response.display_name ) this.coinName    = response.display_name;
@@ -186,11 +192,41 @@ export default {
         },
       });
     },
+
+    // fetch last 24h candle data
+    fetchChartData() {
+      const symbol = this.data.symbol;
+      const interval = '1h';
+      const limit = '168';
+      const endpoint = 'https://api.binance.com/api/v1/klines?symbol='+ symbol +'&interval='+ interval +'&limit='+ limit;
+
+      this.spinner( 'chartSpinner', 'show', 'loading chart data' );
+      this.$ajax.get( endpoint, {
+        type: 'json',
+        cache: 3600,
+
+        error: ( xhr, status, error ) => {
+          this.$bus.emit( 'showNotice', error, 'warning' );
+          this.spinner( 'chartSpinner', 'error', 'error fetching chart data' );
+        },
+
+        success: ( xhr, status, response ) => {
+          if ( !Array.isArray( response ) ) return this.spinner( 'chartSpinner', 'error', 'No chart for '+ symbol );
+          this.spinner( 'chartSpinner', 'hide' );
+
+          this.chartData = [];
+          for ( let i = 0; i < response.length; ++i ) {
+            this.chartData.push( parseFloat( response[ i ][ 4 ] ) ); // close price
+          }
+        },
+      });
+    },
   },
 
   // component mounted
   mounted() {
     this.fetchGlobalData();
+    this.fetchChartData();
   },
 
 }
@@ -211,6 +247,10 @@ export default {
       font-size: 200%;
       line-height: 1.2em;
     }
+  }
+
+  .tokenpage-chart {
+    .polyline { stroke: $colorPrimary; }
   }
 }
 </style>
