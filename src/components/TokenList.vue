@@ -21,7 +21,7 @@
           </div>
 
           <!-- control heading -->
-          <div class="tokenlist-controls-title push-right text-clip text-grey text-center flex-1">
+          <div class="tokenlist-controls-title push-right text-clip text-grey text-center flex-1 if-medium">
             <big>24h Change</big>
           </div>
 
@@ -122,13 +122,17 @@
             <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}% {{ p.arrow }}</span>
           </div>
 
-          <div class="tokenlist-item-price text-clip flex-2">
+          <div class="tokenlist-item-price text-clip flex-1">
             <big class="text-nowrap text-bright">{{ p.close | toSats }}</big>
             <span class="text-default">{{ p.asset }}</span> <br />
             <span class="text-nowrap color">{{ p.sign }}{{ p.change | toSats }}</span>
           </div>
 
-          <div class="tokenlist-item-trades text-right text-clip flex-1">
+          <div class="tokenlist-item-chart flex-1 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
+            <LineChart :width="300" :height="30" :values="p.history"></LineChart>
+          </div>
+
+          <div class="tokenlist-item-trades text-right text-clip flex-1 if-large">
             <big class="text-nowrap text-bright">{{ p.trades | toCommas }}</big> <br />
             <span class="text-default">Trades</span>
           </div>
@@ -163,13 +167,14 @@
 import Spinner from './Spinner.vue';
 import TokenIcon from './TokenIcon.vue';
 import Dropdown from './Dropdown.vue';
+import LineChart from './LineChart.vue';
 import utils from '../modules/utils';
 
 // component
 export default {
 
   // component list
-  components: { Spinner, TokenIcon, Dropdown },
+  components: { Spinner, TokenIcon, Dropdown, LineChart },
 
   // component props
   props: {
@@ -283,11 +288,18 @@ export default {
       let count = this.listLeft;
       let asset = this.filterAsset;
       return utils.noun( count, asset +' pair', asset +' pairs' );
-    }
+    },
   },
 
   // custom mounted
   methods: {
+
+    // build token history chart points for SVG polyline
+    chartPoints( width, height, values ) {
+      let data = utils.points( width, height, values );
+      let out  = data.map( d => d.x +','+ d.y );
+      return out.join( ' ' );
+    },
 
     // set list limit value
     limitList( num ) {
@@ -308,7 +320,7 @@ export default {
   // waiting for socket
   mounted() {
     if ( !this.$refs.spinner ) return;
-    // this.$refs.spinner.show( 'Connecting to socket API' );
+    this.$refs.spinner.show( 'Connecting to socket API' );
   }
 }
 </script>
@@ -333,13 +345,6 @@ export default {
 
       &:hover {
         background-color: lighten( $colorDocument, 6% );
-      }
-    }
-
-    .tokenlist-controls-title {
-      display: none;
-      @media #{$screenMedium} {
-        display: block;
       }
     }
   }
@@ -368,11 +373,14 @@ export default {
       .tokenlist-item-volume {
         margin-top: .1em;
       }
-      .tokenlist-item-trades {
-        display: none;
-        @media #{$screenMedium} {
-          display: block;
-        }
+      .tokenlist-item-chart {
+        padding: .5em;
+        background-color: rgba( #000, 0.2 );
+        border-radius: $lineJoin;
+
+        .polyline { stroke: $colorDefault; }
+        &.gain .polyline { stroke: $colorGain; }
+        &.loss .polyline { stroke: $colorLoss; }
       }
     }
   }
