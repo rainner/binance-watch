@@ -68,7 +68,7 @@ module.exports = class Stream {
       let list   = JSON.parse( e.data );
       let output = [];
 
-      // 1. process data for each symbol and add to cache
+      // process data for each symbol and add to cache
       for ( let i = 0; i < list.length; ++i ) {
         let item        = list[ i ];
         let symbol      = String( item.s );
@@ -83,15 +83,23 @@ module.exports = class Stream {
         let assetVolume = Math.round( item.q );
         let sign        = ( percent >= 0 ) ? '+' : '';
         let arrow       = ( percent >= 0 ) ? '▲' : '▼';
+        let history     = [];
 
+        // keep up to 100 close values in the history for each symbol
+        if ( cache.hasOwnProperty( symbol ) ) {
+          history = cache[ symbol ].history;
+          if ( history.length > 100 ) history = history.slice( history.length - 100 );
+        }
+        history.push( close );
+
+        // buils final symbol data
         cache[ symbol ] = symbolData( symbol, {
-          open, high, low, close, change, percent, trades, tokenVolume, assetVolume, sign, arrow
+          open, high, low, close, change, percent, trades, tokenVolume, assetVolume, sign, arrow, history
         });
       }
-      // 2. add data from cache to output list
-      Object.keys( cache ).forEach( symbol => {
-        output.push( cache[ symbol ] );
-      });
+
+      // convert cache object to final prices list for each symbol
+      Object.keys( cache ).forEach( symbol => { output.push( cache[ symbol ] ) } );
       callback( output );
     });
   }
