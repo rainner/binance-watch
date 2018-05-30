@@ -24,7 +24,7 @@
           <hr />
 
           <!-- form inputs -->
-          <form action="#" class="watchform-controls flex-row flex-top flex-space flex-wrap">
+          <div class="watchform-controls flex-row flex-top flex-space flex-wrap">
 
             <div class="form-input text-nowrap push-bottom">
               <div class="text-grey text-nowrap">Asset: <i class="icon-down-open"></i></div>
@@ -87,7 +87,7 @@
                 {{ active ? elapsed : 'START' }}
             </button>
 
-          </form>
+          </div>
 
         </div>
       </div>
@@ -226,7 +226,8 @@ export default {
     },
 
     // toggle price watch
-    toggleWatch() {
+    toggleWatch( e ) {
+      e && e.preventDefault();
       if ( this.active ) { this.stopWatch(); }
       else { this.startWatch(); }
     },
