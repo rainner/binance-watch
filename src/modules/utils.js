@@ -167,6 +167,25 @@ module.exports = {
     return { change, percent, sign, arrow, color };
   },
 
+  // calc chart points for given dimensions and values
+  points( width, height, values ) {
+    let min = values.reduce( ( min, val ) => val < min ? val : min, values[ 0 ] );
+    let max = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
+    let len = values.length;
+    let range = max - min;
+    let gap = width / ( len - 1 );
+    let out = [];
+
+    for ( let i = 0; i < values.length; ++i ) {
+      let d = values[ i ];
+      let val = 2 * ( ( d - min ) / range - 0.5 );
+      let x = i * gap;
+      let y = -val * height / 2 * 0.9 + height / 2;
+      out.push( { x, y } );
+    }
+    return out;
+  },
+
   // look over anything with a custom callback: loop( data, ( key, val ) => { ... } )
   loop( data, callback ) {
     if ( Array.isArray( data ) ) {
