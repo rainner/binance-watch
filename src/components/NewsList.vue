@@ -43,7 +43,7 @@ export default {
       let list = this.news.list;
 
       if ( this.data.token ) {
-        let reg = new RegExp( '\\b'+ this.data.token, 'gi' );
+        let reg = new RegExp( '\\b'+ this.data.token +'\\b', 'g' );
         list = list.filter( n => n.title.search( reg ) >= 0 );
       }
       this.$emit( 'listCount', list.length );
