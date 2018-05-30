@@ -156,7 +156,7 @@ export default {
     // topbar logo
     .topbar-logo {
       h1 {
-        font-size: 24px;
+        font-size: 150%;
         line-height: 1em;
         text-transform: uppercase;
       }
