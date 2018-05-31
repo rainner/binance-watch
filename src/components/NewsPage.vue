@@ -30,22 +30,10 @@
 
             <!-- filter menu -->
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft" v-text="filterByLabel" title="Filter Type" v-tooltip></button>
+              <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft">{{ filterLabel }}</button>
               <ul slot="list">
-                <li class="clickable" @click="filterBy( 'reddit' )">
-                  <i class="icon-feedback iconLeft"></i> Reddit Posts
-                </li>
-                <li class="clickable" @click="filterBy( 'coinlib' )">
-                  <i class="icon-feedback iconLeft"></i> Coinlib News
-                </li>
-                <li class="clickable" @click="filterBy( 'binance' )">
-                  <i class="icon-chart-line iconLeft"></i> Binance News
-                </li>
-                <li class="clickable" @click="filterBy( 'events' )">
-                  <i class="icon-calendar iconLeft"></i> Upcoming Events
-                </li>
-                <li class="clickable" @click="filterBy( '' )">
-                  <i class="icon-list-add iconLeft"></i> Show All
+                <li class="clickable" v-for="s in newsSources" :key="s.key" @click="filterBy( s.key )">
+                  <i class="icon-feedback iconLeft"></i> {{ s.name }}
                 </li>
               </ul>
             </Dropdown>
@@ -69,7 +57,7 @@
         </div>
 
         <div class="newspage-chart push-bottom" v-if="filterList.length">
-          <BarChart :data="chartData" :heading="'Most Active Tokens'" @click="chartClick"></BarChart>
+          <BarChart :data="chartData" @click="chartClick"></BarChart>
         </div>
 
         <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="n in filterList" :key="n.id">
@@ -106,9 +94,10 @@ export default {
   // component props
   props: {
     options: { type: Object, default() { return {} } },
-    scrollDir: { type: String, default: '', required: false },
-    scrollPos: { type: Number, default: 0, required: false },
-    priceData: { type: Array, default: [], required: false },
+    scrollDir: { type: String, default: '' },
+    scrollPos: { type: Number, default: 0 },
+    priceData: { type: Array, default: [] },
+    coinsData: { type: Object, default() { return {} } },
   },
 
   // component data
@@ -118,6 +107,7 @@ export default {
       lastList: [],
       newsList: [],
       profileData: {},
+      chartData: [],
       // count data
       totalCount: 0,
       newCount: 0,
@@ -131,9 +121,16 @@ export default {
       refetchTime: 300,
       proxyDomain: '',
       working: 0,
+      loaded: false,
       sto: null,
-      // word count chart data
-      chartData: [],
+      // news sources data
+      newsSources: [
+        { key: 'reddit',   name: 'Crypto Subreddit',       cb: 'fetchReddit' },
+        { key: 'ccnews',   name: 'Crypto News (CCN)',      cb: 'fetchCCN' },
+        { key: 'events',   name: 'Crypto Calendar',        cb: 'fetchEvents' },
+        { key: 'binance',  name: 'Binance Announcements',  cb: 'fetchBinance' },
+        { key: '',         name: 'All News Sources',       cb: '' },
+      ],
     }
   },
 
@@ -144,11 +141,15 @@ export default {
     working: function() {
       // still fetching...
       if ( this.working > 0 ) return;
+
       // show notification when something new gets added to the news list
       if ( this.lastCount && this.lastCount !== this.totalCount ) {
         let n = this.newsList[ 0 ];
         this.$notify.add( 'Latest News ('+ this.lastCount +')', n.title, null, n.link );
       }
+      // first run done
+      this.loaded = true;
+      this.updateChart();
     }
   },
 
@@ -166,26 +167,19 @@ export default {
       }
       // filter by search text
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
-        let reg = new RegExp( '\\b'+ this.filterSearch, 'gi' );
-        list = list.filter( n => n.title.search( reg ) >= 0 );
+        list = utils.search( list, 'title', this.filterSearch );
       }
       // limit list to a number of entries
       if ( limit && limit < list.length ) {
         list = list.slice( 0, limit );
       }
-      this.updateChart();
       return list;
     },
 
     // sort-by label for buttons, etc
-    filterByLabel() {
-      switch ( this.filterType ) {
-        case 'reddit'  : return 'Reddit Posts';
-        case 'coinlib' : return 'Coinlib News';
-        case 'binance' : return 'Binance News';
-        case 'events'  : return 'Upcoming Events';
-        default        : return 'All Entries';
-      }
+    filterLabel() {
+      let s = this.newsSources.filter( s => s.key === this.filterType ).shift();
+      return s.name || '';
     },
   },
 
@@ -201,10 +195,9 @@ export default {
     // fetch all news
     fetchAll() {
       this.lastCount = 0;
-      this.fetchEvents();
-      this.fetchBinance();
-      this.fetchCoinlib();
-      this.fetchReddit();
+      this.newsSources.forEach( s => {
+        if ( s.cb ) this[ s.cb ]();
+      });
     },
 
     // auto fetch news on interval
@@ -241,7 +234,10 @@ export default {
       let id   = utils.randString( 20 );
       let time = Date.now();
 
-      this.newsList.unshift( { id, time, type, source, title, link } );
+      // new entries go on top of list, first time goes on bottom in order as loaded
+      if ( this.loaded ) { this.newsList.unshift( { id, time, type, source, title, link } ); }
+      else { this.newsList.push( { id, time, type, source, title, link } ); }
+
       this.newsList   = this.newsList.slice( 0, this.maxCount );
       this.totalCount = this.newsList.length;
       this.newCount   = ( this.newCount >= this.totalCount ) ? this.totalCount : ( this.newCount + 1 );
@@ -274,23 +270,28 @@ export default {
       });
     },
 
-    // fetch news data from coinlib
-    fetchCoinlib() {
-      const type = 'coinlib';
-      const endpoint = 'https://coinlib.io/news';
+     // fetch news data from newsapi
+    fetchCCN() {
+      const type = 'ccnews';
+      const endpoint = 'https://www.ccn.com/wp-admin/admin-ajax.php';
       const source = utils.parseUrl( endpoint, 'host' );
 
+      const fd = new FormData()
+      fd.append( 'action', 'loadmore' );
+      fd.append( 'query', 'a:3:{s:3:"cat";i:132;s:14:"posts_per_page";i:30;s:5:"order";s:4:"DESC";}' );
+
       this.working++;
-      this.$ajax.get( endpoint, {
+      this.$ajax.post( endpoint, {
         type: 'document',
+        data: fd,
         done: ( xhr, status, dom ) => { this.working--; },
         success: ( xhr, status, dom ) => {
 
           const list = scraper( dom, {
-            items  : '.news .news-post',
+            items  : 'article',
             params : {
-              title : '.news-widget > .news-widget-title',
-              link  : '.news-widget > a',
+              title : '.entry-title > a',
+              link  : '.entry-title > a',
             }
           });
 
@@ -308,7 +309,7 @@ export default {
     fetchBinance() {
       const type = 'binance';
       const endpointDomain = 'support.binance.com';
-      const endpoint = 'https://'+ endpointDomain +'/hc/en-us/sections/115000106672-New-Listings';
+      const endpoint = 'https://'+ endpointDomain +'/hc/en-us/categories/115000056351-Announcements';
       const source = utils.parseUrl( endpoint, 'host' );
 
       this.working++;
@@ -369,22 +370,27 @@ export default {
 
     // on chart column click
     chartClick( data ) {
-      this.filterSearch = data.label;
+      this.filterSearch = data.search;
     },
 
     // draw token chart from profile data
     updateChart() {
-      let data = [];
+      let data   = [];
       let tokens = {};
-      this.priceData.forEach( p => { tokens[ p.token ] = 0 } );
 
-      Object.keys( tokens ).forEach( t => {
-        let reg = new RegExp( '\\b'+ t +'\\b', 'g' );
-        let count = this.newsList.filter( n => n.title.search( reg ) >= 0 ).length;
-        if ( count < 2 ) return;
-        data.push( { label: t, value: count } );
+      // pair token from priceData with name from coinsData
+      this.priceData.forEach( p => {
+        if ( !this.coinsData.hasOwnProperty( p.token ) ) return;
+        tokens[ p.token ] = this.coinsData[ p.token ];
       });
-      data.sort( ( a, b ) => b.value - a.value );
+      // check token symbol and name against all loaded news titles
+      Object.keys( tokens ).forEach( t => {
+        let label  = t;
+        let search = t +'|'+ tokens[ t ];
+        let value  = utils.search( this.newsList, 'title', search ).length;
+        if ( value > 1 ) data.push( { label, value, search } );
+      });
+      // update data
       this.chartData = data;
     },
   },
