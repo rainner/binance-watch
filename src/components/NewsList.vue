@@ -25,6 +25,8 @@
 </template>
 
 <script>
+import utils from '../modules/utils';
+
 // component
 export default {
 
@@ -43,8 +45,7 @@ export default {
       let list = this.news.list;
 
       if ( this.data.token ) {
-        let reg = new RegExp( '\\b'+ this.data.token +'\\b', 'g' );
-        list = list.filter( n => n.title.search( reg ) >= 0 );
+        list = utils.search( list, 'title', this.data.token +'|'+ this.data.name );
       }
       this.$emit( 'listCount', list.length );
       return list;
