@@ -1,5 +1,5 @@
 <template>
-  <section class="barchart-wrap">
+  <section class="barchart-wrap" :style="{ 'min-height': height +'px' }">
     <div class="barchart-heading" v-if="heading">{{ heading }}</div>
     <div class="barchart-lines"><hr /><hr /><hr /></div>
     <div class="barchart-graph">
@@ -36,15 +36,14 @@ export default {
       let max = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
 
       for ( let i = 0; i < values.length; ++i ) {
-        let label  = this.data[ i ].label;
-        let value  = this.data[ i ].value;
+        let data   = this.data[ i ];
         let num    = values[ i ];
         let ratio  = ( max > 0 ) ? ( num / max ) : 0.1;
         let size   = ( ratio * this.height );
         let clss   = 'bg-bright';
         if ( num > ( max / 2 ) ) { clss = 'bg-secondary'; }
         if ( num == max ) { clss = 'bg-primary'; }
-        list.push( { label, value, size, clss } );
+        list.push( Object.assign( data, { size, clss } ) );
       }
       return list;
     }
