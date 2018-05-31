@@ -87,8 +87,8 @@ export default {
   z-index: ( $zindexModals - 1 );
 
   .modal-container {
-    margin: 0 $padSpace;
-    width: 100%;
+    margin: 0 auto;
+    width: calc( 100vw - ( #{$padSpace} * 3 ) );
     max-width: $sizeMedium;
     background-color: $colorDocumentLight;
     border-radius: $lineJoin;
