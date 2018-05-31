@@ -56,6 +56,7 @@
         :scrollDir="scrollDir"
         :scrollPos="scrollPos"
         :priceData="priceData"
+        :coinsData="coinsData"
         @newsData="updateNewsData"
         @setRoute="setRoute">
       </NewsPage>
@@ -177,6 +178,7 @@ export default {
       historyData: [],
       alarmsData: {},
       newsData: {},
+      coinsData: {},
       // page and modal related
       mainComp: '',
       modalComp: '',
@@ -273,10 +275,16 @@ export default {
     },
 
     // when live price data is recieved
-    onTickerData( priceData ) {
-      this.priceData = priceData;
-      this.priceData.forEach( p => {
+    onTickerData( list ) {
+      let total = list.length;
 
+      for ( let i = 0; i < total; ++i ) {
+        let p = list[ i ];
+
+        // update symbol name from coinsData
+        if ( this.coinsData.hasOwnProperty( p.token ) ) {
+          p.name = this.coinsData[ p.token ];
+        }
         // if modal is open for a symbol, pass latest price data to it
         if ( this.modalData && this.modalData.symbol && this.modalData.symbol === p.symbol ) {
           this.modalData = p;
@@ -285,7 +293,8 @@ export default {
         if ( this.assetsList.indexOf( p.asset ) < 0 ) {
           this.assetsList.push( p.asset );
         }
-      });
+      }
+      this.priceData = list;
     },
 
     // when socket connection opens
@@ -455,6 +464,21 @@ export default {
         error: ( xhr, status, error ) => { console.warn( 'Mailgun', status, ':', error ) },
       });
     },
+
+    // fetch list of all tokens and their names from API
+    fetchCoinsData() {
+      this.$ajax.get( 'https://coincap.io/map', {
+        type: 'json',
+        done: ( xhr, status, list ) => {
+          if ( !Array.isArray( list ) ) return;
+          for ( let i = 0; i < list.length; ++i ) {
+            let token = String( list[ i ].symbol || '' );
+            let name  = String( list[ i ].name || '' ).replace( /[^\w]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
+            if ( token && name ) this.coinsData[ token ] = name;
+          }
+        },
+      });
+    },
   },
 
   // init app data and handlers
@@ -462,6 +486,7 @@ export default {
     this.loadOptions();
     this.setupRoutes();
     this.setupMailer();
+    this.fetchCoinsData();
     // config global shared objects
     this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
     this.$notify.setOptions( { soundEnabled: this.options.playSound } );
