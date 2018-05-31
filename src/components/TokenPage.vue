@@ -131,7 +131,7 @@ export default {
     return {
       ready: true,
       coinRank: 0,
-      coinName: this.data.token,
+      coinName: this.data.name,
       marketCap: 0,
       totalSupply: 0,
       totalVolume: 0,
