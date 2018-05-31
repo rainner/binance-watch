@@ -118,14 +118,16 @@
           </div>
 
           <div class="tokenlist-item-symbol text-clip flex-1">
-            <big class="text-bright-hover">{{ p.token }}</big> <br />
-            <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}% {{ p.arrow }}</span>
+            <big class="text-bright">{{ p.token }}</big>
+            <span class="text-nowrap text-default">{{ p.arrow }}</span> <br />
+            <span class="text-default">{{ p.name }}</span>
           </div>
 
           <div class="tokenlist-item-price text-clip flex-1">
             <big class="text-nowrap text-bright">{{ p.close | toSats }}</big>
             <span class="text-default">{{ p.asset }}</span> <br />
-            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toSats }}</span>
+            <span class="text-nowrap">{{ p.sign }}{{ p.change | toSats }}</span>
+            <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}%</span>
           </div>
 
           <div class="tokenlist-item-chart flex-1 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
@@ -244,8 +246,7 @@ export default {
       }
       // filter by search text
       if ( this.searchToken && this.searchToken.length > 1 ) {
-        let reg = new RegExp( '\\b'+ this.searchToken, 'gi' );
-        list = list.filter( p => p.token.search( reg ) >= 0 );
+        list = utils.search( list, 'token', this.searchToken );
       }
       // compute list totals before cutting the list
       let total = list.length;
