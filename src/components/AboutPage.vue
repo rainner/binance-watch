@@ -6,7 +6,7 @@
         Binance Price Watch Web App <i class="icon-down-open"></i>
       </div>
       <p>
-        This application connects to the <a href="https://www.binance.com/?ref=12268078" target="_blank">Binance.com</a>
+        This application connects to the <a class="text-primary-hover" @click="goBinance" href="#">Binance.com</a>
         public <a href="https://github.com/binance-exchange/binance-official-api-docs" target="_blank">API</a>
         to get live 24h price change data for all crypto trading pairs on their platform and allows you to set
         custom alerts or watch for price change in real time and get desktop notifications when something triggers
@@ -50,20 +50,24 @@
           <span>Hot upcoming cryptocurrency events and news.</span>
         </li>
         <li>
-          <a href="https://www.reddit.com/r/CryptoCurrency" target="_blank">CryptoCurrency on Reddit</a> &nbsp;
+          <a href="https://www.reddit.com/r/CryptoCurrency" target="_blank">Crypto on Reddit</a> &nbsp;
           <span>The CryptoCurrency subreddit on Reddit.com.</span>
         </li>
         <li>
-          <a href="https://coinlib.io/news" target="_blank">Coinlib News</a> &nbsp;
-          <span>Latest cryptocurrency news and posts.</span>
+          <a href="https://www.ccn.com/" target="_blank">Crypto News (CCN)</a> &nbsp;
+          <span>Latest CryptoCurrency news from the CCN site.</span>
         </li>
         <li>
-          <a href="https://github.com/cjdowner/cryptocurrency-icons" target="_blank">Crypto Icons</a> &nbsp;
-          <span>Nice looking crypto icons.</span>
+          <a href="https://coinlib.io/news" target="_blank">Coinlib News</a> &nbsp;
+          <span>Latest Aggregated crypto news from the Coinlib site.</span>
         </li>
         <li>
           <a href="https://www.mailgun.com/" target="_blank">Mailgun API</a> &nbsp;
           <span>Mailgun API for outgoing notifications by e-mail.</span>
+        </li>
+        <li>
+          <a href="https://github.com/cjdowner/cryptocurrency-icons" target="_blank">Crypto Icons</a> &nbsp;
+          <span>Nice looking crypto icons.</span>
         </li>
       </ul>
     </div>
@@ -94,12 +98,14 @@
 // component
 export default {
 
-  // component data
-  data() {
-    return {
-      // ...
+  methods: {
+
+    // lick to binance site with ref id added
+    goBinance( e ) {
+      e.preventDefault();
+      this.$bus.emit( 'handleClick', 'binance', '/', '_blank' );
     }
-  },
+  }
 
 }
 </script>
