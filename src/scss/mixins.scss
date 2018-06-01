@@ -21,24 +21,15 @@
   white-space: nowrap;
 }
 
-// appearance of list rows
-@mixin listRow {
-  border-top: 1px $lineStyle lighten( $colorDocument, 4% );
-  background-color: lighten( $colorDocument, 10% );
-  color: lighten( $colorDocumentText, 10% );
-
-  &:hover {
-    background-color: lighten( $colorDocument, 6% );
-    color: lighten( $colorDocumentText, 4% );
-  }
-  &:first-of-type {
-    border-top: none;
-  }
-}
-
-// add border accent to containers
+// add light border to the bottom of containers
 @mixin borderAccent {
   border-bottom: $lineWidth solid rgba( 0, 0, 0, 0.1 );
+}
+
+// add light border to sides of containers
+@mixin borderEffect {
+  border-left: $lineWidth $lineStyle $lineColor;
+  border-right: $lineWidth $lineStyle $lineColor;
 }
 
 // common top header bar styles
