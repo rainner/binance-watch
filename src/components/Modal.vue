@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="close">
+  <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="$emit( 'onDismiss' )">
     <section class="modal-container" ref="container" @click.stop>
       <header class="modal-header">
         <div class="modal-title text-clip">{{ title }}</div>
-        <button class="modal-close icon-close" @click.stop="close"></button>
+        <button class="modal-close icon-close" @click.stop="$emit( 'onDismiss' )"></button>
       </header>
       <main class="modal-body">
         <slot></slot>
@@ -91,6 +91,7 @@ export default {
     width: calc( 100vw - ( #{$padSpace} * 3 ) );
     max-width: $sizeMedium;
     background-color: $colorDocumentLight;
+    @include borderEffect;
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
     transform: scale( 0.5 );
