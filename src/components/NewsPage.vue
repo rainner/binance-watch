@@ -18,7 +18,7 @@
           </div>
 
           <!-- control heading -->
-          <div class="newspage-controls-title push-right text-clip text-grey text-center flex-1">
+          <div class="newspage-controls-title push-right text-clip text-center flex-1">
             <big>News &amp; Events ({{ newsList.length }})</big>
           </div>
 
@@ -26,7 +26,13 @@
           <div class="newspage-controls-filters text-nowrap">
 
             <!-- refectch news btn -->
-            <button class="form-btn bg-grey-hover icon-reload iconLeft" :disabled="working > 0" @click="fetchAll">Re-fetch</button> &nbsp;
+            <button
+              class="form-btn bg-grey-hover icon-reload iconLeft"
+              :class="{ 'iconSpin': working }"
+              :disabled="working"
+              @click="fetchAll">
+              Fetch
+            </button> &nbsp;
 
             <!-- filter menu -->
             <Dropdown>
@@ -36,6 +42,17 @@
                   <i class="icon-feedback iconLeft"></i> {{ s.name }}
                 </li>
               </ul>
+            </Dropdown> &nbsp;
+
+            <!-- options menu -->
+            <Dropdown>
+              <button slot="trigger" class="form-btn bg-grey-hover icon-config"></button>
+              <div slot="list">
+                <div class="form-label">News &amp; Notifications Options</div>
+                <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.autoRefetch" @change="applyOptions"></Toggle>
+                <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.notifyNews" @change="applyOptions"></Toggle>
+                <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.emailNews" @change="applyOptions"></Toggle>
+              </div>
             </Dropdown>
 
           </div>
@@ -64,11 +81,8 @@
           <div class="flex-1 push-right text-clip">
             <a class="icon-feedback iconLeft" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
           </div>
-          <div class="push-right text-nowrap if-medium">
+          <div class="text-nowrap if-medium">
             <span class="text-grey">{{ n.source }}</span>
-          </div>
-          <div>
-            <a class="text-pill icon-link iconLeft" :href="n.link" target="_blank" rel="noopener">Source</a>
           </div>
         </div>
 
@@ -82,6 +96,7 @@
 // modules
 import Dropdown from './Dropdown.vue';
 import BarChart from './BarChart.vue';
+import Toggle from './Toggle.vue';
 import scraper from '../modules/scraper';
 import utils from '../modules/utils';
 
@@ -89,7 +104,7 @@ import utils from '../modules/utils';
 export default {
 
   // component list
-  components: { Dropdown, BarChart },
+  components: { Dropdown, BarChart, Toggle },
 
   // component props
   props: {
@@ -103,6 +118,15 @@ export default {
   // component data
   data() {
     return {
+      // news sources data
+      newsSources: [
+        { key: 'binance',  name: 'Binance News',       cb: 'fetchBinance' },
+        { key: 'events',   name: 'Crypto Calendar',    cb: 'fetchEvents' },
+        { key: 'reddit',   name: 'Crypto Subreddit',   cb: 'fetchReddit' },
+        { key: 'ccnews',   name: 'Crypto News (CCN)',  cb: 'fetchCCN' },
+        { key: 'coinlib',  name: 'Coinlib News',       cb: 'fetchCoinlib' },
+        { key: '',         name: 'All Sources',        cb: '' },
+      ],
       // news data
       lastList: [],
       newsList: [],
@@ -120,37 +144,25 @@ export default {
       // other
       refetchTime: 300,
       proxyDomain: '',
-      working: 0,
+      working: false,
       loaded: false,
       sto: null,
-      // news sources data
-      newsSources: [
-        { key: 'reddit',   name: 'Crypto Subreddit',       cb: 'fetchReddit' },
-        { key: 'ccnews',   name: 'Crypto News (CCN)',      cb: 'fetchCCN' },
-        { key: 'events',   name: 'Crypto Calendar',        cb: 'fetchEvents' },
-        { key: 'binance',  name: 'Binance Announcements',  cb: 'fetchBinance' },
-        { key: '',         name: 'All News Sources',       cb: '' },
-      ],
     }
   },
 
   // watch
   watch: {
 
-    // watch api fetch counter
-    working: function() {
-      // still fetching...
-      if ( this.working > 0 ) return;
-
-      // show notification when something new gets added to the news list
-      if ( this.lastCount && this.lastCount !== this.totalCount ) {
-        let n = this.newsList[ 0 ];
-        this.$notify.add( 'Latest News ('+ this.lastCount +')', n.title, null, n.link );
-      }
-      // first run done
-      this.loaded = true;
+    // wait for socket price data to load and update chart
+    priceData: function() {
+      if ( this.chartData.length ) return;
       this.updateChart();
-    }
+    },
+
+    // watch for loaded coins data
+    coinsData: function() {
+      this.updateChart();
+    },
   },
 
   // computed methods
@@ -186,6 +198,16 @@ export default {
   // custom methods
   methods: {
 
+    // apply options
+    applyOptions() {
+      this.$emit( 'saveOptions' );
+    },
+
+    // set filter type
+    filterBy( type ) {
+      this.filterType = type;
+    },
+
     // reset newCount
     resetCount() {
       this.newCount = 0;
@@ -194,36 +216,61 @@ export default {
 
     // fetch all news
     fetchAll() {
+      let plist = [];
+      this.working = true;
       this.lastCount = 0;
       this.newsSources.forEach( s => {
-        if ( s.cb ) this[ s.cb ]();
+        if ( s.cb ) plist.push( this[ s.cb ]() );
       });
+      Promise.all( plist ).then( () => {
+        this.loaded = true;
+        this.working = false;
+        this.emitData();
+      });
+    },
+
+    // clear autofetch timeout
+    clearTimeout() {
+      if ( this.sto ) clearTimeout( this.sto );
     },
 
     // auto fetch news on interval
     autoFetch( force ) {
-      if ( this.sto ) clearTimeout( this.sto );
+      this.clearTimeout();
       this.sto = setTimeout( this.autoFetch, 1000 * this.refetchTime );
       if ( !this.options.autoRefetch && !force ) return;
       this.fetchAll();
     },
 
-    // clear fetch timeout intervals
-    clearTimeout() {
-      if ( this.sto ) clearTimeout( this.sto );
-    },
-
     // emit news data
     emitData() {
-      let total = this.totalCount;
       let count = this.newCount;
+      let total = this.totalCount;
       let list  = this.newsList.slice();
-      this.$emit( 'newsData', { total, count, list } );
-    },
 
-    // set filter type
-    filterBy( type ) {
-      this.filterType = type;
+      // when something new gets added to the news list...
+      if ( this.lastCount && this.lastCount !== this.totalCount ) {
+
+        // show notification of last news item added
+        if ( this.options.notifyNews ) {
+          let item  = this.newsList[ 0 ];
+          let title = 'Latest Crypto News ('+ this.lastCount +')';
+          this.$notify.add( title, item.title, null, item.link );
+        }
+
+        // send notification via e-mail if needed
+        if ( this.options.emailNews ) {
+          for ( let i = 0; i < this.lastCount; ++i ) {
+            let item  = this.newsList[ i ];
+            let title = 'Latest Crypto News:';
+            let info  = `<a href="${ item.link }"><b>${ item.title }</b></a></u>`;
+            this.$bus.emit( 'mailQueue', { title, info } );
+          }
+        }
+      }
+      this.lastCount = 0;
+      this.$emit( 'newsData', { count, total, list } );
+      this.updateChart();
     },
 
     // preppend new item to news list
@@ -246,131 +293,137 @@ export default {
 
     // fetch news data from cryptocurrencynews
     fetchReddit() {
-      const type = 'reddit';
-      const query = encodeURIComponent( 'flair:General-News' );
-      const endpoint = 'https://www.reddit.com/r/CryptoCurrency/search.json?q='+ query +'&restrict_sr=1&include_facets=0&include_over_18=1&sort=new&t=all';
-      const source = utils.parseUrl( endpoint, 'host' );
+      return new Promise( resolve => {
+        const query    = encodeURIComponent( 'flair:General-News' );
+        const params   = 'restrict_sr=1&include_facets=0&include_over_18=1&sort=new&t=all&q='+ query;
+        const endpoint = 'https://www.reddit.com/r/CryptoCurrency/search.json?'+ params;
 
-      this.working++;
-      this.$ajax.get( endpoint, {
-        type: 'json',
-        done: ( xhr, status, response ) => { this.working--; },
-        success: ( xhr, status, response ) => {
+        this.$ajax.get( endpoint, {
+          type: 'json',
+          done: ( xhr, status, response ) => {
+            if ( !response || !response.data || !response.data.children ) return;
+            let list = response.data.children;
 
-          if ( !response || !response.data || !response.data.children ) return;
-          let list = response.data.children;
-
-          for ( let i = 0; i < list.length; ++i ) {
-            let item = list[ i ].data;
-            if ( !item.title || !item.url ) continue;
-            this.addNews( type, source, item.title, item.url );
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ].data;
+              if ( !item.title || !item.url ) continue;
+              this.addNews( 'reddit', 'reddit.com', item.title, item.url );
+            }
+            resolve();
           }
-          this.emitData();
-        }
+        });
       });
     },
 
      // fetch news data from newsapi
     fetchCCN() {
-      const type = 'ccnews';
-      const endpoint = 'https://www.ccn.com/wp-admin/admin-ajax.php';
-      const source = utils.parseUrl( endpoint, 'host' );
+      return new Promise( resolve => {
+        const endpoint = 'https://www.ccn.com/wp-admin/admin-ajax.php';
+        const fdata    = new FormData();
 
-      const fd = new FormData()
-      fd.append( 'action', 'loadmore' );
-      fd.append( 'query', 'a:3:{s:3:"cat";i:132;s:14:"posts_per_page";i:30;s:5:"order";s:4:"DESC";}' );
+        fdata.append( 'action', 'loadmore' );
+        fdata.append( 'query', 'a:3:{s:3:"cat";i:132;s:14:"posts_per_page";i:30;s:5:"order";s:4:"DESC";}' );
 
-      this.working++;
-      this.$ajax.post( endpoint, {
-        type: 'document',
-        data: fd,
-        done: ( xhr, status, dom ) => { this.working--; },
-        success: ( xhr, status, dom ) => {
-
-          const list = scraper( dom, {
-            items  : 'article',
-            params : {
-              title : '.entry-title > a',
-              link  : '.entry-title > a',
+        this.$ajax.post( endpoint, {
+          type: 'document',
+          data: fdata,
+          done: ( xhr, status, dom ) => {
+            const list = scraper( dom, {
+              items  : 'article',
+              params : {
+                title : '.entry-title > a',
+                link  : '.entry-title > a',
+              }
+            });
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ];
+              if ( !item.title || !item.link ) continue;
+              this.addNews( 'ccnews', 'ccn.com', item.title, item.link );
             }
-          });
-
-          for ( let i = 0; i < list.length; ++i ) {
-            let item = list[ i ];
-            if ( !item.title || !item.link ) continue;
-            this.addNews( type, source, item.title, item.link );
+            resolve();
           }
-          this.emitData();
-        }
+        });
+      });
+    },
+
+    // fetch news from coinlib.io site
+    fetchCoinlib() {
+      return new Promise( resolve => {
+        const endpoint = 'https://coinlib.io/news';
+
+        this.$ajax.get( endpoint, {
+          type: 'document',
+          done: ( xhr, status, dom ) => {
+            const list = scraper( dom, {
+              items  : '.news-post',
+              params : {
+                title : '.news-content',
+                link  : '.news-widget > a',
+              }
+            });
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ];
+              if ( !item.title || !item.link ) continue;
+              this.addNews( 'coinlib', 'coinlib.io', item.title, item.link );
+            }
+            resolve();
+          }
+        });
       });
     },
 
     // fetch news from binance site
     fetchBinance() {
-      const type = 'binance';
-      const endpointDomain = 'support.binance.com';
-      const endpoint = 'https://'+ endpointDomain +'/hc/en-us/categories/115000056351-Announcements';
-      const source = utils.parseUrl( endpoint, 'host' );
+      return new Promise( resolve => {
+        const domain   = 'support.binance.com';
+        const endpoint = 'https://'+ domain +'/hc/en-us/categories/115000056351-Announcements';
 
-      this.working++;
-      this.$ajax.get( endpoint, {
-        type: 'document',
-        done: ( xhr, status, dom ) => { this.working--; },
-        success: ( xhr, status, dom ) => {
-
-          const list = scraper( dom, {
-            items  : '.article-list > .article-list-item ',
-            params : {
-              title : '.article-list-link', // innerHtml
-              link  : '.article-list-link', // (link) href
+        this.$ajax.get( endpoint, {
+          type: 'document',
+          done: ( xhr, status, dom ) => {
+            const list = scraper( dom, {
+              items  : '.article-list > .article-list-item',
+              params : {
+                title : '.article-list-link', // innerHtml
+                link  : '.article-list-link', // (link) href
+              }
+            });
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ];
+              if ( !item.title || !item.link ) continue;
+              item.link = item.link.replace( this.proxyDomain, domain );
+              this.addNews( 'binance', 'binance.com', item.title, item.link );
             }
-          });
-
-          for ( let i = 0; i < list.length; ++i ) {
-            let item = list[ i ];
-            if ( !item.title || !item.link ) continue;
-            item.link = item.link.replace( this.proxyDomain, endpointDomain );
-            this.addNews( type, source, item.title, item.link );
+            resolve();
           }
-          this.emitData();
-        }
+        });
       });
     },
 
     // fetch data from coinmarketcal
     fetchEvents() {
-      const type = 'events';
-      const atoken = 'ODM0OGY4MWFlNWU3M2I4YThiYTc2ZmQyMTIwMjkyMmQwNjRhZDk4MzA3NTgwODM4ZjkyYzcyZTg1N2NjNDA2Yw';
-      const endpoint = 'https://api.coinmarketcal.com/v1/events?access_token='+ atoken +'&page=1&max=20&showOnly=hot_events';
-      const source = utils.parseUrl( endpoint, 'host' );
+      return new Promise( resolve => {
+        const atoken   = 'ODM0OGY4MWFlNWU3M2I4YThiYTc2ZmQyMTIwMjkyMmQwNjRhZDk4MzA3NTgwODM4ZjkyYzcyZTg1N2NjNDA2Yw';
+        const endpoint = 'https://api.coinmarketcal.com/v1/events?access_token='+ atoken +'&page=1&max=20&showOnly=hot_events';
 
-      this.working++;
-      this.$ajax.get( endpoint, {
-        type: 'json',
-        done: ( xhr, status, list ) => { this.working--; },
-        success: ( xhr, status, list ) => {
+        this.$ajax.get( endpoint, {
+          type: 'json',
+          done: ( xhr, status, list ) => {
+            if ( !list || !Array.isArray( list ) ) return;
 
-          if ( !list || !Array.isArray( list ) ) return;
-
-          for ( let i = 0; i < list.length; ++i ) {
-            let item = list[ i ];
-            if ( !item.title || !item.coins || !item.description || !item.source ) continue;
-
-            let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
-            let date  = [ month, day, year ].join( '/' );
-            let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
-            let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
-
-            this.addNews( type, source, title, item.source );
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ];
+              if ( !item.title || !item.coins || !item.description || !item.source ) continue;
+              let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
+              let date  = [ month, day, year ].join( '/' );
+              let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
+              let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
+              this.addNews( 'events', 'coinmarketcal.com', title, item.source );
+            }
+            resolve();
           }
-          this.emitData();
-        }
+        });
       });
-    },
-
-    // on chart column click
-    chartClick( data ) {
-      this.filterSearch = data.search;
     },
 
     // draw token chart from profile data
@@ -380,7 +433,7 @@ export default {
 
       // pair token from priceData with name from coinsData
       this.priceData.forEach( p => {
-        if ( !this.coinsData.hasOwnProperty( p.token ) ) return;
+        if ( p.token === 'BTC' || !this.coinsData.hasOwnProperty( p.token ) ) return;
         tokens[ p.token ] = this.coinsData[ p.token ];
       });
       // check token symbol and name against all loaded news titles
@@ -392,6 +445,11 @@ export default {
       });
       // update data
       this.chartData = data;
+    },
+
+    // on chart column click
+    chartClick( data ) {
+      this.filterSearch = data.search;
     },
   },
 
@@ -405,7 +463,7 @@ export default {
   // component destroyed
   destroyed() {
     this.clearTimeout();
-  }
+  },
 }
 </script>
 
@@ -448,7 +506,7 @@ export default {
 
   .newspage-list {
     position: relative;
-    padding: calc( #{$topbarHeight} + 4.5em ) 0;
+    padding: calc( #{$topbarHeight} + 4.5em ) 0 0 0;
 
     .newspage-list-item {
       margin: 0 0 ( $lineWidth * 2 ) 0;
