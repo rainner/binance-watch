@@ -12,6 +12,7 @@
       :history="historyData"
       :alarms="alarmsData"
       :news="newsData"
+      @saveOptions="setOptions"
       @setRoute="setRoute"
       @toggleWatchform="toggleWatchform">
     </Topbar>
@@ -25,6 +26,7 @@
       :scrollPos="scrollPos"
       :assetsList="assetsList"
       :priceData="priceData"
+      @saveOptions="setOptions"
       @setRoute="setRoute"
       @onStartWatch="watching = true"
       @onStopWatch="watching = false">
@@ -45,6 +47,7 @@
         :priceData="priceData"
         :alarms="alarmsData"
         :news="newsData"
+        @saveOptions="setOptions"
         @setRoute="setRoute">
       </TokenList>
 
@@ -58,13 +61,14 @@
         :priceData="priceData"
         :coinsData="coinsData"
         @newsData="updateNewsData"
+        @saveOptions="setOptions"
         @setRoute="setRoute">
       </NewsPage>
 
     </main>
 
     <!-- common modal component -->
-    <Modal ref="modal" @onDone="modalDone">
+    <Modal ref="modal" @onDismiss="modalDismiss" @onDone="modalDone">
       <component
         :is="modalComp"
         :data="modalData"
@@ -72,8 +76,8 @@
         :history="historyData"
         :alarms="alarmsData"
         :news="newsData"
-        @setRoute="setRoute"
-        @saveOptions="setOptions">
+        @saveOptions="setOptions"
+        @setRoute="setRoute">
       </component>
     </Modal>
 
@@ -154,18 +158,15 @@ export default {
   data() {
     return {
       // app options
+      refid: '12268078',
       title: 'Binance Watch',
       optKey: 'app_options_data',
       options: {
-        // play notification sounds
         playSound: true,
-        // toggle to auto refetch news and events data
         autoRefetch: true,
-        // toggle for latest news notifications
         notifyNews: true,
-        // cors proxy url
+        emailNews: false,
         corsProxyUrl: 'https://cors-anywhere.herokuapp.com/',
-        // mailgun api config
         mailgunOn: false,
         mailgunDomain: '',
         mailgunKey: '',
@@ -230,8 +231,8 @@ export default {
     // setup app routes
     setupRoutes() {
       // default route
-      this.$router.on( '/', () => { this.showPage( 'TokenList' ) } );
-      this.$router.on( '/news', () => { this.showPage( 'NewsPage' ) } );
+      this.$router.on( '/', () => { this.showPage( 'TokenList', 'Price List' ) } );
+      this.$router.on( '/news', () => { this.showPage( 'NewsPage', 'Latest News' ) } );
       // common modal routes
       this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
       this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
@@ -376,11 +377,19 @@ export default {
       if ( action === 'link' )    return window.open( dest, target );
       if ( action === 'reload' )  return window.location.reload();
       if ( action === 'return' )  return window.history.back();
+
+      if ( action === 'binance' ) {
+        let symb = /\?/g.test( dest ) ? '&' : '?';
+        let base = 'https://www.binance.com' + dest + symb + 'ref=' + this.refid;
+        return window.open( base, target );
+      }
     },
 
     // change visible page component
-    showPage( component ) {
+    showPage( component, title ) {
+      title = title || component;
       this.mainComp = component;
+      this.setTitle( title );
       this.closeModal();
     },
 
@@ -400,12 +409,15 @@ export default {
       this.$refs.modal.close();
     },
 
+    // on modal close action (dismiss)
+    modalDismiss() {
+      window.history.back();
+    },
+
     // on modal close event
     modalDone() {
       this.modalComp = '';
       this.modalData = {};
-      this.setRoute( '/' );
-      this.setTitle();
     },
 
     // show css alert
