@@ -189,7 +189,8 @@ module.exports = {
   // return matching results from a list
   search( list, key, match ) {
     if ( !Array.isArray( list ) || !key || !match ) return [];
-    let regex = new RegExp( '\\b' + String( match || '' ) + '\\b', 'gi' );
+    let search = '\\b'+ String( match || '' ).replace( /[\|]+/g, '\\b|\\b' ) +'\\b';
+    let regex  = new RegExp( search, 'gi' );
     return list.filter( obj => obj[ key ].search( regex ) >= 0 );
   },
 
