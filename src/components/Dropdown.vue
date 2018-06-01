@@ -102,9 +102,8 @@ export default {
     margin: 0;
     padding: ( $padSpace / 2 ) 0;
     max-width: 400px;
-    // border-left: $lineWidth $lineStyle $colorPrimary;
-    // border-right: $lineWidth $lineStyle $colorPrimary;
-    background-color: lighten( $colorDocument, 12% );
+    @include borderEffect;
+    background-color: lighten( $colorDocument, 5% );
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
     z-index: ( $zindexModals + 2 );
@@ -145,12 +144,20 @@ export default {
       & > li {
         display: block;
         margin: 0;
-        padding: ( $padSpace / 2 ) ( $padSpace * 2 );
+        padding: ( $padSpace / 1.6 ) ( $padSpace * 1.6 );
         text-align: left;
         white-space: nowrap;
 
         &.clickable {
-          @include listRow;
+          border-top: 1px $lineStyle $lineColor;
+          background-color: transparent;
+
+          &:hover {
+            background-color: lighten( $colorDocument, 8% );
+          }
+          &:first-of-type {
+            border-top: none;
+          }
         }
 
         input {
