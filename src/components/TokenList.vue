@@ -21,7 +21,7 @@
           </div>
 
           <!-- control heading -->
-          <div class="tokenlist-controls-title push-right text-clip text-grey text-center flex-1 if-medium">
+          <div class="tokenlist-controls-title push-right text-clip text-center flex-1 if-medium">
             <big>24h Change</big>
           </div>
 
@@ -110,7 +110,7 @@
         <div v-for="p in tickerList"
           class="tokenlist-item flex-row flex-middle flex-stretch clickable"
           :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }"
-          @click="$emit( 'setRoute', '/symbol/'+ p.symbol )"
+          @click.stop="$emit( 'setRoute', p.route )"
           :key="p.symbol">
 
           <div class="tokenlist-item-icon text-clip">
@@ -118,30 +118,33 @@
           </div>
 
           <div class="tokenlist-item-symbol text-clip flex-1">
-            <big class="text-bright">{{ p.token }}</big>
-            <span class="text-nowrap text-default">{{ p.arrow }}</span> <br />
+            <big class="text-bright">{{ p.token }}</big> <br />
             <span class="text-default">{{ p.name }}</span>
           </div>
 
-          <div class="tokenlist-item-price text-clip flex-1">
+          <div class="tokenlist-item-price text-right text-clip flex-2">
+            <span class="text-nowrap text-grey">{{ p.arrow }}</span>
             <big class="text-nowrap text-bright">{{ p.close | toSats }}</big>
-            <span class="text-default">{{ p.asset }}</span> <br />
-            <span class="text-nowrap">{{ p.sign }}{{ p.change | toSats }}</span>
+            <span class="text-grey">{{ p.asset }}</span> <br />
             <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}%</span>
+            <span class="text-nowrap text-grey">{{ p.sign }}{{ p.change | toSats }}</span>
           </div>
 
-          <div class="tokenlist-item-chart flex-1 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
+          <div class="tokenlist-item-chart push-left flex-2 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
             <LineChart :width="300" :height="30" :values="p.history"></LineChart>
           </div>
 
-          <div class="tokenlist-item-trades text-right text-clip flex-1 if-large">
-            <big class="text-nowrap text-bright">{{ p.trades | toCommas }}</big> <br />
-            <span class="text-default">Trades</span>
+          <div class="tokenlist-item-volume text-right text-clip flex-2">
+            <span class="text-grey icon-chart-bar"></span>
+            <big class="text-nowrap text-bright">{{ p.assetVolume | toCommas }}</big>
+            <span class="text-nowrap text-grey">{{ p.asset }}</span> <br />
+            <span class="text-nowrap text-default">{{ p.tokenVolume | toCommas }}</span>
+            <span class="text-nowrap text-grey">{{ p.token }}</span>
           </div>
 
-          <div class="tokenlist-item-volume text-right text-clip flex-1">
-            <big class="text-nowrap text-bright">{{ p.assetVolume | toCommas }} {{ p.asset }}</big> <br />
-            <span class="text-nowrap">{{ p.tokenVolume | toCommas }} {{ p.token }}</span>
+          <div class="tokenlist-item-trades text-right text-clip flex-2 if-large">
+            <big class="text-nowrap text-bright">{{ p.trades | toCommas }}</big> <br />
+            <button class="text-primary-hover icon-chart-line iconLeft" @click.stop="tradeLink( p.token, p.asset )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
           </div>
 
         </div>
@@ -295,6 +298,12 @@ export default {
   // custom mounted
   methods: {
 
+    // lick to binance site with ref id added
+    tradeLink( token, asset ) {
+      let pair = token +'_'+ asset;
+      this.$bus.emit( 'handleClick', 'binance', '/trade.html?symbol='+ pair, '_blank' );
+    },
+
     // build token history chart points for SVG polyline
     chartPoints( width, height, values ) {
       let data = utils.points( width, height, values );
@@ -352,7 +361,7 @@ export default {
 
   .tokenlist-list {
     position: relative;
-    padding: calc( #{$topbarHeight} + 4.5em ) 0;
+    padding: calc( #{$topbarHeight} + 4.5em ) 0 0 0;
 
     .tokenlist-item {
       margin: 0 0 ( $lineWidth * 2 ) 0;
