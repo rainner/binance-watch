@@ -29,26 +29,6 @@
 
     <div class="push-bottom">
       <div class="form-label push-bottom">
-        Browser Notifications <i class="icon-down-open"></i>
-      </div>
-
-      <Toggle class="push-bottom"
-        :text="'Grant permission to receive browser notifications'"
-        v-model="canNotify"
-        @click="askNotifyPermission">
-      </Toggle>
-
-      <Toggle class="push-bottom"
-        :text="'Play a notification sound'"
-        v-model="options.playSound"
-        @change="applyOptions">
-      </Toggle>
-    </div>
-
-    <hr />
-
-    <div class="push-bottom">
-      <div class="form-label push-bottom">
         E-mail Notifications with Mailgun API <i class="icon-down-open"></i>
       </div>
 
@@ -84,6 +64,26 @@
 
     <div class="push-bottom">
       <div class="form-label push-bottom">
+        Browser Notifications <i class="icon-down-open"></i>
+      </div>
+
+      <Toggle class="push-bottom"
+        :text="'Grant permission to receive browser notifications'"
+        v-model="canNotify"
+        @click="askNotifyPermission">
+      </Toggle>
+
+      <Toggle class="push-bottom"
+        :text="'Play a notification sound effect'"
+        v-model="options.playSound"
+        @change="applyOptions">
+      </Toggle>
+    </div>
+
+    <hr />
+
+    <div class="push-bottom">
+      <div class="form-label push-bottom">
         Latest News &amp; Events <i class="icon-down-open"></i>
       </div>
 
@@ -98,6 +98,12 @@
         v-model="options.notifyNews"
         @change="applyOptions">
       </Toggle>
+
+      <Toggle class="push-bottom"
+        :text="'Send news notification via e-mail (if enabled)'"
+        v-model="options.emailNews"
+        @change="applyOptions">
+      </Toggle>
     </div>
 
   </section>
@@ -109,7 +115,7 @@ import Toggle from './Toggle.vue';
 
 export default {
 
-   // component list
+  // component list
   components: { Toggle },
 
   // component props
@@ -174,7 +180,6 @@ export default {
     applyOptions() {
       this.$emit( 'saveOptions', { corsProxyUrl: this.corsProxyUrl } );
     },
-
   },
 
   // test cors url when component mounts
