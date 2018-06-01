@@ -47,25 +47,25 @@
             <button slot="trigger" class="topbar-btn icon-menu"></button>
             <ul slot="list">
               <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/' )">
-                <i class="icon-chart-line iconLeft"></i> Live Price Data
+                <i class="icon-chart-line iconLeft"></i> Prices
               </li>
               <li class="clickable text-primary-hover text-nowrap" @click="onNewsClick">
-                <i class="icon-feedback iconLeft"></i> News &amp; Events <span v-if="news.count">({{ news.count }})</span>
+                <i class="icon-feedback iconLeft"></i> News <span v-if="news.count">({{ news.count }})</span>
               </li>
               <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/history' )">
-                <i class="icon-clock iconLeft"></i> Alert History <span v-if="history.length">({{ history.length }})</span>
+                <i class="icon-clock iconLeft"></i> History <span v-if="history.length">({{ history.length }})</span>
               </li>
               <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/alarms' )">
-                <i class="icon-alarm iconLeft"></i> Saved Alarms <span v-if="alarmsCount">({{ alarmsCount }})</span>
-              </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/options' )">
-                <i class="icon-config iconLeft"></i> Options &amp; Settings
+                <i class="icon-alarm iconLeft"></i> Alarms <span v-if="alarmsCount">({{ alarmsCount }})</span>
               </li>
               <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/about' )">
-                <i class="icon-help iconLeft"></i> About &amp; Contact
+                <i class="icon-help iconLeft"></i> About
+              </li>
+              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/options' )">
+                <i class="icon-config iconLeft"></i> Options
               </li>
               <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/donate' )">
-                <i class="icon-like iconLeft"></i> Make a Donation
+                <i class="icon-like iconLeft"></i> Donate
               </li>
             </ul>
           </Dropdown>
