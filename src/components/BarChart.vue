@@ -36,14 +36,16 @@ export default {
       let max = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
 
       for ( let i = 0; i < values.length; ++i ) {
-        let data   = this.data[ i ];
-        let num    = values[ i ];
-        let ratio  = ( max > 0 ) ? ( num / max ) : 0.1;
-        let size   = ( ratio * this.height );
-        let clss   = 'bg-bright';
-        if ( num > ( max / 2 ) ) { clss = 'bg-secondary'; }
-        if ( num == max ) { clss = 'bg-primary'; }
-        list.push( Object.assign( data, { size, clss } ) );
+        let data    = this.data[ i ];
+        let num     = values[ i ];
+        let ratio   = ( max > 0 ) ? ( num / max ) : 0.1;
+        let size    = Math.floor( ratio * this.height );
+        let percent = Math.floor( ratio * 100 );
+        let clss    = 'bg-grey';
+        if ( percent > 20 ) { clss = 'bg-bright'; }
+        if ( percent > 40 ) { clss = 'bg-secondary'; }
+        if ( percent > 60 ) { clss = 'bg-primary'; }
+        list.push( Object.assign( data, { size, percent, clss } ) );
       }
       return list;
     }
