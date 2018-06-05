@@ -1,6 +1,6 @@
 {
   "name": "binance-watch",
-  "description": "Webapp and CLI client for watching price action on Binance.",
+  "description": "Webapp client for watching price action on Binance.",
   "version": "1.0.0",
   "author": "Rainner Lins <rainnerlins@gmail.com>",
   "license": "MIT",
