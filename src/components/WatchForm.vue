@@ -188,7 +188,6 @@ export default {
       let seconds  = ( Date.now() - this.start ) / 1000;
       let elapsed  = utils.elapsed( seconds );
       this.elapsed = elapsed ? elapsed : '0s';
-      this.$bus.emit( 'setTitle', '● Watching '+ this.pairsCount() );
     },
 
     // start price watch
@@ -222,7 +221,6 @@ export default {
       this.snapshot = {};
       this.$emit( 'onStopWatch' );
       this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
-      this.$bus.emit( 'setTitle', '' );
     },
 
     // toggle price watch
@@ -297,6 +295,7 @@ export default {
         let elapsed = utils.elapsed( ( _now - s.time ) / 1000 );
         let title   = [ p.symbol, _target, c.arrow, percent, '(', display, ')' ].join( ' ' );
         let info    = [ 'The', _target, 'of', p.symbol, 'has changed', c.arrow, percent, 'in the last', elapsed +'.' ].join( ' ' );
+        let icon    = utils.fullUrl( p.icon );
 
         // update symbol snapshot data
         this.snapshot[ p.symbol ].close = p.close;
@@ -304,21 +303,14 @@ export default {
         this.snapshot[ p.symbol ].time = _now;
         this.snapshot[ p.symbol ].checked = true;
 
-        // add to mail queue
-        this.$bus.emit( 'mailQueue', { title, info } );
-
-        // add to history list
-        this.$history.add( title, info );
-
-        // add alert to notification queue
-        this.$notify.add( title, info, p.icon, e => {
-          this.$emit( 'setRoute', p.route );
-        });
+        // norify, add to history and mail queue
+        this.$bus.emit( 'mainMenuAlert' );
+        this.$bus.emit( 'msgQueue', { title, info, icon } );
+        this.$notify.add( title, info, icon, e => { this.$bus.emit( 'setRoute', p.route ) } );
+        this.$history.add( title, info, icon );
       });
     },
-
   },
-
 }
 </script>
 
