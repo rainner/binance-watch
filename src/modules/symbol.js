@@ -1,13 +1,12 @@
 /**
  * Returns data for a symbol (etc: FOOETH, BARBTC)
  */
+const reg = /^([A-Z]+)(BTC|ETH|BNB|USDT|TUSD)$/;
+
 module.exports = function( symbol, merge ) {
 
-  // sanitize symbol string
   symbol = String( symbol || '' ).replace( /[^\w]+/g, '' ).toUpperCase();
 
-  // split symbol into token and asset parts
-  let reg   = /^([A-Z]+)(BTC|ETH|BNB|USDT)$/;
   let token = symbol.replace( reg, '$1' );
   let asset = symbol.replace( reg, '$2' );
   let name  = token;
@@ -15,6 +14,5 @@ module.exports = function( symbol, merge ) {
   let icon  = 'public/images/icons/'+ String( token ).toLowerCase() +'_.png';
   let route = '/symbol/'+ symbol;
 
-  // merge optional data and return
   return Object.assign( { symbol, token, asset, name, pair, icon, route }, merge );
 }
