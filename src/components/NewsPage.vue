@@ -1,6 +1,9 @@
 <template>
   <main class="newspage-wrap" :class="{ 'collapsed': scrollDir === 'down', 'opaque': scrollPos > 10 }">
 
+    <!-- list spinner -->
+    <Spinner class="newspage-spinner abs" ref="spinner"></Spinner>
+
     <!-- fixed list search/filter controls -->
     <div class="newspage-controls">
       <div class="container">
@@ -19,7 +22,7 @@
 
           <!-- control heading -->
           <div class="newspage-controls-title push-right text-clip text-center flex-1">
-            <big>News &amp; Events ({{ newsList.length }})</big>
+            <big>News &amp; Events ({{ lastCount }}/{{ totalCount }})</big>
           </div>
 
           <!-- control dropdown menus -->
@@ -49,9 +52,9 @@
               <button slot="trigger" class="form-btn bg-grey-hover icon-config"></button>
               <div slot="list">
                 <div class="form-label">News &amp; Notifications Options</div>
-                <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.autoRefetch" @change="applyOptions"></Toggle>
-                <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.notifyNews" @change="applyOptions"></Toggle>
-                <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.emailNews" @change="applyOptions"></Toggle>
+                <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
+                <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
+                <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
               </div>
             </Dropdown>
 
@@ -65,11 +68,17 @@
     <div class="newspage-list">
       <div class="container">
 
-        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="filterSearch && !filterList.length">
+        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="!filterList.length">
           <div class="tokenlist-item-icon icon-help iconMedium push-right"></div>
           <div class="tokenlist-item-symbol text-clip flex-1">
-            <big class="text-danger">Found nothing matching: {{ filterSearch }}.</big> <br />
-            <span class="text-grey">There are a total of {{ totalCount }} news and event entries available.</span>
+            <div v-if="filterSearch">
+              <big class="text-danger">Found nothing matching: {{ filterSearch }}.</big> <br />
+              <span class="text-grey">There are a total of {{ totalCount }} news and event entries available.</span>
+            </div>
+            <div v-else>
+              <big class="text-danger">Could not find any news at this time.</big> <br />
+              <span class="text-grey">Try to re-fetch the data manually, or wait a while for it to update.</span>
+            </div>
           </div>
         </div>
 
@@ -77,9 +86,9 @@
           <BarChart :data="chartData" @click="chartClick"></BarChart>
         </div>
 
-        <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="n in filterList" :key="n.id">
+        <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="( n, i ) in filterList" :key="n.id">
           <div class="flex-1 push-right text-clip">
-            <a class="icon-feedback iconLeft" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
+            <a class="icon-feedback text-default iconLeft" :class="{ 'text-bright': isNewEntry( i ) }" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
           </div>
           <div class="text-nowrap if-medium">
             <span class="text-grey">{{ n.source }}</span>
@@ -94,6 +103,7 @@
 
 <script>
 // modules
+import Spinner from './Spinner.vue';
 import Dropdown from './Dropdown.vue';
 import BarChart from './BarChart.vue';
 import Toggle from './Toggle.vue';
@@ -104,10 +114,11 @@ import utils from '../modules/utils';
 export default {
 
   // component list
-  components: { Dropdown, BarChart, Toggle },
+  components: { Spinner, Dropdown, BarChart, Toggle },
 
   // component props
   props: {
+    active: { type: Boolean, default: false },
     options: { type: Object, default() { return {} } },
     scrollDir: { type: String, default: '' },
     scrollPos: { type: Number, default: 0 },
@@ -133,9 +144,8 @@ export default {
       profileData: {},
       chartData: [],
       // count data
-      totalCount: 0,
-      newCount: 0,
       lastCount: 0,
+      totalCount: 0,
       maxCount: 200,
       // list filter options
       filterSearch: '',
@@ -200,7 +210,7 @@ export default {
 
     // apply options
     applyOptions() {
-      this.$emit( 'saveOptions' );
+      this.$bus.emit( 'setOptions' );
     },
 
     // set filter type
@@ -208,69 +218,76 @@ export default {
       this.filterType = type;
     },
 
-    // reset newCount
-    resetCount() {
-      this.newCount = 0;
-      this.emitData();
+    // used to assign a class for new entries in the list
+    isNewEntry( index ) {
+      if ( this.filterType || this.filterSearch ) return false;
+      return ( this.lastCount && index < this.lastCount ) ? true : false;
     },
 
-    // fetch all news
-    fetchAll() {
-      let plist = [];
-      this.working = true;
-      this.lastCount = 0;
-      this.newsSources.forEach( s => {
-        if ( s.cb ) plist.push( this[ s.cb ]() );
-      });
-      Promise.all( plist ).then( () => {
-        this.loaded = true;
-        this.working = false;
-        this.emitData();
-      });
-    },
-
-    // clear autofetch timeout
-    clearTimeout() {
-      if ( this.sto ) clearTimeout( this.sto );
-    },
-
-    // auto fetch news on interval
-    autoFetch( force ) {
-      this.clearTimeout();
-      this.sto = setTimeout( this.autoFetch, 1000 * this.refetchTime );
-      if ( !this.options.autoRefetch && !force ) return;
-      this.fetchAll();
+    // wrapper for page spinner
+    spinner( method, message ) {
+      if ( !this.$refs.spinner ) return;
+      this.$refs.spinner[ method ]( message );
     },
 
     // emit news data
     emitData() {
-      let count = this.newCount;
+      let count = this.lastCount;
       let total = this.totalCount;
       let list  = this.newsList.slice();
+      this.$bus.emit( 'newsData', { count, total, list } );
+    },
 
-      // when something new gets added to the news list...
-      if ( this.lastCount && this.lastCount !== this.totalCount ) {
+    // add news to notification and msg queue
+    setNotifications() {
+      if ( !this.lastCount || this.lastCount === this.totalCount ) return;
+      let icon = utils.fullUrl( 'public/images/notification.png' );
 
-        // show notification of last news item added
-        if ( this.options.notifyNews ) {
-          let item  = this.newsList[ 0 ];
-          let title = 'Latest Crypto News ('+ this.lastCount +')';
-          this.$notify.add( title, item.title, null, item.link );
-        }
-
-        // send notification via e-mail if needed
-        if ( this.options.emailNews ) {
-          for ( let i = 0; i < this.lastCount; ++i ) {
-            let item  = this.newsList[ i ];
-            let title = 'Latest Crypto News:';
-            let info  = `<a href="${ item.link }"><b>${ item.title }</b></a></u>`;
-            this.$bus.emit( 'mailQueue', { title, info } );
-          }
+      // add alert bubble to main menu
+      if ( !this.active ) {
+        this.$bus.emit( 'mainMenuAlert' );
+      }
+      // show notification of last news item added
+      if ( this.options.news.notify ) {
+        let item  = this.newsList[ 0 ];
+        let title = 'Latest Crypto News ('+ this.lastCount +')';
+        this.$notify.add( title, item.title, icon, item.link );
+      }
+      // send notification via api
+      if ( this.options.news.send ) {
+        for ( let i = 0; i < this.lastCount; ++i ) {
+          let item  = this.newsList[ i ];
+          let title = 'Latest Crypto News:';
+          let info  = `<a href="${ item.link }">${ item.title }</a>`;
+          this.$bus.emit( 'msgQueue', { title, info, icon } );
         }
       }
-      this.lastCount = 0;
-      this.$emit( 'newsData', { count, total, list } );
-      this.updateChart();
+    },
+
+    // draw token chart from profile data
+    updateChart() {
+      let data   = [];
+      let tokens = {};
+
+      // pair token from priceData with name from coinsData
+      this.priceData.forEach( p => {
+        if ( p.token === 'BTC' || !this.coinsData.hasOwnProperty( p.token ) ) return;
+        tokens[ p.token ] = this.coinsData[ p.token ];
+      });
+      // check token symbol and name against all loaded news titles
+      Object.keys( tokens ).forEach( t => {
+        let label  = t;
+        let search = t +'|'+ tokens[ t ];
+        let value  = utils.search( this.newsList, 'title', search ).length;
+        if ( value > 1 ) data.push( { label, value, search } );
+      });
+      this.chartData = data;
+    },
+
+    // on chart column click
+    chartClick( data ) {
+      this.filterType = '';
+      this.filterSearch = data.search;
     },
 
     // preppend new item to news list
@@ -285,10 +302,40 @@ export default {
       if ( this.loaded ) { this.newsList.unshift( { id, time, type, source, title, link } ); }
       else { this.newsList.push( { id, time, type, source, title, link } ); }
 
-      this.newsList   = this.newsList.slice( 0, this.maxCount );
+      this.newsList = this.newsList.slice( 0, this.maxCount );
       this.totalCount = this.newsList.length;
-      this.newCount   = ( this.newCount >= this.totalCount ) ? this.totalCount : ( this.newCount + 1 );
       this.lastCount += 1;
+    },
+
+    // clear autofetch timeout
+    clearTimeout() {
+      if ( this.sto ) clearTimeout( this.sto );
+    },
+
+    // auto fetch news on interval
+    autoFetch( force ) {
+      this.clearTimeout();
+      this.sto = setTimeout( this.autoFetch, 1000 * this.refetchTime );
+      if ( !this.options.news.refetch && !force ) return;
+      this.fetchAll();
+    },
+
+    // fetch all news
+    fetchAll() {
+      let plist = [];
+      this.working = true;
+      this.lastCount = 0;
+      this.newsSources.forEach( s => {
+        if ( s.cb ) plist.push( this[ s.cb ]() );
+      });
+      Promise.all( plist ).then( () => {
+        this.loaded = true;
+        this.working = false;
+        this.spinner( 'hide' );
+        this.updateChart();
+        this.setNotifications();
+        this.emitData();
+      });
     },
 
     // fetch news data from cryptocurrencynews
@@ -300,14 +347,16 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'json',
+          timeout: 15,
           done: ( xhr, status, response ) => {
-            if ( !response || !response.data || !response.data.children ) return;
-            let list = response.data.children;
+            if ( response && response.data && response.data.children ) {
+              let list = response.data.children;
 
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ].data;
-              if ( !item.title || !item.url ) continue;
-              this.addNews( 'reddit', 'reddit.com', item.title, item.url );
+              for ( let i = 0; i < list.length; ++i ) {
+                let item = list[ i ].data;
+                if ( !item.title || !item.url ) continue;
+                this.addNews( 'reddit', 'reddit.com', item.title, item.url );
+              }
             }
             resolve();
           }
@@ -326,6 +375,7 @@ export default {
 
         this.$ajax.post( endpoint, {
           type: 'document',
+          timeout: 15,
           data: fdata,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
@@ -353,6 +403,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'document',
+          timeout: 15,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
               items  : '.news-post',
@@ -380,6 +431,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'document',
+          timeout: 15,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
               items  : '.article-list > .article-list-item',
@@ -408,55 +460,30 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'json',
+          timeout: 15,
           done: ( xhr, status, list ) => {
-            if ( !list || !Array.isArray( list ) ) return;
-
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ];
-              if ( !item.title || !item.coins || !item.description || !item.source ) continue;
-              let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
-              let date  = [ month, day, year ].join( '/' );
-              let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
-              let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
-              this.addNews( 'events', 'coinmarketcal.com', title, item.source );
+            if ( Array.isArray( list ) ) {
+              for ( let i = 0; i < list.length; ++i ) {
+                let item = list[ i ];
+                if ( !item.title || !item.coins || !item.description || !item.source ) continue;
+                let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
+                let date  = [ month, day, year ].join( '/' );
+                let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
+                let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
+                this.addNews( 'events', 'coinmarketcal.com', title, item.source );
+              }
             }
             resolve();
           }
         });
       });
     },
-
-    // draw token chart from profile data
-    updateChart() {
-      let data   = [];
-      let tokens = {};
-
-      // pair token from priceData with name from coinsData
-      this.priceData.forEach( p => {
-        if ( p.token === 'BTC' || !this.coinsData.hasOwnProperty( p.token ) ) return;
-        tokens[ p.token ] = this.coinsData[ p.token ];
-      });
-      // check token symbol and name against all loaded news titles
-      Object.keys( tokens ).forEach( t => {
-        let label  = t;
-        let search = t +'|'+ tokens[ t ];
-        let value  = utils.search( this.newsList, 'title', search ).length;
-        if ( value > 1 ) data.push( { label, value, search } );
-      });
-      // update data
-      this.chartData = data;
-    },
-
-    // on chart column click
-    chartClick( data ) {
-      this.filterSearch = data.search;
-    },
   },
 
   // component mounted
   mounted() {
-    this.proxyDomain = String( this.options.corsProxyUrl ).replace( /^https?\:\/\/|\/.*$/g, '' );
-    this.$bus.on( 'resetNewsCount', this.resetCount );
+    this.proxyDomain = String( this.options.proxy ).replace( /^https?\:\/\/|\/.*$/g, '' );
+    this.spinner( 'show', 'waiting for news data' );
     this.autoFetch( true );
   },
 
