@@ -24,12 +24,12 @@ export default {
   },
 
   // add data to history
-  add( title, info ) {
+  add( title, info, icon ) {
     if ( !title || !info ) return;
     let id     = utils.randString( 20 );
     let time   = Date.now();
     this._data = this._data.filter( e => ( ( time - e.time ) / 1000 ) < this._maxage );
-    this._data.unshift( { id, time, title, info } ); // new entries show first
+    this._data.unshift( { id, time, title, info, icon } ); // new entries show first
     return store.setData( this._key, this._data );
   },
 
