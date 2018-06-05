@@ -9,12 +9,10 @@
       :socketTime="socketTime"
       :scrollDir="scrollDir"
       :scrollPos="scrollPos"
-      :history="historyData"
-      :alarms="alarmsData"
-      :news="newsData"
-      @saveOptions="setOptions"
-      @setRoute="setRoute"
-      @toggleWatchform="toggleWatchform">
+      :priceData="priceData"
+      :historyData="historyData"
+      :alarmsData="alarmsData"
+      :newsData="newsData">
     </Topbar>
 
     <!-- price watch form -->
@@ -26,8 +24,6 @@
       :scrollPos="scrollPos"
       :assetsList="assetsList"
       :priceData="priceData"
-      @saveOptions="setOptions"
-      @setRoute="setRoute"
       @onStartWatch="watching = true"
       @onStopWatch="watching = false">
     </WatchForm>
@@ -39,45 +35,38 @@
       <TokenList
         class="app-page"
         :class="{ 'visible': mainComp === 'TokenList' }"
+        :active="( mainComp === 'TokenList' )"
         :options="options"
         :socketStatus="socketStatus"
         :scrollDir="scrollDir"
         :scrollPos="scrollPos"
         :assetsList="assetsList"
-        :priceData="priceData"
-        :alarms="alarmsData"
-        :news="newsData"
-        @saveOptions="setOptions"
-        @setRoute="setRoute">
+        :priceData="priceData">
       </TokenList>
 
       <!-- news aggregator page -->
       <NewsPage
         class="app-page"
         :class="{ 'visible': mainComp === 'NewsPage' }"
+        :active="( mainComp === 'NewsPage' )"
         :options="options"
         :scrollDir="scrollDir"
         :scrollPos="scrollPos"
         :priceData="priceData"
-        :coinsData="coinsData"
-        @newsData="updateNewsData"
-        @saveOptions="setOptions"
-        @setRoute="setRoute">
+        :coinsData="coinsData">
       </NewsPage>
 
     </main>
 
     <!-- common modal component -->
-    <Modal ref="modal" @onDismiss="modalDismiss" @onDone="modalDone">
+    <Modal ref="modal" @onDone="modalDone">
       <component
         :is="modalComp"
-        :data="modalData"
         :options="options"
-        :history="historyData"
-        :alarms="alarmsData"
-        :news="newsData"
-        @saveOptions="setOptions"
-        @setRoute="setRoute">
+        :modalData="modalData"
+        :historyData="historyData"
+        :alarmsData="alarmsData"
+        :newsData="newsData">
       </component>
     </Modal>
 
@@ -114,7 +103,9 @@
 // custom modules
 import Stream from '../modules/stream';
 import Scroller from '../modules/scroller';
-import mailQueue from '../modules/queue';
+import msgQueue from '../modules/queue';
+import mailgun from '../modules/mailgun';
+import telegram from '../modules/telegram';
 import utils from '../modules/utils';
 
 // sub components
@@ -157,20 +148,35 @@ export default {
   // component data
   data() {
     return {
-      // app options
+      // common stufff
       refid: '12268078',
       title: 'Binance Watch',
       optKey: 'app_options_data',
+      // app options
       options: {
-        playSound: true,
-        autoRefetch: true,
-        notifyNews: true,
-        emailNews: false,
-        corsProxyUrl: 'https://cors-anywhere.herokuapp.com/',
-        mailgunOn: false,
-        mailgunDomain: '',
-        mailgunKey: '',
-        mailgunEmail: '',
+        // notification sounds
+        sound: true,
+        // cors proxy for outgoing http requests
+        proxy: 'https://cors-anywhere.herokuapp.com/',
+        // news related options
+        news: {
+          refetch: true,  // aut re-fetch news on a timer
+          notify: true,   // show push notifications for news
+          send: false,    // include news in outgoing notifications (email/telegram)
+        },
+        // mailgun api config
+        mailgun: {
+          enabled: false, // status
+          domain: '',     // account domain
+          apikey: '',     // api key
+          email: '',      // recipient email
+        },
+        // telegram bot api config
+        telegram: {
+          enabled: false, // status
+          botkey: '',     // telegram bot id
+          userid: '',     // recipient chat id
+        }
       },
       // app data
       watching: false,
@@ -207,20 +213,33 @@ export default {
   // custom methods
   methods: {
 
-    // load saved options data from local store
-    loadOptions() {
-      let options = this.$store.getData( this.optKey );
-      this.options = Object.assign( {}, this.options, options );
-    },
-
     // merge new options and save
     setOptions( options ) {
       setTimeout( () => {
         this.options = Object.assign( {}, this.options, options );
-        this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
-        this.$notify.setOptions( { soundEnabled: this.options.playSound } );
+        this.$ajax.setOptions( { proxy: this.options.proxy } );
+        this.$notify.setOptions( { soundEnabled: this.options.sound } );
         this.$store.setData( this.optKey, this.options );
       }, 100 );
+    },
+
+    // load saved options data from local store
+    loadOptions() {
+      let options = this.$store.getData( this.optKey );
+      this.options = Object.assign( {}, this.options, options );
+      this.$ajax.setOptions( { proxy: this.options.proxy } );
+      this.$notify.setOptions( { soundEnabled: this.options.sound } );
+    },
+
+    // load data managed by handlers
+    loadCacheData() {
+      this.historyData = this.$history.getData();
+      this.alarmsData = this.$notify.getAlarms();
+    },
+
+    // set loaded news data from somewhere
+    updateNewsData( data ) {
+      this.newsData = Object.assign( {}, this.newsData, data );
     },
 
     // set a url hash route
@@ -230,10 +249,10 @@ export default {
 
     // setup app routes
     setupRoutes() {
-      // default route
+      // page routes
       this.$router.on( '/', () => { this.showPage( 'TokenList', 'Price List' ) } );
       this.$router.on( '/news', () => { this.showPage( 'NewsPage', 'Latest News' ) } );
-      // common modal routes
+      // modal routes
       this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
       this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
       this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
@@ -242,37 +261,25 @@ export default {
       // symbol modal route
       this.$router.on( '/symbol/([A-Z]+)', symbol => {
         let d = this.priceData.filter( p => p.symbol === symbol ).shift();
-        if ( d ) this.showModal( 'TokenPage', d.arrow +' '+ d.token +' / '+ d.asset, d );
+        if ( d ) this.showModal( 'TokenPage', d.pair +' Info ', d );
       });
-    },
-
-    // handler for news data, from component
-    updateNewsData( data ) {
-      this.newsData = data;
-    },
-
-    // load history data from handler
-    loadHistory() {
-      this.historyData = this.$history.getData();
-    },
-
-    // load alarms data from handler
-    loadAlarms() {
-      this.alarmsData = this.$notify.getAlarms();
     },
 
     // check if custom alarms need to be sent out on a timer
     checkAlarms() {
       utils.delay( 'alarms', 10, this.checkAlarms );
+
       this.priceData.forEach( p => {
         this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-          // add alarm data to mail queue and history
-          this.addMailQueue( { title, info } );
-          this.$history.add( title, info );
+          // add alarm data to outgoing message queue
+          let icon = utils.fullUrl( alertData.icon );
+          this.addMsgQueue( { title, info, icon } );
+          this.$history.add( title, info, icon );
+          this.$bus.emit( 'mainMenuAlert' );
         });
       });
-      this.loadHistory();
-      this.loadAlarms();
+      // alarms get removed when they go off, update load alarms data
+      this.loadCacheData();
     },
 
     // when live price data is recieved
@@ -358,10 +365,9 @@ export default {
     },
 
     // build page title
-    setTitle( title ) {
-      if ( this.modalComp ) return;
-      let list = [ this.title ];
-      title = String( title || '' ).trim();
+    setTitle( info ) {
+      let title = String( info || '' ).trim();
+      let list  = [ this.title ];
       if ( title ) list.unshift( title );
       document.title = list.join( ' | ' );
     },
@@ -390,6 +396,7 @@ export default {
       title = title || component;
       this.mainComp = component;
       this.setTitle( title );
+      this.toggleWatchform( 'close' );
       this.closeModal();
     },
 
@@ -399,7 +406,7 @@ export default {
       title = title || component;
       this.setTitle( title );
       this.modalComp = component;
-      this.modalData = Object.assign( {}, data );
+      this.modalData = data;
       this.$refs.modal.show( title );
     },
 
@@ -409,15 +416,11 @@ export default {
       this.$refs.modal.close();
     },
 
-    // on modal close action (dismiss)
-    modalDismiss() {
-      window.history.back();
-    },
-
     // on modal close event
     modalDone() {
       this.modalComp = '';
       this.modalData = {};
+      window.history.back();
     },
 
     // show css alert
@@ -426,54 +429,21 @@ export default {
       this.$refs.notify.show( message, type, timeout );
     },
 
-    // add data to mail queue
-    addMailQueue( data ) {
-      mailQueue.add( data );
+    // add data to outgoing msg queue
+    addMsgQueue( data ) {
+      msgQueue.add( data );
     },
 
-    // setup mail queue to go off on a timer
-    setupMailer() {
-      mailQueue.onBatch( 60, queue => {
-        let msg = '';
-        queue.forEach( m => { msg += '<hr /> <p><b>'+ m.title +'</b> <br /> '+ m.info +'</p>' } );
-        this.sendEmail( 'Binance Watch Alerts ('+ queue.length +')', msg );
-      });
-    },
+    // setup msg queue to go off on a timer
+    setupMsgQueue() {
+      msgQueue.onBatch( 60, queue => {
+        let plist = [];
+        plist.push( mailgun( this.$ajax, this.options.mailgun, queue ) );
+        plist.push( telegram( this.$ajax, this.options.telegram, queue ) );
 
-    // send notification e-mail using mailgun api
-    sendEmail( subject, message ) {
-      if ( !this.options.mailgunOn ) return;
-
-      const username  = 'api';
-      const password  = String( this.options.mailgunKey || '' ).trim();
-      const recipient = String( this.options.mailgunEmail || '' ).trim();
-      const domain    = String( this.options.mailgunDomain || '' ).trim();
-      const endpoint  = 'https://api.mailgun.net/v3/'+ domain +'/messages';
-      if ( !subject || !message || !domain || !recipient || !password ) return;
-
-      const template = `
-      <!DOCTYPE html>
-      <html lang="en-US">
-        <body style="margin: 0; padding: 0;">
-          <div style="font-family: 'Monaco', 'Consolas', 'Courier New', 'monospace'; font-size: 10px;">
-            <h3>${ subject }</h3>
-            ${ message }
-          </div>
-        </body>
-      </html>`;
-
-      const formdata = new FormData();
-      formdata.append( 'from', 'Binance Watch Alerts <noreply@'+ domain +'>' );
-      formdata.append( 'to', 'Alert Recipient <'+ recipient +'>' );
-      formdata.append( 'subject', subject );
-      formdata.append( 'html', template );
-
-      this.$ajax.post( endpoint, {
-        type: 'json',
-        data: formdata,
-        auth: { username, password },
-        success: ( xhr, status, response ) => { this.showNotice( 'E-mail notifications sent to ('+ recipient +').', 'info' ) },
-        error: ( xhr, status, error ) => { console.warn( 'Mailgun', status, ':', error ) },
+        Promise.all( plist )
+          .then( msgs => { msgs.forEach( msg => { if ( msg ) this.showNotice( msg, 'info' ) } ) } )
+          .catch( err => { if ( err ) this.showNotice( err, 'warning' ) } );
       });
     },
 
@@ -485,7 +455,7 @@ export default {
           if ( !Array.isArray( list ) ) return;
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' );
-            let name  = String( list[ i ].name || '' ).replace( /[^\w]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
+            let name  = String( list[ i ].name || '' ).replace( /[^\w\-\.]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
             if ( token && name ) this.coinsData[ token ] = name;
           }
         },
@@ -496,27 +466,27 @@ export default {
   // init app data and handlers
   beforeMount() {
     this.loadOptions();
+    this.loadCacheData();
     this.setupRoutes();
-    this.setupMailer();
+    this.setupMsgQueue();
     this.fetchCoinsData();
     // config global shared objects
-    this.$ajax.setOptions( { proxy: this.options.corsProxyUrl } );
-    this.$notify.setOptions( { soundEnabled: this.options.playSound } );
     this.$notify.permission();
     this.$notify.loadAlarms();
     this.$history.loadData();
     // setup global event bus handlers
     this.$bus.on( 'setOptions', this.setOptions );
+    this.$bus.on( 'loadCacheData', this.loadCacheData );
     this.$bus.on( 'setTitle', this.setTitle );
     this.$bus.on( 'setRoute', this.setRoute );
     this.$bus.on( 'toggleSocket', this.toggleSocket );
+    this.$bus.on( 'toggleWatchform', this.toggleWatchform );
+    this.$bus.on( 'newsData', this.updateNewsData );
     this.$bus.on( 'showModal', this.showModal );
     this.$bus.on( 'closeModal', this.closeModal );
     this.$bus.on( 'showNotice', this.showNotice );
     this.$bus.on( 'handleClick', this.handleClick );
-    this.$bus.on( 'loadHistory', this.loadHistory );
-    this.$bus.on( 'loadAlarms', this.loadAlarms );
-    this.$bus.on( 'mailQueue', this.addMailQueue );
+    this.$bus.on( 'msgQueue', this.addMsgQueue );
     // setup socket handlers
     _stream.on( 'open', this.onSocketOpen );
     _stream.on( 'error', this.onSocketError );
@@ -531,10 +501,7 @@ export default {
   mounted() {
     this.setTitle();
     this.toggleSocket( true );
-    this.loadHistory();
-    this.loadAlarms();
     this.checkAlarms();
-    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 100 );
   },
 
   // cleanup and close connetions
