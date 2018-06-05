@@ -87,22 +87,16 @@
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    margin: 0 0 $lineWidth 0;
+    align-items: center;
+    justify-content: stretch;
+    margin: 0 0 ( $lineWidth * 2 ) 0;
     padding: ( $padSpace / 2 );
     border-radius: $lineJoin;
-    line-height: 1.2em;
-    @include textClip;
+    background-color: rgba( 0, 0, 0, 0.1 );
 
-    &:nth-child( odd ) {
-      background-color: rgba( 0, 0, 0, 0.1 );
-    }
-    &:nth-child( even ) {
-      background-color: rgba( 0, 0, 0, 0.04 );
-    }
     &:hover {
-      background-color: rgba( 0, 0, 0, 0.2 );
+      background-color: rgba( 0, 0, 0, 0.3 );
     }
-
   }
 }
 
