@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="$emit( 'onDismiss' )">
+  <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="close">
     <section class="modal-container" ref="container" @click.stop>
       <header class="modal-header">
         <div class="modal-title text-clip">{{ title }}</div>
-        <button class="modal-close icon-close" @click.stop="$emit( 'onDismiss' )"></button>
+        <button class="modal-close icon-close" @click.stop="close"></button>
       </header>
       <main class="modal-body">
         <slot></slot>
@@ -120,7 +120,7 @@ export default {
       }
       .modal-close {
         cursor: pointer;
-        color: $colorPrimary;
+        color: $colorBright;
         opacity: 1;
 
         &:hover {
