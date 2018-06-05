@@ -110,11 +110,11 @@
         <div v-for="p in tickerList"
           class="tokenlist-item flex-row flex-middle flex-stretch clickable"
           :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }"
-          @click.stop="$emit( 'setRoute', p.route )"
+          @click.stop="setRoute( p.route )"
           :key="p.symbol">
 
           <div class="tokenlist-item-icon text-clip">
-            <TokenIcon :data="p"></TokenIcon>
+            <TokenIcon :pairData="p"></TokenIcon>
           </div>
 
           <div class="tokenlist-item-symbol text-clip flex-1">
@@ -123,7 +123,6 @@
           </div>
 
           <div class="tokenlist-item-price text-right text-clip flex-2">
-            <span class="text-nowrap text-grey">{{ p.arrow }}</span>
             <big class="text-nowrap text-bright">{{ p.close | toSats }}</big>
             <span class="text-grey">{{ p.asset }}</span> <br />
             <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}%</span>
@@ -135,7 +134,6 @@
           </div>
 
           <div class="tokenlist-item-volume text-right text-clip flex-2">
-            <span class="text-grey icon-chart-bar"></span>
             <big class="text-nowrap text-bright">{{ p.assetVolume | toCommas }}</big>
             <span class="text-nowrap text-grey">{{ p.asset }}</span> <br />
             <span class="text-nowrap text-default">{{ p.tokenVolume | toCommas }}</span>
@@ -183,6 +181,8 @@ export default {
 
   // component props
   props: {
+    active: { type: Boolean, default: false },
+    options: { type: Object, default() { return {} } },
     socketStatus: { type: Number, default: 0, required: false },
     scrollDir: { type: String, default: '', required: false },
     scrollPos: { type: Number, default: 0, required: false },
@@ -297,6 +297,11 @@ export default {
 
   // custom mounted
   methods: {
+
+    // proxy for setting a route
+    setRoute( route ) {
+      this.$bus.emit( 'setRoute', route );
+    },
 
     // lick to binance site with ref id added
     tradeLink( token, asset ) {
