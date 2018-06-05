@@ -6,26 +6,27 @@
         Your custom alarms and price watch alerts will be added to this list in case you missed any.
         Use the Flush button to delete all entries.
       </div>
-      <button class="form-btn bg-danger-hover icon-reset iconLeft" :disabled="!history.length" @click.prevent="flushHistory()">
+      <button class="form-btn bg-danger-hover icon-reset iconLeft" :disabled="!historyData.length" @click.prevent="flushHistory()">
         Flush
       </button>
     </div>
 
-    <div v-if="!history.length" class="icon-close iconLeft text-grey">
+    <div v-if="!historyData.length" class="icon-info iconLeft text-grey">
       There's nothing here right now.
     </div>
 
-    <div class="flex-list">
-      <div v-for="e in history" :key="e.id" class="flex-item">
-        <div class="flex-1 text-clip push-right">
+    <div class="flex-list flex-middle flex-stretch">
+      <div v-for="e in historyData" :key="e.id" class="flex-item">
+        <div class="push-right">
+          <TokenIcon :pairData="{ icon: e.icon, token: 'N/A' }"></TokenIcon>
+        </div>
+        <div class="flex-1 push-right">
           <span class="text-bright">{{ e.title }}</span> <br />
-          <small class="text-default">{{ e.info }}</small>
+          <small>{{ e.info }}</small>
         </div>
-        <div class="text-clip push-right if-medium">
-          <span class="text-grey">{{ e.time | toElapsed }} ago</span>
-        </div>
-        <div class="text-clip">
-          <button class="icon-close text-loss-hover" @click="deleteHistory( e.id )"></button>
+        <div class="text-clip text-right">
+          <button class="icon-close" @click="deleteHistory( e.id )"></button> <br />
+          <small class="text-grey">{{ e.time | toElapsed }} ago</small>
         </div>
       </div>
     </div>
@@ -34,25 +35,19 @@
 </template>
 
 <script>
+// components
+import TokenIcon from './TokenIcon.vue';
+
 // component
 export default {
 
+  // component list
+  components: { TokenIcon },
+
   // component props
   props: {
-    history: { type: Array, default: [], required: true },
-    data: { type: Object, default() { return {} } }, // modal data
-  },
-
-  // component data
-  data() {
-    return {
-      // ...
-    }
-  },
-
-  // computed methods
-  computed: {
-
+    modalData: { type: Object, default() { return {} } },
+    historyData: { type: Array, default: [], required: true },
   },
 
   // custom methods
@@ -63,7 +58,7 @@ export default {
       let saved = this.$history.delete( id );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
       this.$bus.emit( 'showNotice', 'History data has been updated.', 'success' );
-      this.$bus.emit( 'loadHistory' );
+      this.$bus.emit( 'loadCacheData' );
     },
 
     // flush history list
@@ -71,20 +66,9 @@ export default {
       let saved = this.$history.flush();
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
       this.$bus.emit( 'showNotice', 'History data has been flushed.', 'success' );
-      this.$bus.emit( 'loadHistory' );
+      this.$bus.emit( 'loadCacheData' );
     },
   },
-
-  // component mounted
-  mounted() {
-
-  },
-
-  // component destroyed
-  destroyed() {
-
-  }
-
 }
 </script>
 

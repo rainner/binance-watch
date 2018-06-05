@@ -1,12 +1,12 @@
 <template>
   <section>
 
-    <div v-if="!data.token" class="push-bottom">
+    <div v-if="!pairData.token" class="push-bottom">
       List of aggregated news and upcoming crypto events ({{ newsList.length }})
     </div>
 
-    <div v-if="!newsList.length" class="icon-close iconLeft text-grey">
-      <span v-if="data.token">There are no news/events for {{ data.token }}.</span>
+    <div v-if="!newsList.length" class="icon-info iconLeft text-grey">
+      <span v-if="pairData.token">There are no news/events for {{ pairData.token }}.</span>
       <span v-else>There are no news/events loaded.</span>
     </div>
 
@@ -14,9 +14,6 @@
       <div v-for="n in newsList" :key="n.id" class="flex-item clickable">
         <div class="flex-1 push-right text-clip">
           <a class="icon-feedback iconLeft text-primary" :href="n.link" target="_blank">{{ n.title }}</a>
-        </div>
-        <div class="text-clip">
-          <a class="text-pill icon-link iconLeft" :href="n.link" target="_blank" rel="noopener">Source</a>
         </div>
       </div>
     </div>
@@ -32,8 +29,8 @@ export default {
 
   // component props
   props: {
-    news: { type: Object, default: {}, required: true },
-    data: { type: Object, default: () => { return {} } }, // symbol data
+    newsData: { type: Object, default: {}, required: true },
+    pairData: { type: Object, default: () => { return {} } },
   },
 
   // computed methods
@@ -41,16 +38,18 @@ export default {
 
     // filter events for thos token
     newsList() {
-      if ( !this.news.list ) return [];
-      let list = this.news.list;
+      let list = this.newsData.list || [];
+      let news = this.newsData;
+      let pair = this.pairData;
 
-      if ( this.data.token ) {
-        list = utils.search( list, 'title', this.data.token +'|'+ this.data.name );
+      // filter by token and name
+      if ( pair.token ) {
+        list = utils.search( list, 'title', pair.token +'|'+ pair.name );
       }
+      // update count outside
       this.$emit( 'listCount', list.length );
       return list;
     },
   },
-
 }
 </script>

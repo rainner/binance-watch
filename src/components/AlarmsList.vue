@@ -1,21 +1,21 @@
 <template>
   <section>
 
-    <div v-if="!data.symbol" class="push-bottom">
+    <div v-if="!pairData.symbol" class="text-grey push-bottom">
       List of active alarms for all symbols ({{ alarmsList.length }})
     </div>
 
-    <form v-if="data.symbol" class="flex-row flex-middle flex-stretch push-bottom" action="#" @submit.prevent="saveAlarm">
+    <form v-if="pairData.symbol" class="flex-row flex-middle flex-stretch push-bottom" action="#" @submit.prevent="saveAlarm">
       <div class="form-input flex-1 push-right">
         <div class="icon-chart-line push-right"></div>
         <input class="push-right" placeholder="0.00000000" name="alarmPrice" v-model="curPrice" />
-        <div class="text-grey">{{ data.asset }}</div>
+        <div class="text-grey">{{ pairData.asset }}</div>
       </div>
       <button type="submit" class="form-btn bg-grey-hover icon-alarm iconLeft">Set</button>
     </form>
 
-    <div v-if="!alarmsList.length" class="icon-close iconLeft text-grey">
-      <span v-if="data.symbol">There are no alarms for {{ data.symbol }}.</span>
+    <div v-if="!alarmsList.length" class="icon-info iconLeft text-grey">
+      <span v-if="pairData.symbol">There are no alarms for {{ pairData.symbol }}.</span>
       <span v-else>There are no alarms.</span>
     </div>
 
@@ -32,7 +32,7 @@
           <span class="text-grey">{{ a.time | toElapsed }} ago</span>
         </div>
         <div class="text-clip">
-          <button class="icon-close text-loss-hover" @click="deleteAlarm( a.symbol, a.id )"></button>
+          <button class="icon-close" @click="deleteAlarm( a.symbol, a.id )"></button>
         </div>
       </div>
     </div>
@@ -46,8 +46,8 @@ export default {
 
   // component props
   props: {
-    alarms: { type: Object, default: {}, required: true },
-    data: { type: Object, default: () => { return {} } }, // symbol data
+    alarmsData: { type: Object, default: {}, required: true },
+    pairData: { type: Object, default: () => { return {} } },
   },
 
   // comonent data
@@ -62,21 +62,27 @@ export default {
 
     // filter alarms for this token
     alarmsList() {
-      let list = [];
+      let list   = [];
+      let alarms = this.alarmsData;
+      let pair   = this.pairData;
 
-      if ( this.data.symbol ) {
-        list = this.alarms.hasOwnProperty( this.data.symbol ) ? this.alarms[ this.data.symbol ] : [];
+      // filter alarms for a specific pair
+      if ( pair.symbol ) {
+        list = alarms.hasOwnProperty( pair.symbol ) ? alarms[ pair.symbol ] : [];
       }
+      // or build list of alarms for all pairs
       else {
-        Object.keys( this.alarms ).forEach( symbol => {
-          Array.from( this.alarms[ symbol ] ).forEach( alert => { list.push( alert ) } );
+        Object.keys( alarms ).forEach( symbol => {
+          Array.from( alarms[ symbol ] ).forEach( alarm => { list.push( alarm ) } );
         });
       }
+      // sort by pair ascending
       list = list.sort( ( a, b ) => {
         if ( a.symbol < b.symbol ) return -1;
         if ( a.symbol > b.symbol ) return 1;
         return 0;
       });
+      // update count outside
       this.$emit( 'listCount', list.length );
       return list;
     },
@@ -87,18 +93,20 @@ export default {
 
     // save a new alert for this token
     saveAlarm( e ) {
-      const alarmPrice = parseFloat( e.target.alarmPrice.value ) || 0;
+      let price = parseFloat( e.target.alarmPrice.value ) || 0;
+      let pair  = this.pairData;
 
-      if ( !alarmPrice ) {
-        return this.$bus.emit( 'showNotice', 'Please enter a valid '+ this.data.asset +' price.', 'warning' );
+      if ( !pair.symbol ) {
+        return this.$bus.emit( 'showNotice', 'No symbol pair selected.', 'warning' );
       }
-      if ( alarmPrice === this.data.close ) {
-        return this.$bus.emit( 'showNotice', 'Please enter a different '+ this.data.asset +' price.', 'warning' );
+      if ( !price || price === pair.close ) {
+        let word = ( price === pair.close ) ? 'different' : 'valid';
+        return this.$bus.emit( 'showNotice', 'Please enter a '+ word +' '+ pair.asset +' price.', 'warning' );
       }
-      let saved = this.$notify.saveAlarm( this.data.symbol, this.data.close, alarmPrice );
+      let saved = this.$notify.saveAlarm( pair.symbol, pair.close, price );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'New alarm for '+ this.data.symbol +' has been saved.', 'success' );
-      this.$bus.emit( 'loadAlarms' );
+      this.$bus.emit( 'showNotice', 'New alarm for '+ pair.symbol +' has been saved.', 'success' );
+      this.$bus.emit( 'loadCacheData' );
     },
 
     // remove an alert from the list by id
@@ -106,14 +114,14 @@ export default {
       let saved = this.$notify.deleteAlarm( symbol, id );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
       this.$bus.emit( 'showNotice', 'Alarm for '+ symbol +' has been removed from list.', 'success' );
-      this.$bus.emit( 'loadAlarms' );
+      this.$bus.emit( 'loadCacheData' );
     },
   },
 
   // component mounted
   mounted() {
-    if ( this.data.symbol ) {
-      this.curPrice = Number( this.data.close ).toFixed( 8 );
+    if ( this.pairData.symbol ) {
+      this.curPrice = Number( this.pairData.close ).toFixed( 8 );
     }
   },
 

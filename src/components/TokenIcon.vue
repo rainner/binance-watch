@@ -10,7 +10,7 @@ export default {
 
   // component props
   props: {
-    data: { type: Object, default() { return {} } },
+    pairData: { type: Object, default() { return {} } },
   },
 
   // component data
@@ -41,8 +41,8 @@ export default {
 
   // component mounted
   mounted() {
-    this.imgfile = this.data.icon || '';
-    this.tokenName = this.data.token || 'N/A';
+    this.imgfile = this.pairData.icon || '';
+    this.tokenName = this.pairData.token || 'N/A';
   },
 }
 </script>

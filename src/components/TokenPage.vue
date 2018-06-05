@@ -1,11 +1,11 @@
 <template>
-  <section class="tokenpage-wrap" :class="{ 'gain': ( data.percent > 0 ), 'loss': ( data.percent < 0 ) }">
+  <section class="tokenpage-wrap" :class="{ 'gain': ( modalData.percent > 0 ), 'loss': ( modalData.percent < 0 ) }">
 
     <!--  coin name and price -->
     <div class="tokenpage-header flex-grid">
       <div class="flex-grid-item flex-1">
         <div class="flex-row flex-middle">
-          <TokenIcon class="push-right" :data="data"></TokenIcon>
+          <TokenIcon class="push-right" :pairData="modalData"></TokenIcon>
           <h1 class="tokenpage-name text-bright">{{ coinName }}</h1>
           <div class="pad-left" v-if="coinRank">
             <span class="text-label text-clip">Rank</span> <br />
@@ -17,11 +17,11 @@
         <div class="flex-row flex-middle">
           <div class="text-clip push-right">
             <span class="text-label text-clip">Price</span> <br />
-            <big class="text-bright">{{ data.close | toSats }}</big>
+            <big class="text-bright">{{ modalData.close | toSats }}</big>
           </div>
           <div class="text-clip">
             <span class="text-label text-clip">Open 24h</span> <br />
-            <big class="text-default">{{ data.open | toSats }}</big>
+            <big class="text-default">{{ modalData.open | toSats }}</big>
           </div>
         </div>
       </div>
@@ -33,20 +33,20 @@
     <div class="tokenpage-change flex-row flex-middle flex-space">
       <div class="text-clip push-right">
         <span class="text-label text-clip">Change 24h</span> <br />
-        <big class="color">{{ data.sign }}{{ data.change | toSats }}</big>
+        <big class="color">{{ modalData.sign }}{{ modalData.change | toSats }}</big>
       </div>
       <div class="text-clip">
         <span class="text-label text-clip">Percent 24h</span> <br />
-        <big class="text-clip color">{{ data.sign }}{{ data.percent | toCents }}%</big>
-        <big class="text-grey">{{ data.arrow }}</big>
+        <big class="text-clip color">{{ modalData.sign }}{{ modalData.percent | toCents }}%</big>
+        <big class="text-grey">{{ modalData.arrow }}</big>
       </div>
       <div class="text-clip">
-        <span class="text-label text-clip">{{ data.asset }} Vol. 24h</span> <br />
-        <big class="text-primary">{{ data.assetVolume | toCommas }}</big>
+        <span class="text-label text-clip">{{ modalData.asset }} Vol. 24h</span> <br />
+        <big class="text-primary">{{ modalData.assetVolume | toCommas }}</big>
       </div>
       <div class="text-clip">
-        <span class="text-label text-clip">{{ data.token }} Vol. 24h</span> <br />
-        <big class="text-primary">{{ data.tokenVolume | toCommas }}</big>
+        <span class="text-label text-clip">{{ modalData.token }} Vol. 24h</span> <br />
+        <big class="text-primary">{{ modalData.tokenVolume | toCommas }}</big>
       </div>
     </div>
 
@@ -88,17 +88,12 @@
 
     <!-- events and alarms -->
     <Tabs class="tokenpage-tabs pad-top push-bottom" :data="{ alarmsCount, newsCount }">
-
-      <!-- alarms tab -->
       <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Price Alarms ('+ alarmsCount +')' ]" active>
-        <AlarmsList :alarms="alarms" :data="data" @listCount="onAlarmsCount"></AlarmsList>
+        <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
       </section>
-
-      <!-- events tab -->
       <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News & Events ('+ newsCount +')' ]">
-        <NewsList :news="news" :data="data" @listCount="onNewsCount"></NewsList>
+        <NewsList :newsData="newsData" :pairData="modalData" @listCount="onNewsCount"></NewsList>
       </section>
-
     </Tabs>
 
   </section>
@@ -121,21 +116,20 @@ export default {
 
   // component props
   props: {
-    data: { type: Object, default: {}, required: true },
-    alarms: { type: Object, default() { return {} } },
-    news: { type: Object, default() { return {} } },
+    modalData: { type: Object, default: {}, required: true }, // pair data
+    alarmsData: { type: Object, default() { return {} } },
+    newsData: { type: Object, default() { return {} } },
   },
 
   // comonent data
   data() {
     return {
-      ready: true,
       coinRank: 0,
-      coinName: this.data.name,
+      coinName: this.modalData.name,
       marketCap: 0,
       totalSupply: 0,
       totalVolume: 0,
-      curPrice: this.data.close,
+      curPrice: this.modalData.close,
       usdPrice: 0,
       alarmsCount: 0,
       newsCount: 0,
@@ -143,6 +137,16 @@ export default {
       chartWidth: 800,
       chartHeight: 100,
       chartData: [],
+    }
+  },
+
+  // watch methods
+  watch: {
+
+    // update title as token data changes
+    modalData: function() {
+      let p = this.modalData;
+      this.$bus.emit( 'setTitle', p.pair +' '+ p.arrow +' '+ p.sign + p.percent );
     }
   },
 
@@ -167,7 +171,7 @@ export default {
 
     // fetch token data from api
     fetchGlobalData() {
-      const endpoint = 'https://coincap.io/page/'+ this.data.token;
+      const endpoint = 'https://coincap.io/page/'+ this.modalData.token;
 
       this.spinner( 'globalSpinner', 'show', 'loading market data' );
       this.$ajax.get( endpoint, {
@@ -180,7 +184,7 @@ export default {
         },
 
         success: ( xhr, status, response ) => {
-          if ( !response || !response.id ) return this.spinner( 'globalSpinner', 'error', 'No data for '+ this.data.token );
+          if ( !response || !response.id ) return this.spinner( 'globalSpinner', 'error', 'No data for '+ this.modalData.token );
           this.spinner( 'globalSpinner', 'hide' );
 
           if ( response.rank )         this.coinRank    = response.rank;
@@ -195,7 +199,7 @@ export default {
 
     // fetch last 24h candle data
     fetchChartData() {
-      const symbol = this.data.symbol;
+      const symbol = this.modalData.symbol;
       const interval = '1h';
       const limit = '168';
       const endpoint = 'https://api.binance.com/api/v1/klines?symbol='+ symbol +'&interval='+ interval +'&limit='+ limit;
@@ -228,7 +232,6 @@ export default {
     this.fetchGlobalData();
     this.fetchChartData();
   },
-
 }
 </script>
 
