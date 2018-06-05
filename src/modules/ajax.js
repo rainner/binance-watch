@@ -142,6 +142,14 @@ export default class Ajax {
       isDone = true;
     });
 
+    // request timeout handler
+    xhr.addEventListener( 'timeout', e => {
+      let { status, response, error } = this._responseParams( xhr, type );
+      onError( xhr, status, 'The HTTP request has been aborted due to the server not responding in time.' );
+      if ( !isDone ) onDone( xhr, status, response );
+      isDone = true;
+    });
+
     // send the request
     xhr.send( options.data || null );
   }
