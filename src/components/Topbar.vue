@@ -3,26 +3,37 @@
     <div class="container">
 
       <!-- main topbar row with logo and buttons -->
-      <div class="topbar-main flex-row flex-middle flex-space">
+      <div class="topbar-main flex-row flex-middle flex-stretch">
+
         <!-- topbar logo -->
         <div class="topbar-logo text-clip">
-          <h1 class="icon-chart-line iconLeft text-clip text-primary-hover clickable" @click="$emit( 'setRoute', '/' )">
-            Binance Watch
+          <h1 class="text-clip text-primary-hover clickable" @click="setRoute( '/' )">
+            <i class="icon-chart-line"></i> <span class="text-uppercase text-clip if-medium">Binance Watch</span>
           </h1>
         </div>
+
+        <!-- topbar buttons and menu -->
+        <div class="topbar-prices flex-row flex-middle flex-1">
+          <div class="text-clip clickable" v-for="a in assetPrices" :key="a.token" @click="setRoute( a.route )">
+            <span class="text-bright">{{ a.token }}</span>
+            <span :class="{ 'text-gain': ( a.percent > 0 ), 'text-loss': ( a.percent < 0 ) }">{{ a.sign }}{{ a.percent | toCents }}%</span> <br />
+            <span class="text-default">${{ a.close | toCurrency }} {{ a.arrow }}</span> <br />
+          </div>
+        </div>
+
         <!-- topbar buttons and menu -->
         <div class="topbar-menu text-nowrap">
 
           <button
             class="topbar-btn icon-alarm"
-            :class="{ 'text-success pulse': watching, 'text-danger': !watching }"
-            @click="$emit( 'toggleWatchform', 'toggle' )">
+            :class="{ 'text-gain pulse': watching, 'text-grey': !watching }"
+            @click="$bus.emit( 'toggleWatchform', 'toggle' )">
           </button>
 
           <Dropdown class="topbar-dropdown">
             <button slot="trigger"
-              class="topbar-btn icon-connection"
-              :class="{ 'text-success': isConnected, 'text-danger': !isConnected }">
+              class="topbar-btn icon-signal"
+              :class="{ 'text-gain': isConnected, 'text-danger': !isConnected }">
             </button>
             <div slot="list" class="text-center">
               <big>Socket Connection</big>
@@ -43,28 +54,28 @@
             </div>
           </Dropdown>
 
-          <dropdown class="topbar-dropdown" :class="{ 'alert-bubble': hasBubble }">
-            <button slot="trigger" class="topbar-btn icon-menu"></button>
+          <Dropdown class="topbar-dropdown" :class="{ 'alert-bubble': alertCount }">
+            <button slot="trigger" class="topbar-btn icon-menu" @click="resetCount"></button>
             <ul slot="list">
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/' )">
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/' )">
                 <i class="icon-chart-line iconLeft"></i> Prices
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="onNewsClick">
-                <i class="icon-feedback iconLeft"></i> News <span v-if="news.count">({{ news.count }})</span>
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/news' )">
+                <i class="icon-feedback iconLeft"></i> News <span class="text-grey" v-if="newsData.count">({{ newsData.count }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/history' )">
-                <i class="icon-clock iconLeft"></i> History <span v-if="history.length">({{ history.length }})</span>
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/history' )">
+                <i class="icon-clock iconLeft"></i> History <span class="text-grey" v-if="historyData.length">({{ historyData.length }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/alarms' )">
-                <i class="icon-alarm iconLeft"></i> Alarms <span v-if="alarmsCount">({{ alarmsCount }})</span>
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/alarms' )">
+                <i class="icon-alarm iconLeft"></i> Alarms <span class="text-grey" v-if="alarmsCount">({{ alarmsCount }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/about' )">
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/about' )">
                 <i class="icon-help iconLeft"></i> About
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/options' )">
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/options' )">
                 <i class="icon-config iconLeft"></i> Options
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="$emit( 'setRoute', '/donate' )">
+              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/donate' )">
                 <i class="icon-like iconLeft"></i> Donate
               </li>
             </ul>
@@ -89,14 +100,22 @@ export default {
 
   // component props
   props: {
-    watching: { type: Boolean, default: false, required: false },
-    socketStatus: { type: Number, default: 0, required: false },
-    socketTime: { type: String, default: '', required: false },
-    scrollDir: { type: String, default: '', required: false },
-    scrollPos: { type: Number, default: 0, required: false },
-    history: { type: Array, default: [] },
-    alarms: { type: Object, default() { return {} } },
-    news: { type: Object, default() { return {} } },
+    watching: { type: Boolean, default: false },
+    socketStatus: { type: Number, default: 0 },
+    socketTime: { type: String, default: '' },
+    scrollDir: { type: String, default: '' },
+    scrollPos: { type: Number, default: 0 },
+    priceData: { type: Array, default: [] },
+    historyData: { type: Array, default: [] },
+    alarmsData: { type: Object, default() { return {} } },
+    newsData: { type: Object, default() { return {} } },
+  },
+
+  // component data
+  data() {
+    return {
+      alertCount: 0,
+    }
   },
 
   // computed methods
@@ -107,33 +126,51 @@ export default {
       return ( this.socketStatus > 0 ) ? true : false;
     },
 
-    // see if there are new events or news
-    hasBubble() {
-      return this.news.count ? true : false;
-    },
-
     // get total number of alerms
     alarmsCount() {
       let count = 0;
-      Object.keys( this.alarms ).forEach( a => { count += this.alarms[ a ].length } );
+      Object.keys( this.alarmsData ).forEach( a => { count += this.alarmsData[ a ].length } );
       return count;
+    },
+
+    // get a few top tokens to be listed on topbar
+    assetPrices() {
+      let tokens = /^(BTC|ETH|LTC)$/;
+      let asset  = 'USDT';
+      return this.priceData.filter( p => ( tokens.test( p.token ) && p.asset === asset ) );
     },
   },
 
   // custom methods
   methods: {
 
+    // reset bubble alert count
+    resetCount() {
+      this.alertCount = 0;
+    },
+
+    // increase bubble alert count
+    increaseCount() {
+      this.alertCount += 1;
+    },
+
     // toggle socket connection
     toggleConnection() {
       this.$bus.emit( 'toggleSocket', !this.isConnected );
     },
 
-    // special handler for the news menu item to reset count and change route
-    onNewsClick( e ) {
-      this.$bus.emit( 'resetNewsCount' );
-      this.$emit( 'setRoute', '/news' );
-    }
+    // proxy for settings a route
+    setRoute( route, reset ) {
+      this.$bus.emit( 'setRoute', route );
+      if ( reset ) this.resetCount();
+    },
+  },
 
+  // component mounted
+  mounted() {
+    // used to add the alert bubble to the menu
+    this.$bus.on( 'mainMenuAlert', this.increaseCount );
+    this.$bus.on( 'mainMenuReset', this.resetCount );
   },
 }
 </script>
@@ -159,6 +196,19 @@ export default {
         font-size: 150%;
         line-height: 1em;
         text-transform: uppercase;
+      }
+    }
+    // top asset prices
+    .topbar-prices {
+      font-size: 80%;
+      line-height: 1.1em;
+      letter-spacing: 1px;
+      font-weight: normal;
+
+      & > div {
+        margin-left: $padSpace;
+        padding-left: $padSpace;
+        border-left: $lineWidth $lineStyle $lineColor;
       }
     }
     // button/links
