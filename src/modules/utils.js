@@ -22,6 +22,14 @@ module.exports = {
     return data;
   },
 
+  // convert relative path to full url
+  fullUrl( relpath ) {
+    let loc  = window.location;
+    let path = String( loc.pathname || '' ).replace( /\/+$/g, '' );
+    let rel  = String( relpath || '' ).replace( /^\/+/g, '' );
+    return loc.protocol +'//'+ loc.host + path +'/'+ rel;
+  },
+
   // to trimmed string
   toStr( input, deft ) {
     return String( String( input ) || deft ).trim();
