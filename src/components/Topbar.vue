@@ -202,13 +202,22 @@ export default {
     .topbar-prices {
       font-size: 80%;
       line-height: 1.1em;
-      letter-spacing: 1px;
+      letter-spacing: 0;
       font-weight: normal;
 
       & > div {
-        margin-left: $padSpace;
-        padding-left: $padSpace;
+        margin-left: $padSpace / 1.5;
+        padding-left: $padSpace / 1.5;
         border-left: $lineWidth $lineStyle $lineColor;
+      }
+
+       @media #{$screenSmall} {
+        letter-spacing: 1px;
+
+        & > div {
+          margin-left: $padSpace;
+          padding-left: $padSpace;
+        }
       }
     }
     // button/links
