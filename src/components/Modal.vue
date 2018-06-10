@@ -88,10 +88,9 @@ export default {
 
   .modal-container {
     margin: 0 auto;
-    width: calc( 100vw - ( #{$padSpace} * 3 ) );
-    max-width: $sizeMedium;
+    width: calc( 100% - ( #{$padSpace} * 2 ) );
+    max-width: calc( #{$sizeMedium} + ( #{$padSpace} * 2 ) );
     background-color: $colorDocumentLight;
-    @include borderEffect;
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
     transform: scale( 0.5 );
