@@ -4,9 +4,9 @@
     <div class="barchart-lines"><hr /><hr /><hr /></div>
     <div class="barchart-graph">
       <div class="barchart-column clickable" v-for="d in chartData" :key="d.label" @click="$emit( 'click', d )">
-        <div class="barchart-value">{{ d.value }}</div>
+        <div class="barchart-value" v-text="d.value"></div>
         <div class="barchart-bar"><div :class="d.clss" :style="{ height: d.size +'px' }"></div></div>
-        <div class="barchart-label">{{ d.label }}</div>
+        <div class="barchart-label" :class="d.color || ''" v-html="d.label"></div>
       </div>
     </div>
   </section>
