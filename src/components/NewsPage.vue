@@ -82,8 +82,27 @@
           </div>
         </div>
 
-        <div class="newspage-chart push-bottom" v-if="filterList.length">
-          <BarChart :data="chartData" @click="chartClick"></BarChart>
+        <div class="newspage-chart push-bottom" v-if="chartData.length">
+          <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
+            <div class="newspage-chart-sm text-nowrap">Token</div>
+            <div class="newspage-chart-md text-clip">Name</div>
+            <div class="flex-5 text-nowrap if-medium">Mention %</div>
+            <div class="newspage-chart-sm text-nowrap">Count</div>
+            <div class="newspage-chart-sm text-nowrap text-right">Score</div>
+            <div class="newspage-chart-md text-nowrap if-small">Sentiment</div>
+            <div class="flex-1 text-nowrap text-right">Details</div>
+          </div>
+          <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.search">
+            <div class="newspage-chart-sm text-clip text-bright icon-search iconLeft">{{ d.token }}</div>
+            <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
+            <div class="flex-5 text-nowrap if-medium"><span class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span></div>
+            <div class="newspage-chart-sm text-nowrap">{{ d.count }}</div>
+            <div class="newspage-chart-sm text-nowrap text-right" :class="d.scoreColor">{{ d.scoreStr }}</div>
+            <div class="newspage-chart-md text-nowrap if-small" :class="d.scoreColor">{{ d.scoreWord }}</div>
+            <div class="flex-1 text-nowrap text-right">
+              <button class="text-pill bg-grey-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Info</button>
+            </div>
+          </div>
         </div>
 
         <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="( n, i ) in filterList" :key="n.id">
@@ -108,6 +127,7 @@ import Dropdown from './Dropdown.vue';
 import BarChart from './BarChart.vue';
 import Toggle from './Toggle.vue';
 import scraper from '../modules/scraper';
+import sentiment from '../modules/sentiment';
 import utils from '../modules/utils';
 
 // component
@@ -136,12 +156,13 @@ export default {
         { key: 'reddit',   name: 'Crypto Subreddit',   cb: 'fetchReddit' },
         { key: 'ccnews',   name: 'Crypto News (CCN)',  cb: 'fetchCCN' },
         { key: 'coinlib',  name: 'Coinlib News',       cb: 'fetchCoinlib' },
+        { key: 'ambnews',  name: 'AMB Crypto News',    cb: 'fetchAMB' },
         { key: '',         name: 'All Sources',        cb: '' },
       ],
       // news data
       lastList: [],
       newsList: [],
-      profileData: {},
+      coinsCache: {},
       chartData: [],
       // count data
       lastCount: 0,
@@ -152,6 +173,7 @@ export default {
       filterType: '',
       filterLimit: 0,
       // other
+      timeout: 10,
       refetchTime: 300,
       proxyDomain: '',
       working: false,
@@ -160,20 +182,20 @@ export default {
     }
   },
 
-  // watch
-  watch: {
+  // // watch
+  // watch: {
 
-    // wait for socket price data to load and update chart
-    priceData: function() {
-      if ( this.chartData.length ) return;
-      this.updateChart();
-    },
+  //   // wait for socket price data to load and update chart
+  //   priceData: function() {
+  //     if ( this.chartData.length ) return;
+  //     this.updateChart();
+  //   },
 
-    // watch for loaded coins data
-    coinsData: function() {
-      this.updateChart();
-    },
-  },
+  //   // watch for loaded coins data
+  //   coinsData: function() {
+  //     this.updateChart();
+  //   },
+  // },
 
   // computed methods
   computed: {
@@ -266,21 +288,61 @@ export default {
 
     // draw token chart from profile data
     updateChart() {
-      let data   = [];
-      let tokens = {};
+      // need available tokens data
+      if ( !this.priceData.length ) return;
+      if ( !Object.keys( this.coinsData ).length ) return;
+      let data = [];
+      let max  = 0;
 
       // pair token from priceData with name from coinsData
       this.priceData.forEach( p => {
-        if ( p.token === 'BTC' || !this.coinsData.hasOwnProperty( p.token ) ) return;
-        tokens[ p.token ] = this.coinsData[ p.token ];
+        if ( p.token === 'BTC' ) return;
+        if ( this.coinsCache.hasOwnProperty( p.token ) ) return;
+        if ( !this.coinsData.hasOwnProperty( p.token ) ) return;
+        this.coinsCache[ p.token ] = this.coinsData[ p.token ];
       });
+
       // check token symbol and name against all loaded news titles
-      Object.keys( tokens ).forEach( t => {
-        let label  = t;
-        let search = t +'|'+ tokens[ t ];
-        let value  = utils.search( this.newsList, 'title', search ).length;
-        if ( value > 1 ) data.push( { label, value, search } );
+      Object.keys( this.coinsCache ).forEach( token => {
+        let name       = this.coinsCache[ token ];
+        let search     = token +'|'+ name;
+        let route      = '/symbol/'+ token +'BTC';
+        let score      = 0;
+        let scoreStr   = '';
+        let scoreColor = 'text-bright';
+        let scoreWord  = 'Neutral';
+        let sign       = '';
+        let list       = utils.search( this.newsList, 'title', search );
+        let count      = list.length;
+
+        if ( count > 1 ) {
+          for ( let i = 0; i < list.length; ++i ) {
+            let d = sentiment.analyze( list[ i ].title );
+            score += d.score;
+          }
+          if ( score > 1 )  { scoreColor = 'text-gain'; }
+          if ( score < -1 ) { scoreColor = 'text-loss'; }
+          if ( score > 0 )  { scoreWord  = 'Positive'; sign = '+'; }
+          if ( score < 0 )  { scoreWord  = 'Negative'; sign = '-'; }
+
+          scoreStr = sign + String( Math.abs( score ) );
+          data.push( { token, name, search, route, count, score, scoreStr, scoreColor, scoreWord } );
+        }
       });
+
+      // calculate percent for each data enrtry
+      max  = data.reduce( ( max, d ) => d.count > max ? d.count : max, data[ 0 ].count );
+      data = data.map( d => {
+        let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
+        let barPercent = Math.round( ratio * 100 );
+        let barColor = 'bg-grey';
+        if ( barPercent > 20 ) { barColor = 'bg-bright'; }
+        if ( barPercent > 40 ) { barColor = 'bg-secondary'; }
+        if ( barPercent > 60 ) { barColor = 'bg-primary'; }
+        return Object.assign( d, { barPercent, barColor } );
+      });
+
+      // assign final chart data
       this.chartData = data;
     },
 
@@ -347,7 +409,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'json',
-          timeout: 15,
+          timeout: this.timeout,
           done: ( xhr, status, response ) => {
             if ( response && response.data && response.data.children ) {
               let list = response.data.children;
@@ -364,7 +426,34 @@ export default {
       });
     },
 
-     // fetch news data from newsapi
+    // fetch news data from ambcrypto
+    fetchAMB() {
+      return new Promise( resolve => {
+        const endpoint = 'https://ambcrypto.com/category/altcoins-news/';
+
+        this.$ajax.get( endpoint, {
+          type: 'document',
+          timeout: this.timeout,
+          done: ( xhr, status, dom ) => {
+            const list = scraper( dom, {
+              items  : '.mvp-blog-story-wrap',
+              params : {
+                title : '.mvp-blog-story-text h2',
+                link  : 'a',
+              }
+            });
+            for ( let i = 0; i < list.length; ++i ) {
+              let item = list[ i ];
+              if ( !item.title || !item.link ) continue;
+              this.addNews( 'ambnews', 'ambcrypto.com', item.title, item.link );
+            }
+            resolve();
+          }
+        });
+      });
+    },
+
+    // fetch news data from newsapi
     fetchCCN() {
       return new Promise( resolve => {
         const endpoint = 'https://www.ccn.com/wp-admin/admin-ajax.php';
@@ -375,7 +464,7 @@ export default {
 
         this.$ajax.post( endpoint, {
           type: 'document',
-          timeout: 15,
+          timeout: this.timeout,
           data: fdata,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
@@ -403,7 +492,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'document',
-          timeout: 15,
+          timeout: this.timeout,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
               items  : '.news-post',
@@ -431,7 +520,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'document',
-          timeout: 15,
+          timeout: this.timeout,
           done: ( xhr, status, dom ) => {
             const list = scraper( dom, {
               items  : '.article-list > .article-list-item',
@@ -460,7 +549,7 @@ export default {
 
         this.$ajax.get( endpoint, {
           type: 'json',
-          timeout: 15,
+          timeout: this.timeout,
           done: ( xhr, status, list ) => {
             if ( Array.isArray( list ) ) {
               for ( let i = 0; i < list.length; ++i ) {
@@ -526,9 +615,37 @@ export default {
   }
 
   .newspage-chart {
-    padding: $padSpace;
-    background-color: $lineColor;
+    padding: $padSpace 0;
+    background-color: $colorDocumentLight;
     border-radius: $lineJoin;
+    font-size: 90%;
+
+    .newspage-chart-row {
+      position: relative;
+      padding: 0 $padSpace;
+
+      &:nth-child( even ) {
+        background-color: rgba( #000, 0.1 );
+      }
+      & + .newspage-chart-row:hover {
+        background-color: rgba( #fff, 0.1 );
+      }
+      .newspage-chart-sm {
+        width: 80px;
+      }
+      .newspage-chart-md {
+        width: 180px;
+      }
+      .newspage-chart-bar {
+        display: block;
+        height: 5px;
+        background-color: $colorInfo;
+        border-radius: $lineJoin;
+      }
+      & > div + div {
+        margin-left: 1em;
+      }
+    }
   }
 
   .newspage-list {
