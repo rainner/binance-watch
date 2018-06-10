@@ -195,10 +195,11 @@ module.exports = {
   },
 
   // return matching results from a list
-  search( list, key, match ) {
+  search( list, key, match, strict ) {
     if ( !Array.isArray( list ) || !key || !match ) return [];
-    let search = '\\b'+ String( match || '' ).replace( /[\|]+/g, '\\b|\\b' ) +'\\b';
-    let regex  = new RegExp( search, 'gi' );
+    let search  = '\\b'+ String( match || '' ).replace( /[\|]+/g, '\\b|\\b' ) +'\\b';
+    let options = strict ? 'g' : 'gi';
+    let regex   = new RegExp( search, options );
     return list.filter( obj => obj[ key ].search( regex ) >= 0 );
   },
 
