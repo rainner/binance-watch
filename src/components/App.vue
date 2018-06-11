@@ -106,6 +106,7 @@ import Scroller from '../modules/scroller';
 import msgQueue from '../modules/queue';
 import mailgun from '../modules/mailgun';
 import telegram from '../modules/telegram';
+import appOptions from '../modules/options';
 import utils from '../modules/utils';
 
 // sub components
@@ -148,38 +149,12 @@ export default {
   // component data
   data() {
     return {
-      // common stufff
       refid: '12268078',
       title: 'Binance Watch',
       optKey: 'app_options_data',
-      // app options
-      options: {
-        // notification sounds
-        sound: true,
-        // cors proxy for outgoing http requests
-        proxy: 'https://cors-anywhere.herokuapp.com/',
-        // news related options
-        news: {
-          refetch: true,  // aut re-fetch news on a timer
-          notify: true,   // show push notifications for news
-          send: false,    // include news in outgoing notifications (email/telegram)
-        },
-        // mailgun api config
-        mailgun: {
-          enabled: false, // status
-          domain: '',     // account domain
-          apikey: '',     // api key
-          email: '',      // recipient email
-        },
-        // telegram bot api config
-        telegram: {
-          enabled: false, // status
-          botkey: '',     // telegram bot id
-          userid: '',     // recipient chat id
-        }
-      },
-      // app data
+      options: appOptions,
       watching: false,
+      // app data
       priceData: [],
       assetsList: [],
       historyData: [],
@@ -191,22 +166,13 @@ export default {
       modalComp: '',
       modalData: {},
       // socket related data
-      socketStatus: 0, // ( 0: off, 1: connecting, 2: connected)
+      socketStatus: 0, // ( 0: off, 1: wait, 2: on )
       socketStart: 0,
       socketInt: null,
       socketTime: '',
       // page scroll data
       scrollDir: '',
       scrollPos: 0,
-    }
-  },
-
-  // watch methods
-  watch: {
-    // update socket status based on price data
-    priceData: function() {
-      if ( !this.socketStatus ) return; // off, leave as is
-      this.socketStatus = !this.priceData.length ? 1 : 2; // waiting, or done
     }
   },
 
@@ -282,12 +248,58 @@ export default {
       this.loadCacheData();
     },
 
+    // convert socket timestamp to text
+    computeSocketTime() {
+      if ( !this.socketStart ) return;
+      let secs = ( Date.now() - this.socketStart ) / 1000;
+      this.socketTime = utils.elapsed( secs );
+    },
+
+    // when socket connection opens
+    onSocketOpen( ws, e ) {
+      this.socketStatus = 1;
+      this.socketStart = Date.now();
+      this.socketInt = setInterval( this.computeSocketTime, 1000 );
+      this.showNotice( 'Socket connection active.', 'success' );
+    },
+
+    // when socket connection ends
+    onSocketError( ws, e ) {
+      if ( this.socketInt ) clearInterval( this.socketInt );
+      this.socketStatus = 0;
+      this.socketStart = 0;
+      console.info( 'Socket-Error:', e.message || e );
+      this.showNotice( 'Socket connection error.', 'warning' );
+    },
+
+    // when socket connection ends
+    onSocketClose( ws, e ) {
+      if ( this.socketInt ) clearInterval( this.socketInt );
+      this.socketStatus = 0;
+      this.socketStart = 0;
+      this.showNotice( 'Socket connection closed.', 'warning' );
+    },
+
+    // handle socket connection
+    toggleSocket( toggle ) {
+      this.toggleWatchform( 'stop' );
+      this.socketStatus = 1;
+
+      if ( toggle === true && !this.socketStart ) {
+        return _stream.getTickerData( this.onTickerData );
+      }
+      if ( toggle === false && this.socketStart ) {
+        return _stream.closeSockets();
+      }
+    },
+
     // when live price data is recieved
     onTickerData( list ) {
-      let total = list.length;
+      this.priceData = list;
+      this.socketStatus = 2;
 
-      for ( let i = 0; i < total; ++i ) {
-        let p = list[ i ];
+      for ( let i = 0; i < this.priceData.length; ++i ) {
+        let p = this.priceData[ i ];
 
         // update symbol name from coinsData
         if ( this.coinsData.hasOwnProperty( p.token ) ) {
@@ -301,54 +313,6 @@ export default {
         if ( this.assetsList.indexOf( p.asset ) < 0 ) {
           this.assetsList.push( p.asset );
         }
-      }
-      this.priceData = list;
-    },
-
-    // when socket connection opens
-    onSocketOpen( ws, e ) {
-      this.socketStatus = 1;
-      this.socketStart = Date.now();
-      this.socketInt = setInterval( this.computeSocketTime, 1000 );
-      this.assetsList = [];
-      this.showNotice( 'Socket connection active', 'success' );
-    },
-
-    // when socket connection ends
-    onSocketError( ws, e ) {
-      if ( this.socketInt ) clearInterval( this.socketInt );
-      this.socketStatus = 0;
-      this.priceData = [];
-      this.showNotice( 'Socket connection error', 'error' );
-      console.error( e );
-    },
-
-    // when socket connection ends
-    onSocketClose( ws, e ) {
-      if ( this.socketInt ) clearInterval( this.socketInt );
-      this.socketStatus = 0;
-      this.priceData = [];
-      this.showNotice( 'Socket connection closed', 'warning' );
-    },
-
-    // convert socket timestamp to text
-    computeSocketTime() {
-      if ( !this.socketStart ) return;
-      let secs = ( Date.now() - this.socketStart ) / 1000;
-      this.socketTime = utils.elapsed( secs );
-    },
-
-    // handle socket connection
-    toggleSocket( toggle ) {
-      this.toggleWatchform( 'stop' );
-
-      if ( toggle === true && !this.socketStatus ) {
-        this.socketStatus = 1;
-        _stream.getTickerData( this.onTickerData );
-      }
-      if ( toggle === false ) {
-        this.socketStatus = 0;
-        _stream.closeSockets();
       }
     },
 
