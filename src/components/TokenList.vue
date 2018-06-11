@@ -211,11 +211,13 @@ export default {
   watch: {
 
     // update spinenr based on socket and price data status
-    socketStatus: function() {
+    priceData: function() {
       if ( !this.$refs.spinner ) return;
-      if ( this.socketStatus === 0 ) return this.$refs.spinner.error( 'Socket API not connected' );
-      if ( this.socketStatus === 1 ) return this.$refs.spinner.show( 'Waiting for price data' );
-      if ( this.socketStatus === 2 ) return this.$refs.spinner.hide();
+      if ( !this.priceData.length ) {
+        if ( this.socketStatus === 0 ) return this.$refs.spinner.error( 'Socket API not connected' );
+        if ( this.socketStatus === 1 ) return this.$refs.spinner.show( 'Waiting for price data' );
+      }
+      this.$refs.spinner.hide();
     },
   },
 
