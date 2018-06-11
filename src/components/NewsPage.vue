@@ -86,8 +86,8 @@
           <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
             <div class="newspage-chart-sm text-nowrap">Token</div>
             <div class="newspage-chart-md text-clip">Name</div>
+            <div class="newspage-chart-sm text-nowrap text-right">Count</div>
             <div class="flex-5 text-nowrap if-medium">Mention %</div>
-            <div class="newspage-chart-sm text-nowrap">Count</div>
             <div class="newspage-chart-sm text-nowrap text-right">Score</div>
             <div class="newspage-chart-md text-nowrap if-small">Sentiment</div>
             <div class="flex-1 text-nowrap text-right">Details</div>
@@ -95,8 +95,8 @@
           <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.search">
             <div class="newspage-chart-sm text-clip text-bright icon-search iconLeft">{{ d.token }}</div>
             <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
+            <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
             <div class="flex-5 text-nowrap if-medium"><span class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span></div>
-            <div class="newspage-chart-sm text-nowrap">{{ d.count }}</div>
             <div class="newspage-chart-sm text-nowrap text-right" :class="d.scoreColor">{{ d.scoreStr }}</div>
             <div class="newspage-chart-md text-nowrap if-small" :class="d.scoreColor">{{ d.scoreWord }}</div>
             <div class="flex-1 text-nowrap text-right">
@@ -182,20 +182,22 @@ export default {
     }
   },
 
-  // // watch
-  // watch: {
+  // watch methods
+  watch: {
 
-  //   // wait for socket price data to load and update chart
-  //   priceData: function() {
-  //     if ( this.chartData.length ) return;
-  //     this.updateChart();
-  //   },
+    // make sure to update the chart after the price data comes in
+    priceData: function() {
+      if ( !this.priceData.length ) return;
+      if ( this.chartData.length ) return;
+      this.updateChart();
+    },
 
-  //   // watch for loaded coins data
-  //   coinsData: function() {
-  //     this.updateChart();
-  //   },
-  // },
+    // don't show spinner if list is full
+    newsList: function() {
+      if ( !this.$refs.spinner ) return;
+      if ( this.newsList.length ) this.$refs.spinner.hide();
+    },
+  },
 
   // computed methods
   computed: {
@@ -288,15 +290,10 @@ export default {
 
     // draw token chart from profile data
     updateChart() {
-      // need available tokens data
-      if ( !this.priceData.length ) return;
-      if ( !Object.keys( this.coinsData ).length ) return;
       let data = [];
-      let max  = 0;
 
       // pair token from priceData with name from coinsData
       this.priceData.forEach( p => {
-        if ( p.token === 'BTC' ) return;
         if ( this.coinsCache.hasOwnProperty( p.token ) ) return;
         if ( !this.coinsData.hasOwnProperty( p.token ) ) return;
         this.coinsCache[ p.token ] = this.coinsData[ p.token ];
@@ -309,7 +306,7 @@ export default {
         let route      = '/symbol/'+ token +'BTC';
         let score      = 0;
         let scoreStr   = '';
-        let scoreColor = 'text-bright';
+        let scoreColor = 'text-default';
         let scoreWord  = 'Neutral';
         let sign       = '';
         let list       = utils.search( this.newsList, 'title', search );
@@ -320,10 +317,8 @@ export default {
             let d = sentiment.analyze( list[ i ].title );
             score += d.score;
           }
-          if ( score > 1 )  { scoreColor = 'text-gain'; }
-          if ( score < -1 ) { scoreColor = 'text-loss'; }
-          if ( score > 0 )  { scoreWord  = 'Positive'; sign = '+'; }
-          if ( score < 0 )  { scoreWord  = 'Negative'; sign = '-'; }
+          if ( score > 0 ) { scoreColor = 'text-gain'; scoreWord = 'Positive'; sign = '+'; }
+          if ( score < 0 ) { scoreColor = 'text-loss'; scoreWord = 'Negative'; sign = '-'; }
 
           scoreStr = sign + String( Math.abs( score ) );
           data.push( { token, name, search, route, count, score, scoreStr, scoreColor, scoreWord } );
@@ -331,7 +326,7 @@ export default {
       });
 
       // calculate percent for each data enrtry
-      max  = data.reduce( ( max, d ) => d.count > max ? d.count : max, data[ 0 ].count );
+      let max = data.reduce( ( m, d ) => d.count > m ? d.count : m, 0 );
       data = data.map( d => {
         let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
         let barPercent = Math.round( ratio * 100 );
@@ -615,14 +610,18 @@ export default {
   }
 
   .newspage-chart {
-    padding: $padSpace 0;
-    background-color: $colorDocumentLight;
+    padding: ( $padSpace / 2 ) 0;
+    background-color: rgba( $colorDocumentLight, 0.6 );
     border-radius: $lineJoin;
     font-size: 90%;
 
     .newspage-chart-row {
       position: relative;
       padding: 0 $padSpace;
+
+      &:first-of-type {
+        margin-bottom: ( $padSpace / 2 );
+      }
 
       &:nth-child( even ) {
         background-color: rgba( #000, 0.1 );
