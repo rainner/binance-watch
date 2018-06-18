@@ -5,10 +5,8 @@
     <Spinner class="tokenlist-spinner abs" ref="spinner"></Spinner>
 
     <!-- fixed list search/sorting controls -->
-    <div class="tokenlist-controls">
+    <section class="tokenlist-controls">
       <div class="container">
-
-        <!-- control elements -->
         <div class="tokenlist-controls-row flex-row flex-middle flex-space">
 
           <!-- control input -->
@@ -27,8 +25,6 @@
 
           <!-- control dropdown menus -->
           <div class="tokenlist-controls-filters text-nowrap">
-
-            <!-- limit menu -->
             <Dropdown>
               <button slot="trigger" class="form-btn bg-grey-hover icon-down-open" title="List Limit" v-tooltip>
                 {{ limitCountLabel }}
@@ -49,7 +45,6 @@
               </ul>
             </Dropdown>&nbsp;
 
-            <!-- sort menu -->
             <Dropdown>
               <button slot="trigger" class="form-btn bg-grey-hover iconLeft"
                 :class="{ 'icon-down': sortOrder === 'desc', 'icon-up': sortOrder === 'asc' }"
@@ -77,7 +72,6 @@
               </ul>
             </Dropdown>&nbsp;
 
-            <!-- assets menu -->
             <Dropdown>
               <button slot="trigger" class="form-btn bg-primary-hover icon-star iconLeft"
                 v-text="filterAsset" title="Filter Asset" v-tooltip>
@@ -88,24 +82,35 @@
                 </li>
               </ul>
             </Dropdown>
-
           </div>
-        </div>
 
+        </div>
       </div>
-    </div>
+    </section>
 
     <!-- live ticker price list -->
-    <div class="tokenlist-list">
+    <section class="push-bottom" v-if="!listCount">
       <div class="container">
-
-        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="searchToken && !listCount">
-          <div class="tokenlist-item-icon icon-help iconMedium push-right"></div>
-          <div class="tokenlist-item-symbol text-clip flex-1">
-            <big class="text-danger">Found nothing matching: {{ searchToken }}.</big> <br />
-            <span class="text-grey">There are a total of {{ priceData.length }} symbols loaded from the API</span>
+        <div class="card flex-row flex-middle flex-stretch">
+          <div class="icon-help iconLarge push-right"></div>
+          <div class="text-clip flex-1">
+            <div v-if="searchToken">
+              <span class="text-bright">No match for search: <span class="text-primary">{{ searchToken }}</span></span> &nbsp;
+              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="searchToken = ''">Reset</button> <br />
+              <span class="text-grey">Can't find anything matching your search input.</span>
+            </div>
+            <div v-else>
+              <span class="text-bright">No price data available</span> <br />
+              <span class="text-grey">Price data from remote API has not loaded yet.</span>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- live ticker price list -->
+    <section class="tokenlist-list">
+      <div class="container">
 
         <div v-for="p in tickerList"
           class="tokenlist-item flex-row flex-middle flex-stretch clickable"
@@ -159,8 +164,7 @@
         </div>
 
       </div>
-
-    </div>
+    </section>
 
   </main>
 </template>
@@ -346,6 +350,8 @@ export default {
 // ticker wrap
 .tokenlist-wrap {
   position: relative;
+  padding-top: calc( #{$topbarHeight} + 4.5em );
+  padding-bottom: $topbarHeight;
   min-height: 100vh;
 
   .tokenlist-controls {
@@ -368,7 +374,6 @@ export default {
 
   .tokenlist-list {
     position: relative;
-    padding: calc( #{$topbarHeight} + 4.5em ) 0 0 0;
 
     .tokenlist-item {
       margin: 0 0 ( $lineWidth * 2 ) 0;
@@ -404,8 +409,7 @@ export default {
 
   // collapsed mode
   &.collapsed {
-    .tokenlist-controls,
-    .tokenlist-list {
+    .tokenlist-controls {
       transform: translateY( -#{$topbarHeight} );
     }
   }
