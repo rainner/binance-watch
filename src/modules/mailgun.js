@@ -22,12 +22,13 @@ export default function( ajax, options, queue ) {
     if ( !domain || !recipient || !password ) return resolve();
 
     queue.forEach( m => {
+      let info = String( m.info || '' ).replace( /\n+/g, ' <br />' );
       message += `
       <div style="border-top: 1px dashed rgba( 0,0,0,0.1 ); margin-top: 1em; padding-top: 1em;">
         <table width="100%" border="0">
           <tr>
-            <td><img src="${ m.icon }" alt="icon" style="width: 30px; height: auto; margin: 0 5px 0 0;" /></td>
-            <td width="100%"><b>${ m.title }</b> <br /> ${ m.info }</td>
+            <td><img src="${ m.icon }" alt="icon" style="width: 42px; height: auto; margin: 0 5px 0 0;" /></td>
+            <td width="100%"><b>${ m.title }</b> <br /> ${ info }</td>
           </tr>
         </table>
       </div>`;
