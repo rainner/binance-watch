@@ -39,7 +39,7 @@
 // common card style
 .card {
   padding: $padSpace;
-  background-color: lighten( $colorDocument, 10% );
+  background-color: $colorDocumentLight;
   border-radius: $lineJoin;
   box-shadow: $shadowPaper;
 }

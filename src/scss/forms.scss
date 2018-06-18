@@ -40,6 +40,11 @@ input[type="date"] {
   cursor: pointer;
 }
 
+// select options
+select > option {
+  color: $colorDocument !important;
+}
+
 // row container for a form element
 .form-row {
   display: block;

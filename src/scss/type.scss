@@ -82,10 +82,10 @@ ul {
 // pill style wrappers for text elements
 .text-pill {
   display: inline-block;
-  font-size: 80%;
+  font-size: inherit;
   line-height: 1.2em;
-  padding: .2em .6em;
-  text-transform: uppercase;
+  padding: 0 .6em 1px .6em;
+  // text-transform: uppercase;
   background: $colorBright linear-gradient( 180deg, transparent, rgba(0,0,0,0.2) );
   color: $colorBrightText;
   border-radius: 100px;
