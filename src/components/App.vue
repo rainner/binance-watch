@@ -261,6 +261,7 @@ export default {
       this.socketStart = Date.now();
       this.socketInt = setInterval( this.computeSocketTime, 1000 );
       this.showNotice( 'Socket connection active.', 'success' );
+      this.fetchCoinsData();
     },
 
     // when socket connection ends
@@ -300,11 +301,8 @@ export default {
 
       for ( let i = 0; i < this.priceData.length; ++i ) {
         let p = this.priceData[ i ];
+        p.name = this.coinsData[ p.token ] || p.name || p.token;
 
-        // update symbol name from coinsData
-        if ( this.coinsData.hasOwnProperty( p.token ) ) {
-          p.name = this.coinsData[ p.token ];
-        }
         // if modal is open for a symbol, pass latest price data to it
         if ( this.modalData && this.modalData.symbol && this.modalData.symbol === p.symbol ) {
           this.modalData = p;
@@ -417,11 +415,13 @@ export default {
         type: 'json',
         done: ( xhr, status, list ) => {
           if ( !Array.isArray( list ) ) return;
+          let data = {};
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' );
             let name  = String( list[ i ].name || '' ).replace( /[^\w\-\.]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
-            if ( token && name ) this.coinsData[ token ] = name;
+            if ( token && name ) data[ token ] = name;
           }
+          this.coinsData = data;
         },
       });
     },
@@ -433,7 +433,6 @@ export default {
     this.loadCacheData();
     this.setupRoutes();
     this.setupMsgQueue();
-    this.fetchCoinsData();
     // config global shared objects
     this.$notify.permission();
     this.$notify.loadAlarms();
