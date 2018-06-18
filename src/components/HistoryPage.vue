@@ -22,7 +22,7 @@
         </div>
         <div class="flex-1 push-right">
           <span class="text-bright">{{ e.title }}</span> <br />
-          <small>{{ e.info }}</small>
+          <small>{{ formatInfo( e.info ) }}</small>
         </div>
         <div class="text-clip text-right">
           <button class="icon-close" @click="deleteHistory( e.id )"></button> <br />
@@ -68,6 +68,11 @@ export default {
       this.$bus.emit( 'showNotice', 'History data has been flushed.', 'success' );
       this.$bus.emit( 'loadCacheData' );
     },
+
+    // format info string
+    formatInfo( info ) {
+      return String( info || '' ).replace( /\n+/g, ' | ' );
+    }
   },
 }
 </script>
