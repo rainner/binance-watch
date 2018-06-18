@@ -27,57 +27,66 @@
           <div class="watchform-controls flex-row flex-top flex-space flex-wrap">
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Asset: <i class="icon-down-open"></i></div>
-              <select v-model="options.asset">
-                <option v-for="asset in assetsList" :key="asset" :value="asset">{{ asset }}</option>
-              </select>
+              <div class="icon-down-open">
+                <select v-model="options.asset">
+                  <option v-for="asset in assetsList" :key="asset" :value="asset">{{ asset }} Pairs</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Change: <i class="icon-down-open"></i></div>
-              <select class="push-right" v-model="options.target">
-                <option value="price">Price</option>
-                <option value="volume">Volume</option>
-              </select>
-              <input class="flex-1 push-right" type="range" min="1" max="100" step="1" v-model="options.change" />
-              <div>{{ options.change }}%</div>
+              <div class="push-right icon-down-open">
+                <select v-model="options.priceType">
+                  <option value="change">Price Change</option>
+                  <option value="gain">Price Gain</option>
+                  <option value="loss">Price Loss</option>
+                </select>
+              </div>
+              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="options.priceChange" />
+              <div :class="{ 'text-grey': options.priceChange === '0' }">{{ options.priceChange }}%</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Type: <i class="icon-down-open"></i></div>
-              <select v-model="options.type">
-                <option value="both">Gain/Loss</option>
-                <option value="gain">Gain only</option>
-                <option value="loss">Loss only</option>
-              </select>
+              <div class="push-right icon-down-open">
+                <select v-model="options.volumeType">
+                  <option value="change">Vol Change</option>
+                  <option value="gain">Vol Gain</option>
+                  <option value="loss">Vol Loss</option>
+                </select>
+              </div>
+              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="options.volumeChange" />
+              <div :class="{ 'text-grey': options.volumeChange === '0' }">{{ options.volumeChange }}%</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Notify: <i class="icon-down-open"></i></div>
-              <select v-model="options.notify">
-                <option value="repeat">Repeat all</option>
-                <option value="once">Once per pair</option>
-              </select>
-            </div>
-
-            <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Price: <i class="icon-down-open"></i></div>
-              <select class="push-right" v-model="options.priceCheck">
-                <option value="above">Above</option>
-                <option value="below">Below</option>
-              </select>
+              <div class="push-right icon-down-open">
+                <select v-model="options.priceCheck">
+                  <option value="above">Price Above</option>
+                  <option value="below">Price Below</option>
+                </select>
+              </div>
               <input class="push-right" type="text" placeholder="0.00000000" v-model="options.price" @keyup="numInput" />
               <div class="text-grey">{{ options.asset }}</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="text-grey text-nowrap">Volume: <i class="icon-down-open"></i></div>
-              <select class="push-right" v-model="options.volumeCheck">
-                <option value="above">Above</option>
-                <option value="below">Below</option>
-              </select>
+              <div class="push-right icon-down-open">
+                <select v-model="options.volumeCheck">
+                  <option value="above">Vol Above</option>
+                  <option value="below">Vol Below</option>
+                </select>
+              </div>
               <input class="push-right" type="text" placeholder="0" v-model="options.volume" @keyup="numInput" />
               <div class="text-grey">{{ options.asset }}</div>
+            </div>
+
+            <div class="form-input text-nowrap push-bottom">
+              <div class="icon-down-open">
+                <select v-model="options.notify">
+                  <option value="repeat">Repeat all</option>
+                  <option value="once">Once per pair</option>
+                </select>
+              </div>
             </div>
 
             <button
@@ -127,14 +136,18 @@ export default {
       snapshot: {},
       // user options
       options: {
-        asset: 'BTC',
-        type: 'both',
-        target: 'price',
-        priceCheck: 'below',
-        price: '',
-        volumeCheck: 'above',
-        volume: '',
-        change: '5',
+        asset: 'BTC', // asset pair
+        // price
+        priceType: 'change', // change, gain, loss
+        priceChange: '5', // change percent
+        priceCheck: 'below', // above, below
+        price: '', // custom price limit
+        // volume
+        volumeType: 'change', // change, gain, loss
+        volumeChange: '0', // change percent
+        volumeCheck: 'above', // above, below
+        volume: '', // custom volume limit
+        // other
         notify: 'repeat',
       }
     }
@@ -243,64 +256,76 @@ export default {
 
     // compare watch form options against pair data from price list, snapshot, or both
     checkFormOptions( p ) {
-      let _asset  = String( this.options.asset || '' );
-      let _pcheck = String( this.options.priceCheck || '' );
-      let _price  = parseFloat( this.options.price ) || 0;
-      let _vcheck = String( this.options.volumeCheck || '' );
-      let _volume = parseInt( this.options.volume ) || 0;
+      let asset = String( this.options.asset || '' );
+      let priceCheck = String( this.options.priceCheck || '' );
+      let price = parseFloat( this.options.price ) || 0;
+      let volumeCheck = String( this.options.volumeCheck || '' );
+      let volume = parseInt( this.options.volume ) || 0;
 
-      if ( _asset && p.asset !== _asset ) return false;
-      if ( _price && _pcheck === 'above' && p.close < _price ) return false;
-      if ( _price && _pcheck === 'below' && p.close > _price ) return false;
-      if ( _volume && _vcheck === 'above' && p.assetVolume < _volume ) return false;
-      if ( _volume && _vcheck === 'below' && p.assetVolume > _volume ) return false;
+      if ( asset && p.asset !== asset ) return false;
+      if ( price && priceCheck === 'above' && p.close < price ) return false;
+      if ( price && priceCheck === 'below' && p.close > price ) return false;
+      if ( volume && volumeCheck === 'above' && p.assetVolume < volume ) return false;
+      if ( volume && volumeCheck === 'below' && p.assetVolume > volume ) return false;
       return true;
     },
 
     // count total pairs for select option
     pairsCount() {
-      let _count = 0;
-      let _asset = String( this.options.asset || '' );
-      this.priceData.forEach( p => { if ( this.checkFormOptions( p ) ) _count++ } );
-      return utils.noun( _count, _asset +' pair', _asset +' pairs' );
+      let count = 0;
+      let asset = String( this.options.asset || '' );
+      this.priceData.forEach( p => { if ( this.checkFormOptions( p ) ) count++ } );
+      return utils.noun( count, asset +' pair', asset +' pairs' );
     },
 
     // check current prices against snapshot based on options
     checkPrices() {
-      let _target = String( this.options.target || '' );
-      let _type   = String( this.options.type || '' );
-      let _chance = parseFloat( this.options.change ) || 1;
-      let _notify = String( this.options.notify || 'once' );
-      let _now    = Date.now();
+      let priceType    = String( this.options.priceType || '' );
+      let priceChange  = parseFloat( this.options.priceChange ) || 0;
+      let volumeType   = String( this.options.volumeType || '' );
+      let volumeChange = parseFloat( this.options.volumeChange ) || 0;
+      let notify       = String( this.options.notify || 'once' );
+      let now          = Date.now();
 
       this.priceData.forEach( p => {
         if ( !this.snapshot.hasOwnProperty( p.symbol ) ) return;
-        let s = this.snapshot[ p.symbol ];
-        let c = {};
-
-        // filter checks
         if ( !this.checkFormOptions( p ) ) return;
-        if ( _notify === 'once' && s.checked ) return;
-        if ( _target === 'price' )  c = utils.percent( p.close, s.close );
-        if ( _target === 'volume' ) c = utils.percent( p.assetVolume, s.assetVolume );
-        if ( _type === 'gain' && c.sign === '-' ) return;
-        if ( _type === 'loss' && c.sign === '+' ) return;
-        if ( c.percent < _chance ) return;
+
+        // get snapshot, price and volume change data
+        let s  = this.snapshot[ p.symbol ];
+        let pc = utils.percent( p.close, s.close );
+        let vc = utils.percent( p.assetVolume, s.assetVolume );
+
+        // already notified
+        if ( notify === 'once' && s.checked ) return;
+
+        // check price change data
+        if ( priceChange ) {
+          if ( priceType === 'gain' && pc.sign === '-' ) return;
+          if ( priceType === 'loss' && pc.sign === '+' ) return;
+          if ( pc.percent < priceChange ) return;
+        }
+        // check volume change data
+        if ( volumeChange ) {
+          if ( volumeType === 'gain' && vc.sign === '-' ) return;
+          if ( volumeType === 'loss' && vc.sign === '+' ) return;
+          if ( vc.percent < volumeChange ) return;
+        }
 
         // we have a hit, prep notification
-        let percent = c.sign + Number( c.percent ).toFixed( 2 ) + '%';
-        let price   = Number( p.close ).toFixed( 8 ) +' '+ p.asset;
-        let volume  = utils.money( p.assetVolume, 0 ) +' '+ p.asset;
-        let display = ( _target === 'price' ) ? price : volume;
-        let elapsed = utils.elapsed( ( _now - s.time ) / 1000 );
-        let title   = [ p.symbol, _target, c.arrow, percent, '(', display, ')' ].join( ' ' );
-        let info    = [ 'The', _target, 'of', p.symbol, 'has changed', c.arrow, percent, 'in the last', elapsed +'.' ].join( ' ' );
-        let icon    = utils.fullUrl( p.icon );
+        let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
+        let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
+        let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
+        let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
+        let elapsed   = 'Last '+ utils.elapsed( ( now - s.time ) / 1000 );
+        let title     = p.name +' ('+ p.pair +')';
+        let info      = [ curPrice, curVol, elapsed ].join( '\n' );
+        let icon      = utils.fullUrl( p.icon );
 
         // update symbol snapshot data
         this.snapshot[ p.symbol ].close = p.close;
         this.snapshot[ p.symbol ].assetVolume = p.assetVolume;
-        this.snapshot[ p.symbol ].time = _now;
+        this.snapshot[ p.symbol ].time = now;
         this.snapshot[ p.symbol ].checked = true;
 
         // norify, add to history and mail queue
