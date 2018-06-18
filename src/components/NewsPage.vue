@@ -4,11 +4,9 @@
     <!-- list spinner -->
     <Spinner class="newspage-spinner abs" ref="spinner"></Spinner>
 
-    <!-- fixed list search/filter controls -->
-    <div class="newspage-controls">
+    <!-- controls section -->
+    <section class="newspage-controls">
       <div class="container">
-
-        <!-- control elements -->
         <div class="newspage-controls-row flex-row flex-middle flex-space">
 
           <!-- control input -->
@@ -27,19 +25,18 @@
 
           <!-- control dropdown menus -->
           <div class="newspage-controls-filters text-nowrap">
-
-            <!-- refectch news btn -->
             <button
               class="form-btn bg-grey-hover icon-reload iconLeft"
               :class="{ 'iconSpin': working }"
               :disabled="working"
-              @click="fetchAll">
+              @click="fetchAll"
+              title="Fetch News"
+              v-tooltip>
               Fetch
             </button> &nbsp;
 
-            <!-- filter menu -->
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft">{{ filterLabel }}</button>
+              <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft" title="Filter Source" v-tooltip>{{ filterLabel }}</button>
               <ul slot="list">
                 <li class="clickable" v-for="s in newsSources" :key="s.key" @click="filterBy( s.key )">
                   <i class="icon-feedback iconLeft"></i> {{ s.name }}
@@ -47,42 +44,34 @@
               </ul>
             </Dropdown> &nbsp;
 
-            <!-- options menu -->
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-grey-hover icon-config"></button>
+              <button slot="trigger" class="form-btn bg-grey-hover icon-config" title="Options" v-tooltip></button>
               <div slot="list">
+
                 <div class="form-label">News &amp; Notifications Options</div>
                 <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
                 <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
                 <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
+                <hr />
+
+                <div class="form-label">News &amp; Sentiment Chart Data</div>
+                <div class="pad-left">
+                  <p><button class="icon-reload iconLeft text-bright-hover" @click="resetNews">Reset news data</button></p>
+                  <p><button class="icon-reload iconLeft text-bright-hover" @click="updateChart">Reload chart data</button></p>
+                  <p><button class="icon-close iconLeft text-bright-hover" @click="clearChart">Clear chart data</button></p>
+                </div>
               </div>
             </Dropdown>
-
           </div>
-        </div>
 
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- news list -->
-    <div class="newspage-list">
+    <!-- chart section -->
+    <section class="push-bottom" v-if="chartData.length">
       <div class="container">
-
-        <div class="flex-row flex-middle flex-stretch border-top pad-top push-top" v-if="!filterList.length">
-          <div class="tokenlist-item-icon icon-help iconMedium push-right"></div>
-          <div class="tokenlist-item-symbol text-clip flex-1">
-            <div v-if="filterSearch">
-              <big class="text-danger">Found nothing matching: {{ filterSearch }}.</big> <br />
-              <span class="text-grey">There are a total of {{ totalCount }} news and event entries available.</span>
-            </div>
-            <div v-else>
-              <big class="text-danger">Could not find any news at this time.</big> <br />
-              <span class="text-grey">Try to re-fetch the data manually, or wait a while for it to update.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="newspage-chart push-bottom" v-if="chartData.length">
+        <div class="card newspage-chart">
           <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
             <div class="newspage-chart-sm text-nowrap">Token</div>
             <div class="newspage-chart-md text-clip">Name</div>
@@ -100,11 +89,42 @@
             <div class="newspage-chart-sm text-nowrap text-right" :class="d.scoreColor">{{ d.scoreStr }}</div>
             <div class="newspage-chart-md text-nowrap if-small" :class="d.scoreColor">{{ d.scoreWord }}</div>
             <div class="flex-1 text-nowrap text-right">
-              <button class="text-pill bg-grey-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Info</button>
+              <button class="icon-info iconLeft text-primary-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Info</button>
             </div>
           </div>
         </div>
+      </div>
+    </section>
 
+    <!-- fallback section -->
+    <section class="push-bottom" v-if="!filterList.length">
+      <div class="container">
+        <div class="card flex-row flex-middle flex-stretch">
+          <div class="icon-help iconLarge text-grey push-right"></div>
+          <div class="flex-1">
+            <div v-if="filterSearch">
+              <span class="text-bright">No match for search: <span class="text-primary">{{ filterSearch }}</span></span> &nbsp;
+              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="filterSearch = ''">Reset</button> <br />
+              <span class="text-grey">Can't find anything matching your search input.</span>
+            </div>
+            <div v-else-if="filterType">
+              <span class="text-bright">No entries loaded for source: <span class="text-primary">{{ filterLabel }}</span></span> &nbsp;
+              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="filterType = ''">Reset</button> <br />
+              <span class="text-grey">There are no entries available for the selected news source.</span>
+            </div>
+            <div v-else>
+              <span class="text-bright">No news data available</span> &nbsp;
+              <button class="icon-reload iconLeft text-pill bg-grey-hover" :disabled="working" @click.prevent="fetchAll">Fetch</button> <br />
+              <span class="text-grey">News data from remote sources has not loaded yet.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- news list -->
+    <section class="newspage-list">
+      <div class="container">
         <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="( n, i ) in filterList" :key="n.id">
           <div class="flex-1 push-right text-clip">
             <a class="icon-feedback text-default iconLeft" :class="{ 'text-bright': isNewEntry( i ) }" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
@@ -113,9 +133,8 @@
             <span class="text-grey">{{ n.source }}</span>
           </div>
         </div>
-
       </div>
-    </div>
+    </section>
 
   </main>
 </template>
@@ -143,7 +162,6 @@ export default {
     scrollDir: { type: String, default: '' },
     scrollPos: { type: Number, default: 0 },
     priceData: { type: Array, default: [] },
-    coinsData: { type: Object, default() { return {} } },
   },
 
   // component data
@@ -184,13 +202,6 @@ export default {
 
   // watch methods
   watch: {
-
-    // make sure to update the chart after the price data comes in
-    priceData: function() {
-      if ( !this.priceData.length ) return;
-      if ( this.chartData.length ) return;
-      this.updateChart();
-    },
 
     // don't show spinner if list is full
     newsList: function() {
@@ -292,18 +303,17 @@ export default {
     updateChart() {
       let data = [];
 
-      // pair token from priceData with name from coinsData
+      // keep local cache of loaded binance tokens and their names
       this.priceData.forEach( p => {
-        if ( this.coinsCache.hasOwnProperty( p.token ) ) return;
-        if ( !this.coinsData.hasOwnProperty( p.token ) ) return;
-        this.coinsCache[ p.token ] = this.coinsData[ p.token ];
+        this.coinsCache[ p.token ] = p.name || p.token;
       });
 
       // check token symbol and name against all loaded news titles
       Object.keys( this.coinsCache ).forEach( token => {
         let name       = this.coinsCache[ token ];
         let search     = token +'|'+ name;
-        let route      = '/symbol/'+ token +'BTC';
+        let asset      = ( token === 'BTC' ) ? 'USDT' : 'BTC';
+        let route      = '/symbol/'+ token + asset;
         let score      = 0;
         let scoreStr   = '';
         let scoreColor = 'text-default';
@@ -341,10 +351,15 @@ export default {
       this.chartData = data;
     },
 
-    // on chart column click
-    chartClick( data ) {
-      this.filterType = '';
-      this.filterSearch = data.search;
+    // clear chart data
+    clearChart() {
+      this.chartData = [];
+    },
+
+    // reset news data
+    resetNews() {
+      this.newsList = [];
+      this.fetchAll();
     },
 
     // preppend new item to news list
@@ -385,13 +400,19 @@ export default {
       this.newsSources.forEach( s => {
         if ( s.cb ) plist.push( this[ s.cb ]() );
       });
-      Promise.all( plist ).then( () => {
+      Promise.all( plist )
+      .then( () => {
         this.loaded = true;
         this.working = false;
         this.spinner( 'hide' );
         this.updateChart();
         this.setNotifications();
         this.emitData();
+      })
+      .catch( err => {
+        let msg = err.message || err || 'There was a problem fetching latest news entries, check the console.';
+        this.$bus.emit( 'showNotice', msg, 'warning' );
+        console.info( 'Error:', msg );
       });
     },
 
@@ -582,6 +603,8 @@ export default {
 // comp wrapper
 .newspage-wrap {
   position: relative;
+  padding-top: calc( #{$topbarHeight} + 4.5em );
+  padding-bottom: $topbarHeight;
   min-height: 100vh;
 
   .newspage-controls {
@@ -610,24 +633,22 @@ export default {
   }
 
   .newspage-chart {
+    position: relative;
     padding: ( $padSpace / 2 ) 0;
-    background-color: rgba( $colorDocumentLight, 0.6 );
-    border-radius: $lineJoin;
     font-size: 90%;
 
     .newspage-chart-row {
       position: relative;
-      padding: 0 $padSpace;
+      padding: .1em $padSpace;
 
       &:first-of-type {
         margin-bottom: ( $padSpace / 2 );
       }
-
-      &:nth-child( even ) {
-        background-color: rgba( #000, 0.1 );
+      & + .newspage-chart-row {
+        border-top: 1px $lineStyle $lineColor;
       }
       & + .newspage-chart-row:hover {
-        background-color: rgba( #fff, 0.1 );
+        background-color: rgba( #000, 0.1 );
       }
       .newspage-chart-sm {
         width: 80px;
@@ -649,7 +670,6 @@ export default {
 
   .newspage-list {
     position: relative;
-    padding: calc( #{$topbarHeight} + 4.5em ) 0 0 0;
 
     .newspage-list-item {
       margin: 0 0 ( $lineWidth * 2 ) 0;
@@ -665,8 +685,7 @@ export default {
 
   // collapsed mode
   &.collapsed {
-    .newspage-controls,
-    .newspage-list {
+    .newspage-controls {
       transform: translateY( -#{$topbarHeight} );
     }
   }
