@@ -323,10 +323,10 @@ export default {
         let count      = list.length;
 
         if ( count > 1 ) {
-          for ( let i = 0; i < list.length; ++i ) {
-            let d = sentiment.analyze( list[ i ].title );
-            score += d.score;
-          }
+          let text = list.reduce( ( a, n ) => a += ' '+ n.title, '' );
+          let d = sentiment.analyze( text );
+          score = d.score;
+
           if ( score > 0 ) { scoreColor = 'text-gain'; scoreWord = 'Positive'; sign = '+'; }
           if ( score < 0 ) { scoreColor = 'text-loss'; scoreWord = 'Negative'; sign = '-'; }
 
