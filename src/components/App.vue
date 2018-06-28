@@ -197,12 +197,6 @@ export default {
       this.$notify.setOptions( { soundEnabled: this.options.sound } );
     },
 
-    // load data managed by handlers
-    loadCacheData() {
-      this.historyData = this.$history.getData();
-      this.alarmsData = this.$notify.getAlarms();
-    },
-
     // set loaded news data from somewhere
     updateNewsData( data ) {
       this.newsData = Object.assign( {}, this.newsData, data );
@@ -231,21 +225,66 @@ export default {
       });
     },
 
-    // check if custom alarms need to be sent out on a timer
-    checkAlarms() {
-      utils.delay( 'alarms', 10, this.checkAlarms );
+    // setup msg queue to go off on a timer
+    setupMsgQueue() {
+      msgQueue.onBatch( 60, queue => {
+        let plist = [];
+        plist.push( mailgun( this.$ajax, this.options.mailgun, queue ) );
+        plist.push( telegram( this.$ajax, this.options.telegram, queue ) );
 
-      this.priceData.forEach( p => {
-        this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-          // add alarm data to outgoing message queue
-          let icon = utils.fullUrl( alertData.icon );
-          this.addMsgQueue( { title, info, icon } );
-          this.$history.add( title, info, icon );
-          this.$bus.emit( 'mainMenuAlert' );
-        });
+        Promise.all( plist )
+          .then( msgs => { msgs.forEach( msg => { if ( msg ) this.showNotice( msg, 'info' ) } ) } )
+          .catch( err => { if ( err ) this.showNotice( err, 'warning' ) } );
       });
-      // alarms get removed when they go off, update load alarms data
-      this.loadCacheData();
+    },
+
+    // add data to outgoing msg queue
+    addMsgQueue( data ) {
+      msgQueue.add( data );
+    },
+
+    // setup notifications data handler
+    setupNotifications() {
+      this.$notify.permission();
+      this.$notify.loadAlarms();
+      this.$notify.onChange( alarms => { this.alarmsData = alarms; } );
+      this.alarmsData = this.$notify.getAlarms();
+    },
+
+    // setup history data handler
+    setupHistoryData() {
+      this.$history.loadData();
+      this.$history.onChange( data => { this.historyData = data; } );
+      this.historyData = this.$history.getData();
+    },
+
+    // setup global event bus handlers
+    setupGlobalHandlers() {
+      this.$bus.on( 'setOptions', this.setOptions );
+      this.$bus.on( 'setTitle', this.setTitle );
+      this.$bus.on( 'setRoute', this.setRoute );
+      this.$bus.on( 'toggleSocket', this.toggleSocket );
+      this.$bus.on( 'toggleWatchform', this.toggleWatchform );
+      this.$bus.on( 'newsData', this.updateNewsData );
+      this.$bus.on( 'showModal', this.showModal );
+      this.$bus.on( 'closeModal', this.closeModal );
+      this.$bus.on( 'showNotice', this.showNotice );
+      this.$bus.on( 'handleClick', this.handleClick );
+      this.$bus.on( 'msgQueue', this.addMsgQueue );
+    },
+
+    // setup scroller handlers
+    setupScrollHandlers() {
+      _scroller.onChange( pos => { this.scrollPos = pos; } );
+      _scroller.onDown( pos => { this.scrollDir = 'down'; } );
+      _scroller.onUp( pos => { this.scrollDir = 'up'; } );
+    },
+
+    // setup socket handlers
+    setupSocketHandlers() {
+      _stream.on( 'open', this.onSocketOpen );
+      _stream.on( 'error', this.onSocketError );
+      _stream.on( 'close', this.onSocketClose );
     },
 
     // convert socket timestamp to text
@@ -279,11 +318,11 @@ export default {
       this.socketStatus = 0;
       this.socketStart = 0;
       this.showNotice( 'Socket connection closed.', 'warning' );
+      this.toggleWatchform( 'stop' );
     },
 
     // handle socket connection
     toggleSocket( toggle ) {
-      this.toggleWatchform( 'stop' );
       this.socketStatus = 1;
 
       if ( toggle === true && !this.socketStart ) {
@@ -303,14 +342,21 @@ export default {
         let p = this.priceData[ i ];
         p.name = this.coinsData[ p.token ] || p.name || p.token;
 
-        // if modal is open for a symbol, pass latest price data to it
-        if ( this.modalData && this.modalData.symbol && this.modalData.symbol === p.symbol ) {
-          this.modalData = p;
-        }
         // add main asset token to the list
         if ( this.assetsList.indexOf( p.asset ) < 0 ) {
           this.assetsList.push( p.asset );
         }
+        // if modal is open for a symbol, pass latest price data to it
+        if ( this.modalData && this.modalData.symbol && this.modalData.symbol === p.symbol ) {
+          this.modalData = p;
+        }
+        // trigger custom alarms for pair
+        this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
+          let icon = utils.fullUrl( alertData.icon );
+          this.addMsgQueue( { title, info, icon } );
+          this.$history.add( title, info, icon );
+          this.$bus.emit( 'mainMenuAlert' );
+        });
       }
     },
 
@@ -391,24 +437,6 @@ export default {
       this.$refs.notify.show( message, type, timeout );
     },
 
-    // add data to outgoing msg queue
-    addMsgQueue( data ) {
-      msgQueue.add( data );
-    },
-
-    // setup msg queue to go off on a timer
-    setupMsgQueue() {
-      msgQueue.onBatch( 60, queue => {
-        let plist = [];
-        plist.push( mailgun( this.$ajax, this.options.mailgun, queue ) );
-        plist.push( telegram( this.$ajax, this.options.telegram, queue ) );
-
-        Promise.all( plist )
-          .then( msgs => { msgs.forEach( msg => { if ( msg ) this.showNotice( msg, 'info' ) } ) } )
-          .catch( err => { if ( err ) this.showNotice( err, 'warning' ) } );
-      });
-    },
-
     // fetch list of all tokens and their names from API
     fetchCoinsData() {
       this.$ajax.get( 'https://coincap.io/map', {
@@ -418,7 +446,7 @@ export default {
           let data = {};
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' );
-            let name  = String( list[ i ].name || '' ).replace( /[^\w\-\.]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
+            let name  = String( list[ i ].name || '' ).replace( /[^\w\-]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
             if ( token && name ) data[ token ] = name;
           }
           this.coinsData = data;
@@ -430,41 +458,19 @@ export default {
   // init app data and handlers
   beforeMount() {
     this.loadOptions();
-    this.loadCacheData();
     this.setupRoutes();
     this.setupMsgQueue();
-    // config global shared objects
-    this.$notify.permission();
-    this.$notify.loadAlarms();
-    this.$history.loadData();
-    // setup global event bus handlers
-    this.$bus.on( 'setOptions', this.setOptions );
-    this.$bus.on( 'loadCacheData', this.loadCacheData );
-    this.$bus.on( 'setTitle', this.setTitle );
-    this.$bus.on( 'setRoute', this.setRoute );
-    this.$bus.on( 'toggleSocket', this.toggleSocket );
-    this.$bus.on( 'toggleWatchform', this.toggleWatchform );
-    this.$bus.on( 'newsData', this.updateNewsData );
-    this.$bus.on( 'showModal', this.showModal );
-    this.$bus.on( 'closeModal', this.closeModal );
-    this.$bus.on( 'showNotice', this.showNotice );
-    this.$bus.on( 'handleClick', this.handleClick );
-    this.$bus.on( 'msgQueue', this.addMsgQueue );
-    // setup socket handlers
-    _stream.on( 'open', this.onSocketOpen );
-    _stream.on( 'error', this.onSocketError );
-    _stream.on( 'close', this.onSocketClose );
-    // setup scroller handlers
-    _scroller.onChange( pos => { this.scrollPos = pos; } );
-    _scroller.onDown( pos => { this.scrollDir = 'down'; } );
-    _scroller.onUp( pos => { this.scrollDir = 'up'; } );
+    this.setupNotifications();
+    this.setupHistoryData();
+    this.setupGlobalHandlers();
+    this.setupSocketHandlers();
+    this.setupScrollHandlers();
   },
 
   // start socket and other external data
   mounted() {
     this.setTitle();
     this.toggleSocket( true );
-    this.checkAlarms();
   },
 
   // cleanup and close connetions
