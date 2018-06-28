@@ -106,7 +106,6 @@ export default {
       let saved = this.$notify.saveAlarm( pair.symbol, pair.close, price );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
       this.$bus.emit( 'showNotice', 'New alarm for '+ pair.symbol +' has been saved.', 'success' );
-      this.$bus.emit( 'loadCacheData' );
     },
 
     // remove an alert from the list by id
@@ -114,7 +113,6 @@ export default {
       let saved = this.$notify.deleteAlarm( symbol, id );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
       this.$bus.emit( 'showNotice', 'Alarm for '+ symbol +' has been removed from list.', 'success' );
-      this.$bus.emit( 'loadCacheData' );
     },
   },
 
