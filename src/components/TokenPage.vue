@@ -6,7 +6,7 @@
       <div class="flex-grid-item flex-1">
         <div class="flex-row flex-middle">
           <TokenIcon class="push-right" :pairData="modalData"></TokenIcon>
-          <h1 class="tokenpage-name text-bright">{{ coinName }}</h1>
+          <h1 class="tokenpage-name text-bright">{{ modalData.name }}</h1>
           <div class="pad-left" v-if="coinRank">
             <span class="text-label text-clip">Rank</span> <br />
             <big class="text-secondary">#{{ coinRank | toCommas }}</big>
@@ -88,11 +88,11 @@
 
     <!-- events and alarms -->
     <Tabs class="tokenpage-tabs pad-top push-bottom" :data="{ alarmsCount, newsCount }">
-      <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Price Alarms ('+ alarmsCount +')' ]" active>
-        <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
-      </section>
-      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News & Events ('+ newsCount +')' ]">
+      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News ('+ newsCount +')' ]" active>
         <NewsList :newsData="newsData" :pairData="modalData" @listCount="onNewsCount"></NewsList>
+      </section>
+      <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Alarms ('+ alarmsCount +')' ]">
+        <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
       </section>
     </Tabs>
 
@@ -125,7 +125,6 @@ export default {
   data() {
     return {
       coinRank: 0,
-      coinName: this.modalData.name,
       marketCap: 0,
       totalSupply: 0,
       totalVolume: 0,
@@ -188,7 +187,6 @@ export default {
           this.spinner( 'globalSpinner', 'hide' );
 
           if ( response.rank )         this.coinRank    = response.rank;
-          if ( response.display_name ) this.coinName    = response.display_name;
           if ( response.market_cap )   this.marketCap   = response.market_cap;
           if ( response.supply )       this.totalSupply = response.supply;
           if ( response.volume )       this.totalVolume = response.volume;
