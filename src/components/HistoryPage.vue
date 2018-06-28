@@ -58,7 +58,6 @@ export default {
       let saved = this.$history.delete( id );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
       this.$bus.emit( 'showNotice', 'History data has been updated.', 'success' );
-      this.$bus.emit( 'loadCacheData' );
     },
 
     // flush history list
@@ -66,7 +65,6 @@ export default {
       let saved = this.$history.flush();
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
       this.$bus.emit( 'showNotice', 'History data has been flushed.', 'success' );
-      this.$bus.emit( 'loadCacheData' );
     },
 
     // format info string
