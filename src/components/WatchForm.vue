@@ -139,12 +139,12 @@ export default {
         asset: 'BTC', // asset pair
         // price
         priceType: 'change', // change, gain, loss
-        priceChange: '5', // change percent
+        priceChange: '2', // change percent
         priceCheck: 'below', // above, below
         price: '', // custom price limit
         // volume
-        volumeType: 'change', // change, gain, loss
-        volumeChange: '0', // change percent
+        volumeType: 'gain', // change, gain, loss
+        volumeChange: '5', // change percent
         volumeCheck: 'above', // above, below
         volume: '', // custom volume limit
         // other
@@ -212,7 +212,7 @@ export default {
       if ( this.socketStatus !== 2 ) {
         return this.$bus.emit( 'showNotice', 'Socket connection is not active.', 'warning' );
       }
-      this.watchSto = setInterval( this.checkPrices, 10000 );
+      this.watchSto = setInterval( this.checkPrices, 2000 );
       this.timerSto = setInterval( this.computeWatchTime, 1000 );
       this.start    = Date.now();
       this.active   = true;
@@ -329,10 +329,10 @@ export default {
         this.snapshot[ p.symbol ].checked = true;
 
         // norify, add to history and mail queue
-        this.$bus.emit( 'mainMenuAlert' );
-        this.$bus.emit( 'msgQueue', { title, info, icon } );
-        this.$notify.add( title, info, icon, e => { this.$bus.emit( 'setRoute', p.route ) } );
         this.$history.add( title, info, icon );
+        this.$notify.add( title, info, icon, e => { this.$bus.emit( 'setRoute', p.route ) } );
+        this.$bus.emit( 'msgQueue', { title, info, icon } );
+        this.$bus.emit( 'mainMenuAlert' );
       });
     },
   },
