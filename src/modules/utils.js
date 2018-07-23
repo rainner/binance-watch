@@ -170,7 +170,7 @@ module.exports = {
     let change  = isup  ? ( current - last ) : ( last - current );
     let percent = isnum ? ( change / last * 100.0 ) : 0.0;
     let sign    = isup  ? '+' : '-';
-    let arrow   = isup  ? '▲' : '▼';
+    let arrow   = isup  ? '🔺' : '🔻';
     let color   = isup  ? 'green' : 'red';
     return { change, percent, sign, arrow, color };
   },
