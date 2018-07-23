@@ -24,7 +24,7 @@
           <hr />
 
           <!-- form inputs -->
-          <div class="watchform-controls flex-row flex-top flex-space flex-wrap">
+          <form class="watchform-controls flex-row flex-top flex-space flex-wrap" @submit.prevent @change="formChange">
 
             <div class="form-input text-nowrap push-bottom">
               <div class="icon-down-open">
@@ -90,13 +90,14 @@
             </div>
 
             <button
+              type="button"
               class="form-btn iconLeft"
               :class="{ 'bg-danger-hover icon-stop': active, 'bg-success-hover icon-play': !active }"
-              @click="toggleWatch">
+              @click.prevent="toggleWatch">
                 {{ active ? elapsed : 'START' }}
             </button>
 
-          </div>
+          </form>
 
         </div>
       </div>
@@ -106,6 +107,7 @@
 
 <script>
 // modules
+import emoji from '../modules/emoji';
 import utils from '../modules/utils';
 
 // component
@@ -234,6 +236,7 @@ export default {
       this.snapshot = {};
       this.$emit( 'onStopWatch' );
       this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
+      this.$notify.flush();
     },
 
     // toggle price watch
@@ -241,6 +244,12 @@ export default {
       e && e.preventDefault();
       if ( this.active ) { this.stopWatch(); }
       else { this.startWatch(); }
+    },
+
+    // reset some things when the form is changed while runnig
+    formChange( e ) {
+      this.buildSnapshot();
+      this.$notify.flush();
     },
 
     // make a copy of current prices to start comparing against
@@ -299,6 +308,9 @@ export default {
         // already notified
         if ( notify === 'once' && s.checked ) return;
 
+        // nothing to check
+        if ( !priceChange && !volumeChange ) return;
+
         // check price change data
         if ( priceChange ) {
           if ( priceType === 'gain' && pc.sign === '-' ) return;
@@ -312,14 +324,22 @@ export default {
           if ( vc.percent < volumeChange ) return;
         }
 
+        // resolve emoji icons
+        let titleIcon  = emoji( 'bell' );
+        let changeIcon = ( p.percent >= 0 ) ? emoji( 'gain' ) : emoji( 'loss' );
+        let priceIcon  = ( pc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
+        let volumeIcon = ( vc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
+        if ( p.percent >= 5 )  titleIcon = emoji( 'rocket' );
+        if ( p.percent <= -5 ) titleIcon = emoji( 'sos' );
+
         // we have a hit, prep notification
         let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
         let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
-        let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
-        let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
-        let elapsed   = 'Last '+ utils.elapsed( ( now - s.time ) / 1000 );
-        let title     = p.name +' ('+ p.pair +')';
-        let info      = [ curPrice, curVol, elapsed ].join( '\n' );
+        let elapsed   = 'Change '+ emoji( 'clock' ) +' '+ utils.elapsed( ( now - s.time ) / 1000 );
+        let curPrice  = 'Price '+ priceIcon +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
+        let curVol    = 'Volume '+ volumeIcon +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
+        let title     = titleIcon +' '+ p.name +' ('+ p.pair +') '+ changeIcon +' '+ p.sign + Number( p.percent ).toFixed( 2 ) +'%';
+        let info      = [ elapsed, curPrice, curVol ].join( '\n' );
         let icon      = utils.fullUrl( p.icon );
 
         // update symbol snapshot data
