@@ -3,9 +3,7 @@
 
     <div v-if="sentimentData" class="push-bottom">
       <span class="text-bright text-clip">Sentiment for {{ pairData.name }} is &nbsp;</span>
-      <span class="text-gain icon-like iconLeft" v-if="sentimentData.score > 0">Positive (+{{ sentimentData.score }})</span>
-      <span class="text-loss icon-dislike iconLeft" v-else-if="sentimentData.score < 0">Negative ({{ sentimentData.score }})</span>
-      <span class="text-info icon-info iconLeft" v-else>Neutral ({{ sentimentData.score }})</span>
+      <span class="text-nowrap text-monospace text-small" :class="sentimentData.styles" v-html="sentimentData.sentiment"></span>
     </div>
 
     <div v-if="!newsList.length" class="icon-info iconLeft text-grey push-bottom">
@@ -14,9 +12,11 @@
     </div>
 
     <div class="flex-list">
-      <div v-for="n in newsList" :key="n.id" class="flex-item clickable">
-        <div class="flex-1 push-right text-clip">
-          <a class="icon-feedback iconLeft text-primary" :href="n.link" target="_blank">{{ n.title }}</a>
+      <div v-for="t in newsList" :key="t.id" class="flex-item">
+        <div class="flex-1 push-right">
+          <a class="icon-twtr iconLeft text-primary" :href="t.link" target="_blank">{{ t.name }}</a> &nbsp;
+          <small class="text-grey">@{{ t.handle }}</small> <br />
+          <small class="text-bright" v-html="t.text"></small>
         </div>
       </div>
     </div>
@@ -25,7 +25,6 @@
 </template>
 
 <script>
-import sentiment from '../modules/sentiment';
 import utils from '../modules/utils';
 
 // component
@@ -60,9 +59,9 @@ export default {
 
     // get news list for a token, or all items
     getNewsList() {
-      let list = this.newsData.list || [];
       let pair = this.pairData;
-      if ( pair.token ) list = utils.search( list, 'title', pair.token +'|'+ pair.name );
+      let list = this.newsData.list || [];
+      if ( pair.token ) list = utils.search( list, 'text', pair.token +'|'+ pair.name );
       return list;
     },
 
@@ -72,8 +71,8 @@ export default {
       let list = this.getNewsList();
 
       if ( list.length && this.pairData.token ) {
-        let text = list.reduce( ( a, n ) => a += ' '+ n.title, '' );
-        data = sentiment.analyze( text );
+        let text = list.reduce( ( a, t ) => a += ' '+ t.text, '' ).trim();
+        data = this.$sentiment.analyze( text );
       }
       this.sentimentData = data;
     },

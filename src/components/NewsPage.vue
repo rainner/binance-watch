@@ -1,16 +1,13 @@
 <template>
   <main class="newspage-wrap" :class="{ 'collapsed': scrollDir === 'down', 'opaque': scrollPos > 10 }">
 
-    <!-- list spinner -->
-    <Spinner class="newspage-spinner abs" ref="spinner"></Spinner>
-
     <!-- controls section -->
     <section class="newspage-controls">
       <div class="container">
         <div class="newspage-controls-row flex-row flex-middle flex-space">
 
           <!-- control input -->
-          <div class="newspage-controls-input push-right">
+          <div class="newspage-controls-search push-right">
             <div class="form-input">
               <div class="icon-search iconLeft"></div>
               <input class="push-right" type="text" v-model="filterSearch" placeholder="Search ..." />
@@ -20,48 +17,69 @@
 
           <!-- control heading -->
           <div class="newspage-controls-title push-right text-clip text-center flex-1">
-            <big>News &amp; Events ({{ lastCount }}/{{ totalCount }})</big>
+            <big>Twitter News ({{ lastCount }}/{{ twitterEntries.length }})</big>
           </div>
 
           <!-- control dropdown menus -->
           <div class="newspage-controls-filters text-nowrap">
-            <button
-              class="form-btn bg-grey-hover icon-reload iconLeft"
-              :class="{ 'iconSpin': working }"
-              :disabled="working"
-              @click="fetchAll"
-              title="Fetch News"
-              v-tooltip>
-              Fetch
-            </button> &nbsp;
 
             <Dropdown>
               <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft" title="Filter Source" v-tooltip>{{ filterLabel }}</button>
-              <ul slot="list">
-                <li class="clickable" v-for="s in newsSources" :key="s.key" @click="filterBy( s.key )">
-                  <i class="icon-feedback iconLeft"></i> {{ s.name }}
-                </li>
-              </ul>
+              <div slot="list">
+
+                <div class="flex-row flex-top flex-space pad-h">
+                  <div class="flex-1 push-right form-label">Twitter Accounts</div>
+                  <button v-if="filterHandle" class="icon-list iconLeft" @click="filterHandle = ''">Show all</button>
+                </div>
+
+                <div class="twitter-accounts-list push-bottom border-top border-bottom">
+                  <div class="twitter-accounts-item flex-row flex-middle flex-stretch" v-for="a in accountsList" :key="a.handle">
+                    <div class="flex-1 text-clip clickable push-right" title="Show tweets" v-tooltip @click="filterHandle = a.handle">
+                      <span class="icon-twtr iconLeft text-clip" :class="{ 'text-gain': a.active, 'text-danger text-striked': a.error !== '' }">{{ a.name }}</span>
+                    </div>
+                    <div class="push-right">
+                      <span v-if="a.checking" class="text-badge text-primary">...</span>
+                      <span v-else class="text-badge">{{ a.count }}</span>
+                    </div>
+                    <button class="icon-close text-danger-hover" title="Remove account" v-tooltip @click="removeTwitterHandler( a.handle )"></button>
+                  </div>
+                </div>
+
+                <div class="form-label pad-h">Add New Account</div>
+
+                <form class="twitter-accounts-form pad-h" action="#" autocomplete="off" @submit.prevent="accountFormHandler">
+                  <div class="form-input text-nowrap">
+                    <div class="icon-twtr iconLeft"></div>
+                    <input class="flex-1" type="text" name="handle" placeholder="Twitter handle..." />
+                    <button class="icon-add text-primary-hover" type="submit"></button>
+                  </div>
+                </form>
+
+              </div>
             </Dropdown> &nbsp;
 
             <Dropdown>
               <button slot="trigger" class="form-btn bg-grey-hover icon-config" title="Options" v-tooltip></button>
-              <div slot="list">
+              <div slot="list" class="pad-h">
 
                 <div class="form-label">News &amp; Notifications Options</div>
                 <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
                 <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
                 <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
-                <hr />
 
-                <div class="form-label">News &amp; Sentiment Chart Data</div>
-                <div class="pad-left">
-                  <p><button class="icon-reload iconLeft text-bright-hover" @click="resetNews">Reset news data</button></p>
-                  <p><button class="icon-reload iconLeft text-bright-hover" @click="updateChart">Reload chart data</button></p>
-                  <p><button class="icon-close iconLeft text-bright-hover" @click="clearChart">Clear chart data</button></p>
+                <hr />
+                <div class="form-label">Limit Number of Entries</div>
+                <div class="flex-row flex-middle flex-stretch">
+                  <input class="flex-1 push-right" type="range" min="10" max="200" step="5" v-model="options.news.max" @change="applyOptions" />
+                  <span class="text-primary">{{ options.news.max }}</span>
                 </div>
+
+                <hr />
+                <div class="form-label">Sentiment Analysis Chart</div>
+                <button class="icon-reset iconLeft text-bright-hover" @click="updateChart">Update chart data</button>
               </div>
             </Dropdown>
+
           </div>
 
         </div>
@@ -75,21 +93,19 @@
           <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
             <div class="newspage-chart-sm text-nowrap">Token</div>
             <div class="newspage-chart-md text-clip">Name</div>
-            <div class="newspage-chart-sm text-nowrap text-right">Count</div>
+            <div class="newspage-chart-sm text-nowrap text-right">Tweets</div>
             <div class="flex-5 text-nowrap if-medium">Mention %</div>
-            <div class="newspage-chart-sm text-nowrap text-right">Score</div>
             <div class="newspage-chart-md text-nowrap if-small">Sentiment</div>
             <div class="flex-1 text-nowrap text-right">Details</div>
           </div>
           <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.search">
-            <div class="newspage-chart-sm text-clip text-bright icon-search iconLeft">{{ d.token }}</div>
+            <div class="newspage-chart-sm text-clip text-bright">{{ d.token }}</div>
             <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
             <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
             <div class="flex-5 text-nowrap if-medium"><span class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span></div>
-            <div class="newspage-chart-sm text-nowrap text-right" :class="d.scoreColor">{{ d.scoreStr }}</div>
-            <div class="newspage-chart-md text-nowrap if-small" :class="d.scoreColor">{{ d.scoreWord }}</div>
+            <div class="newspage-chart-md text-nowrap text-monospace text-small if-small" :class="d.styles" v-html="d.sentiment"></div>
             <div class="flex-1 text-nowrap text-right">
-              <button class="icon-info iconLeft text-primary-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Info</button>
+              <button class="icon-search iconLeft text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
             </div>
           </div>
         </div>
@@ -97,24 +113,21 @@
     </section>
 
     <!-- fallback section -->
-    <section class="push-bottom" v-if="!filterList.length">
+    <section class="push-bottom" v-if="!tweetsList.length">
       <div class="container">
         <div class="card flex-row flex-middle flex-stretch">
           <div class="icon-help iconLarge text-grey push-right"></div>
           <div class="flex-1">
             <div v-if="filterSearch">
-              <span class="text-bright">No match for search: <span class="text-primary">{{ filterSearch }}</span></span> &nbsp;
-              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="filterSearch = ''">Reset</button> <br />
+              <h3 class="text-bright">No Match For <span class="text-primary">{{ filterSearch }}</span></h3>
               <span class="text-grey">Can't find anything matching your search input.</span>
             </div>
-            <div v-else-if="filterType">
-              <span class="text-bright">No entries loaded for source: <span class="text-primary">{{ filterLabel }}</span></span> &nbsp;
-              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="filterType = ''">Reset</button> <br />
+            <div v-else-if="filterHandle">
+              <h3 class="text-bright">No News Data For <span class="text-primary">{{ filterLabel }}</span></h3>
               <span class="text-grey">There are no entries available for the selected news source.</span>
             </div>
             <div v-else>
-              <span class="text-bright">No news data available</span> &nbsp;
-              <button class="icon-reload iconLeft text-pill bg-grey-hover" :disabled="working" @click.prevent="fetchAll">Fetch</button> <br />
+              <h3 class="text-primary">No News Data Yet</h3>
               <span class="text-grey">News data from remote sources has not loaded yet.</span>
             </div>
           </div>
@@ -125,14 +138,29 @@
     <!-- news list -->
     <section class="newspage-list">
       <div class="container">
-        <div class="newspage-list-item flex-row flex-middle flex-stretch" v-for="( n, i ) in filterList" :key="n.id">
-          <div class="flex-1 push-right text-clip">
-            <a class="icon-feedback text-default iconLeft" :class="{ 'text-bright': isNewEntry( i ) }" :href="n.link" target="_blank" rel="noopener">{{ n.title }}</a>
+
+        <div class="newspage-list-item flex-row flex-top flex-stretch" v-for="t in tweetsList" :key="t.id">
+
+          <div class="push-right">
+            <img class="newspage-list-image" :src="t.avatar" :alt="t.handle" />
           </div>
-          <div class="text-nowrap if-medium">
-            <span class="text-grey">{{ n.source }}</span>
+
+          <div class="flex-1">
+            <div class="newspage-list-header flex-row flex-space">
+              <h3 class="text-clip clickable" @click="openLink( 'https://twitter.com/'+ t.handle )">
+                <span class="text-primary-hover">{{ t.name }}</span> &nbsp;
+                <small class="text-smaller text-grey-hover">@{{ t.handle }}</small>
+              </h3>
+              <div class="text-clip if-small">
+                <small class="text-grey icon-clock iconLeft">{{ t.time }}</small> &nbsp;
+                <a class="text-primary-hover icon-link" :href="t.link" target="_blank" title="Open tweet" v-tooltip></a>
+              </div>
+            </div>
+            <div class="newspage-list-text text-bright text-wrap" v-html="t.text"></div>
           </div>
+
         </div>
+
       </div>
     </section>
 
@@ -141,24 +169,21 @@
 
 <script>
 // modules
-import Spinner from './Spinner.vue';
 import Dropdown from './Dropdown.vue';
-import BarChart from './BarChart.vue';
 import Toggle from './Toggle.vue';
-import scraper from '../modules/scraper';
-import sentiment from '../modules/sentiment';
+import Twitter from '../modules/twitter';
 import utils from '../modules/utils';
 
 // component
 export default {
 
   // component list
-  components: { Spinner, Dropdown, BarChart, Toggle },
+  components: { Dropdown, Toggle },
 
   // component props
   props: {
+    options: { type: Object, default() { return {} }, required: true },
     active: { type: Boolean, default: false },
-    options: { type: Object, default() { return {} } },
     scrollDir: { type: String, default: '' },
     scrollPos: { type: Number, default: 0 },
     priceData: { type: Array, default: [] },
@@ -167,46 +192,39 @@ export default {
   // component data
   data() {
     return {
-      // news sources data
-      newsSources: [
-        { key: 'binance',  name: 'Binance News',       cb: 'fetchBinance' },
-        { key: 'events',   name: 'Crypto Calendar',    cb: 'fetchEvents' },
-        { key: 'reddit',   name: 'Crypto Subreddit',   cb: 'fetchReddit' },
-        { key: 'ccnews',   name: 'Crypto News (CCN)',  cb: 'fetchCCN' },
-        { key: 'coinlib',  name: 'Coinlib News',       cb: 'fetchCoinlib' },
-        { key: 'ambnews',  name: 'AMB Crypto News',    cb: 'fetchAMB' },
-        { key: '',         name: 'All Sources',        cb: '' },
-      ],
+      storeKey: 'tweets_list_data',
       // news data
-      lastList: [],
-      newsList: [],
-      coinsCache: {},
+      twitterHandlers: [],
+      twitterEntries: [],
+      twitterChecking: [],
+      twitterCounter: 0,
+      twitterInterval: null,
+      // filter options
+      filterSearch: '',
+      filterHandle: '',
+      // coins data
+      totalTokens: 0,
       chartData: [],
       // count data
       lastCount: 0,
-      totalCount: 0,
-      maxCount: 200,
-      // list filter options
-      filterSearch: '',
-      filterType: '',
-      filterLimit: 0,
-      // other
-      timeout: 10,
-      refetchTime: 300,
-      proxyDomain: '',
-      working: false,
-      loaded: false,
-      sto: null,
+      maxCount: 50,
     }
   },
 
-  // watch methods
+  // watchers
   watch: {
 
-    // don't show spinner if list is full
-    newsList: function() {
-      if ( !this.$refs.spinner ) return;
-      if ( this.newsList.length ) this.$refs.spinner.hide();
+    // update chart data when new tokens load from socket api
+    priceData() {
+      if ( this.priceData.length > this.totalTokens ) {
+        this.totalTokens = this.priceData.length;
+        this.updateChart();
+      }
+    },
+
+    // update chart data when tweets change
+    twitterEntries() {
+      this.updateChart();
     },
   },
 
@@ -214,29 +232,44 @@ export default {
   computed: {
 
     // get filtered list
-    filterList() {
-      let list  = this.newsList.slice(); // copy
-      let limit = parseInt( this.filterLimit ) | 0;
+    tweetsList() {
+      let list = this.twitterEntries.slice(); // copy
 
-      // filter by news type
-      if ( this.filterType ) {
-        list = list.filter( n => n.type === this.filterType );
+      // filter by account handle
+      if ( this.filterHandle ) {
+        list = list.filter( t => t.handle === this.filterHandle );
       }
-      // filter by search text
+      // filter by search text against tweet name, handle and text
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
-        list = utils.search( list, 'title', this.filterSearch );
-      }
-      // limit list to a number of entries
-      if ( limit && limit < list.length ) {
-        list = list.slice( 0, limit );
+        list = utils.search( list, 'text', this.filterSearch );
       }
       return list;
     },
 
+    // build twitter accounts list from handler list with checking indicator
+    accountsList() {
+      let list = this.twitterHandlers.map( tw => {
+        let { uid, handle, name, avatar, url, last, error } = tw.getData();
+        let active = ( handle === this.filterHandle );
+        let checking = this.twitterChecking.filter( h => h === handle ).length;
+        let count = this.twitterEntries.filter( t => t.handle === handle ).length;
+        return { uid, handle, name, avatar, url, last, error, active, checking, count };
+      });
+      return list.sort( ( a, b ) => {
+        let _a = a.name.toUpperCase();
+        let _b = b.name.toUpperCase();
+        if ( _a < _b ) return -1;
+        if ( _a > _b ) return 1;
+        return 0;
+      });
+    },
+
     // sort-by label for buttons, etc
     filterLabel() {
-      let s = this.newsSources.filter( s => s.key === this.filterType ).shift();
-      return s.name || '';
+      let l = this.twitterHandlers.length;
+      let t = this.twitterHandlers.filter( tw => tw.handle === this.filterHandle ).shift();
+      if ( t && t.handle ) return '@'+ t.handle;
+      return 'All Sources ('+ l +')';
     },
   },
 
@@ -244,100 +277,83 @@ export default {
   methods: {
 
     // apply options
-    applyOptions() {
-      this.$bus.emit( 'setOptions' );
+    applyOptions( options ) {
+      this.$bus.emit( 'setOptions', options );
     },
 
-    // set filter type
-    filterBy( type ) {
-      this.filterType = type;
-    },
-
-    // used to assign a class for new entries in the list
-    isNewEntry( index ) {
-      if ( this.filterType || this.filterSearch ) return false;
-      return ( this.lastCount && index < this.lastCount ) ? true : false;
-    },
-
-    // wrapper for page spinner
-    spinner( method, message ) {
-      if ( !this.$refs.spinner ) return;
-      this.$refs.spinner[ method ]( message );
+    // open external link
+    openLink( link ) {
+      window.open( link, '_blank' );
     },
 
     // emit news data
     emitData() {
       let count = this.lastCount;
-      let total = this.totalCount;
-      let list  = this.newsList.slice();
+      let total = this.twitterEntries.length;
+      let list  = this.twitterEntries.slice();
       this.$bus.emit( 'newsData', { count, total, list } );
     },
 
-    // add news to notification and msg queue
-    setNotifications() {
-      if ( !this.lastCount || this.lastCount === this.totalCount ) return;
-      let icon = utils.fullUrl( 'public/images/notification.png' );
+    // reset filters
+    resetFilters() {
+      this.filterHandle = '';
+      this.filterSearch = '';
+    },
 
-      // add alert bubble to main menu
-      if ( !this.active ) {
+    // reset number of new entries since last checked
+    resetCount() {
+      if ( !this.active ) return;
+      this.lastCount = 0;
+      this.emitData();
+    },
+
+    // add news to notification and msg queue
+    setNotification( tweet ) {
+      let { name, text, avatar, link } = tweet;
+      let isaway = ( !this.active || !document.hasFocus() );
+
+      // remove html and urls from tweet text
+      text = utils.stripHtml( text, true );
+
+      // increase new entries indicator if away
+      if ( isaway ) {
+        this.lastCount += 1;
         this.$bus.emit( 'mainMenuAlert' );
       }
-      // show notification of last news item added
-      if ( this.options.news.notify ) {
-        let item  = this.newsList[ 0 ];
-        let title = 'Latest Crypto News ('+ this.lastCount +')';
-        this.$notify.add( title, item.title, icon, item.link );
+      // show tweet notification only if enabled and away
+      if ( this.options.news.notify && isaway ) {
+        this.$notify.add( '💬  '+ name, text, avatar, e => { this.$bus.emit( 'setRoute', '/news' ) } );
       }
-      // send notification via api
+      // always send notification via api if enabled
       if ( this.options.news.send ) {
-        for ( let i = 0; i < this.lastCount; ++i ) {
-          let item  = this.newsList[ i ];
-          let title = 'Latest Crypto News:';
-          let info  = `<a href="${ item.link }">${ item.title }</a>`;
-          this.$bus.emit( 'msgQueue', { title, info, icon } );
-        }
+        let info  = `<a href="${ link }">${ text }</a>`;
+        this.$bus.emit( 'msgQueue', { name, info, avatar } );
       }
     },
 
-    // draw token chart from profile data
+    // scan tweets against list of tokens from api and build sentiment analysis data for chart
     updateChart() {
       let data = [];
-
-      // keep local cache of loaded binance tokens and their names
       this.priceData.forEach( p => {
-        this.coinsCache[ p.token ] = p.name || p.token;
+        if ( p.asset !== 'BTC' ) return;
+
+        let token  = p.token;
+        let name   = p.name;
+        let search = token +'|'+ name;
+        let list   = utils.search( this.twitterEntries, 'text', search );
+        let count  = list.length;
+        if ( !count ) return;
+
+        let asset  = ( token === 'BTC' ) ? 'USDT' : 'BTC';
+        let route  = '/symbol/'+ token + asset;
+        let text   = list.reduce( ( a, t ) => a += ' '+ t.text, '' ).trim();
+        let sdata  = this.$sentiment.analyze( text );
+        let { score, positive, negative, comparative, icon, word, styles, sign, sentiment } = sdata;
+        data.push( { token, name, search, route, count, score, styles, sentiment } );
       });
 
-      // check token symbol and name against all loaded news titles
-      Object.keys( this.coinsCache ).forEach( token => {
-        let name       = this.coinsCache[ token ];
-        let search     = token +'|'+ name;
-        let asset      = ( token === 'BTC' ) ? 'USDT' : 'BTC';
-        let route      = '/symbol/'+ token + asset;
-        let score      = 0;
-        let scoreStr   = '';
-        let scoreColor = 'text-default';
-        let scoreWord  = 'Neutral';
-        let sign       = '';
-        let list       = utils.search( this.newsList, 'title', search );
-        let count      = list.length;
-
-        if ( count > 1 ) {
-          let text = list.reduce( ( a, n ) => a += ' '+ n.title, '' );
-          let d = sentiment.analyze( text );
-          score = d.score;
-
-          if ( score > 0 ) { scoreColor = 'text-gain'; scoreWord = 'Positive'; sign = '+'; }
-          if ( score < 0 ) { scoreColor = 'text-loss'; scoreWord = 'Negative'; sign = '-'; }
-
-          scoreStr = sign + String( Math.abs( score ) );
-          data.push( { token, name, search, route, count, score, scoreStr, scoreColor, scoreWord } );
-        }
-      });
-
-      // calculate percent for each data enrtry
       let max = data.reduce( ( m, d ) => d.count > m ? d.count : m, 0 );
-      data = data.map( d => {
+      this.chartData = data.map( d => {
         let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
         let barPercent = Math.round( ratio * 100 );
         let barColor = 'bg-grey';
@@ -346,255 +362,125 @@ export default {
         if ( barPercent > 60 ) { barColor = 'bg-primary'; }
         return Object.assign( d, { barPercent, barColor } );
       });
-
-      // assign final chart data
-      this.chartData = data;
     },
 
-    // clear chart data
-    clearChart() {
-      this.chartData = [];
+    // save tweets list to local store
+    saveTweets() {
+      if ( !this.twitterEntries.length ) return;
+      this.$store.setData( this.storeKey, this.twitterEntries );
     },
 
-    // reset news data
-    resetNews() {
-      this.newsList = [];
-      this.fetchAll();
+    // load saved tweets from local store
+    loadTweets() {
+      let tweets = this.$store.getData( this.storeKey );
+      if ( Array.isArray( tweets ) ) this.twitterEntries = tweets;
     },
 
-    // preppend new item to news list
-    addNews( type, source, title, link ) {
-      let exist = this.newsList.filter( n => ( n.title === title || n.link === link ) ).length;
-      if ( exist ) return;
-
-      let id   = utils.randString( 20 );
-      let time = Date.now();
-
-      // new entries go on top of list, first time goes on bottom in order as loaded
-      if ( this.loaded ) { this.newsList.unshift( { id, time, type, source, title, link } ); }
-      else { this.newsList.push( { id, time, type, source, title, link } ); }
-
-      this.newsList = this.newsList.slice( 0, this.maxCount );
-      this.totalCount = this.newsList.length;
-      this.lastCount += 1;
-    },
-
-    // clear autofetch timeout
-    clearTimeout() {
-      if ( this.sto ) clearTimeout( this.sto );
-    },
-
-    // auto fetch news on interval
-    autoFetch( force ) {
-      this.clearTimeout();
-      this.sto = setTimeout( this.autoFetch, 1000 * this.refetchTime );
-      if ( !this.options.news.refetch && !force ) return;
-      this.fetchAll();
-    },
-
-    // fetch all news
-    fetchAll() {
-      let plist = [];
-      this.working = true;
-      this.lastCount = 0;
-      this.newsSources.forEach( s => {
-        if ( s.cb ) plist.push( this[ s.cb ]() );
-      });
-      Promise.all( plist )
-      .then( () => {
-        this.loaded = true;
-        this.working = false;
-        this.spinner( 'hide' );
+    // add new tweets to the list
+    onTweetsHandler( err, handle, tweets ) {
+      if ( err ) {
+        console.warn( err );
+      }
+      if ( handle ) {
+        this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
+      }
+      if ( Array.isArray( tweets ) && tweets.length ) {
+        let tweet;
+        for ( tweet of tweets ) {
+          if ( this.twitterEntries.filter( t => t.id === tweet.id ).length ) return;
+          this.twitterEntries.unshift( tweet );
+          this.twitterEntries = this.twitterEntries.slice( 0, this.options.news.max );
+        }
+        this.setNotification( tweet );
         this.updateChart();
-        this.setNotifications();
         this.emitData();
-      })
-      .catch( err => {
-        let msg = err.message || err || 'There was a problem fetching latest news entries, check the console.';
-        this.$bus.emit( 'showNotice', msg, 'warning' );
-        console.info( 'Error:', msg );
-      });
+        this.saveTweets();
+      }
     },
 
-    // fetch news data from cryptocurrencynews
-    fetchReddit() {
-      return new Promise( resolve => {
-        const query    = encodeURIComponent( 'flair:General-News' );
-        const params   = 'restrict_sr=1&include_facets=0&include_over_18=1&sort=new&t=all&q='+ query;
-        const endpoint = 'https://www.reddit.com/r/CryptoCurrency/search.json?'+ params;
-
-        this.$ajax.get( endpoint, {
-          type: 'json',
-          timeout: this.timeout,
-          done: ( xhr, status, response ) => {
-            if ( response && response.data && response.data.children ) {
-              let list = response.data.children;
-
-              for ( let i = 0; i < list.length; ++i ) {
-                let item = list[ i ].data;
-                if ( !item.title || !item.url ) continue;
-                this.addNews( 'reddit', 'reddit.com', item.title, item.url );
-              }
-            }
-            resolve();
-          }
-        });
-      });
+    // save current list of tracked accounts to store
+    saveNewsSources() {
+      const sources = this.twitterHandlers.map( tw => tw.handle );
+      this.options.news.sources = sources;
+      this.applyOptions( this.options );
+      this.$bus.emit( 'showNotice', 'News source list has been saved.', 'success' );
     },
 
-    // fetch news data from ambcrypto
-    fetchAMB() {
-      return new Promise( resolve => {
-        const endpoint = 'https://ambcrypto.com/category/altcoins-news/';
-
-        this.$ajax.get( endpoint, {
-          type: 'document',
-          timeout: this.timeout,
-          done: ( xhr, status, dom ) => {
-            const list = scraper( dom, {
-              items  : '.mvp-blog-story-wrap',
-              params : {
-                title : '.mvp-blog-story-text h2',
-                link  : 'a',
-              }
-            });
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ];
-              if ( !item.title || !item.link ) continue;
-              this.addNews( 'ambnews', 'ambcrypto.com', item.title, item.link );
-            }
-            resolve();
-          }
-        });
-      });
+    // handle adding accounts from a form
+    accountFormHandler( e ) {
+      if ( !e || !e.target ) return;
+      let handle = String( e.target.handle.value || '' ).replace( /[^\w]+/g, '' ).trim();
+      if ( !handle ) return this.$bus.emit( 'showNotice', 'Please enter a valid twitter handle.', 'warning' );
+      this.createTwitterHandler( handle, true, true );
+      this.resetFilters();
+      e.target.reset();
     },
 
-    // fetch news data from newsapi
-    fetchCCN() {
-      return new Promise( resolve => {
-        const endpoint = 'https://www.ccn.com/wp-admin/admin-ajax.php';
-        const fdata    = new FormData();
-
-        fdata.append( 'action', 'loadmore' );
-        fdata.append( 'query', 'a:3:{s:3:"cat";i:132;s:14:"posts_per_page";i:30;s:5:"order";s:4:"DESC";}' );
-
-        this.$ajax.post( endpoint, {
-          type: 'document',
-          timeout: this.timeout,
-          data: fdata,
-          done: ( xhr, status, dom ) => {
-            const list = scraper( dom, {
-              items  : 'article',
-              params : {
-                title : '.entry-title > a',
-                link  : '.entry-title > a',
-              }
-            });
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ];
-              if ( !item.title || !item.link ) continue;
-              this.addNews( 'ccnews', 'ccn.com', item.title, item.link );
-            }
-            resolve();
-          }
-        });
-      });
+    // create new instance of Twitter handler for a handle
+    createTwitterHandler( handle, fetch, save ) {
+      if ( !handle || this.twitterHandlers.filter( t => t.handle === handle ).length ) return;
+      this.twitterHandlers.push( new Twitter( handle, { fetchDelay: 120, limitCount: 1 } ) );
+      if ( fetch ) this.fetchByHandle( handle );
+      if ( save ) this.saveNewsSources();
     },
 
-    // fetch news from coinlib.io site
-    fetchCoinlib() {
-      return new Promise( resolve => {
-        const endpoint = 'https://coinlib.io/news';
-
-        this.$ajax.get( endpoint, {
-          type: 'document',
-          timeout: this.timeout,
-          done: ( xhr, status, dom ) => {
-            const list = scraper( dom, {
-              items  : '.news-post',
-              params : {
-                title : '.news-content',
-                link  : '.news-widget > a',
-              }
-            });
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ];
-              if ( !item.title || !item.link ) continue;
-              this.addNews( 'coinlib', 'coinlib.io', item.title, item.link );
-            }
-            resolve();
-          }
-        });
-      });
+    // remove instance of Twitter handler from list
+    removeTwitterHandler( handle ) {
+      if ( !confirm( 'Stop tracking tweets from @'+ handle +'?' ) ) return;
+      this.twitterHandlers = this.twitterHandlers.filter( t => t.handle !== handle );
+      this.twitterEntries  = this.twitterEntries.filter( t => t.handle !== handle );
+      this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
+      this.saveNewsSources();
+      this.saveTweets();
+      this.resetFilters();
+      this.updateChart();
     },
 
-    // fetch news from binance site
-    fetchBinance() {
-      return new Promise( resolve => {
-        const domain   = 'support.binance.com';
-        const endpoint = 'https://'+ domain +'/hc/en-us/categories/115000056351-Announcements';
-
-        this.$ajax.get( endpoint, {
-          type: 'document',
-          timeout: this.timeout,
-          done: ( xhr, status, dom ) => {
-            const list = scraper( dom, {
-              items  : '.article-list > .article-list-item',
-              params : {
-                title : '.article-list-link', // innerHtml
-                link  : '.article-list-link', // (link) href
-              }
-            });
-            for ( let i = 0; i < list.length; ++i ) {
-              let item = list[ i ];
-              if ( !item.title || !item.link ) continue;
-              item.link = item.link.replace( this.proxyDomain, domain );
-              this.addNews( 'binance', 'binance.com', item.title, item.link );
-            }
-            resolve();
-          }
-        });
-      });
+    // fetches tweets manually for a handle
+    fetchByHandle( handle ) {
+      const tw = this.twitterHandlers.filter( t => t.handle === handle ).shift();
+      if ( !tw ) return this.$bus.emit( 'showNotice', 'Could not find account @'+ handle +'.', 'warning' );
+      if ( this.twitterChecking.filter( h => h === handle ).length ) return; // fetching...
+      this.twitterChecking.push( tw.handle );
+      tw.fetchTweets( this.$ajax, this.onTweetsHandler );
     },
 
-    // fetch data from coinmarketcal
-    fetchEvents() {
-      return new Promise( resolve => {
-        const atoken   = 'ODM0OGY4MWFlNWU3M2I4YThiYTc2ZmQyMTIwMjkyMmQwNjRhZDk4MzA3NTgwODM4ZjkyYzcyZTg1N2NjNDA2Yw';
-        const endpoint = 'https://api.coinmarketcal.com/v1/events?access_token='+ atoken +'&page=1&max=20&showOnly=hot_events';
+    // fetches tweets on an interval
+    fetchByInterval() {
+      if ( !this.options.news.refetch ) return;
+      if ( !this.twitterHandlers.length ) return;
+      const last = this.twitterHandlers.length - 1;
+      const tw = this.twitterHandlers[ this.twitterCounter ];
+      if ( tw ) this.fetchByHandle( tw.handle );
+      this.twitterCounter = ( this.twitterCounter < last ) ? ( this.twitterCounter + 1 ) : 0;
+    },
 
-        this.$ajax.get( endpoint, {
-          type: 'json',
-          timeout: this.timeout,
-          done: ( xhr, status, list ) => {
-            if ( Array.isArray( list ) ) {
-              for ( let i = 0; i < list.length; ++i ) {
-                let item = list[ i ];
-                if ( !item.title || !item.coins || !item.description || !item.source ) continue;
-                let { month, day, year, hour, minute, second, ampm } = utils.dateData( item.date_event );
-                let date  = [ month, day, year ].join( '/' );
-                let coins = '('+ item.coins.reduce( ( arr, coin ) => { arr.push( coin.symbol ); return arr; }, [] ).join( ', ' ) +')';
-                let title = date +' '+ coins +': '+ item.title +' - '+ item.description.replace( /[\"\(\)]+/g, '' );
-                this.addNews( 'events', 'coinmarketcal.com', title, item.source );
-              }
-            }
-            resolve();
-          }
-        });
-      });
+    // load and start tracking twitter accounts for latest tweets
+    setupTwitterTrackers() {
+      this.twitterHandlers = [];
+      let accounts = utils.shuffle( this.options.news.sources || [] );
+      for ( let handle of accounts ) this.createTwitterHandler( handle );
+      if ( this.twitterInterval ) clearInterval( this.twitterInterval );
+      this.twitterInterval = setInterval( this.fetchByInterval, 2000 );
+      this.fetchByInterval();
     },
   },
 
   // component mounted
   mounted() {
-    this.proxyDomain = String( this.options.proxy ).replace( /^https?\:\/\/|\/.*$/g, '' );
-    this.spinner( 'show', 'waiting for news data' );
-    this.autoFetch( true );
+    this.setupTwitterTrackers();
+    this.loadTweets();
+
+    document.addEventListener( 'focus', () => {
+      setTimeout( this.resetCount, 3000 );
+    });
   },
 
   // component destroyed
   destroyed() {
-    this.clearTimeout();
+    this.twitterHandlers = [];
+    this.twitterEntries  = [];
+    this.twitterChecking = [];
   },
 }
 </script>
@@ -616,11 +502,13 @@ export default {
     background-color: rgba( $colorDocument, 0 );
     z-index: ( $zindexElements - 1 );
 
-    .form-input {
-      background-color: lighten( $colorDocument, 4% );
+    .newspage-controls-search {
+      .form-input {
+        background-color: lighten( $colorDocument, 4% );
 
-      &:hover {
-        background-color: lighten( $colorDocument, 6% );
+        &:hover {
+          background-color: lighten( $colorDocument, 6% );
+        }
       }
     }
 
@@ -630,16 +518,33 @@ export default {
         display: block;
       }
     }
+
+    .twitter-accounts-list {
+      overflow-y: auto;
+      min-width: 300px;
+      max-height: 300px;
+
+      .twitter-accounts-item {
+        padding: .5em 1em;
+        background-color: rgba( 0, 0, 0, 0 );
+
+        &:hover {
+          background-color: rgba( 0, 0, 0, 0.08 );
+        }
+        & + .twitter-accounts-item {
+          border-top: $lineWidth $lineStyle $lineColor;
+        }
+      }
+    }
   }
 
   .newspage-chart {
     position: relative;
     padding: ( $padSpace / 2 ) 0;
-    font-size: 90%;
 
     .newspage-chart-row {
       position: relative;
-      padding: .1em $padSpace;
+      padding: 0 $padSpace;
 
       &:first-of-type {
         margin-bottom: ( $padSpace / 2 );
@@ -673,12 +578,40 @@ export default {
 
     .newspage-list-item {
       margin: 0 0 ( $lineWidth * 2 ) 0;
-      padding: ( $padSpace / 2 ) $padSpace;
+      padding: $padSpace;
       background-color: $colorDocumentLight;
       border-radius: $lineJoin;
 
       &:hover {
         background-color: lighten( $colorDocumentLight, 2% );
+      }
+
+      .newspage-list-image {
+        display: block;
+        overflow: hidden;
+        background-color: $colorGrey;
+        text-align: center;
+        width: 68px;
+        height: 68px;
+        line-height: 68px;
+        border-radius: 100px;
+        color: $colorDocument;
+      }
+
+      .newspage-list-header {
+        margin-bottom: .4em;
+        padding-bottom: .4em;
+        border-bottom: $lineWidth $lineStyle $lineColor;
+      }
+
+      .newspage-list-text {
+        position: relative;
+        overflow: hidden;
+
+        a {
+          text-decoration: underline;
+          color: $colorDefault;
+        }
       }
     }
   }
