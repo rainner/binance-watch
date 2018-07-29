@@ -33,6 +33,9 @@
                 <li class="clickable" @click="limitList( 10 )">
                   <i class="icon-list-add iconLeft"></i> 10 tokens
                 </li>
+                <li class="clickable" @click="limitList( 20 )">
+                  <i class="icon-list-add iconLeft"></i> 20 tokens
+                </li>
                 <li class="clickable" @click="limitList( 50 )">
                   <i class="icon-list-add iconLeft"></i> 50 tokens
                 </li>
@@ -118,7 +121,7 @@
           @click.stop="setRoute( p.route )"
           :key="p.symbol">
 
-          <div class="tokenlist-item-icon text-clip">
+          <div class="tokenlist-item-icon" :class="{ 'alarm-bubble': p.alarms }">
             <TokenIcon :pairData="p"></TokenIcon>
           </div>
 
@@ -204,7 +207,7 @@ export default {
       sortBy: 'assetVolume',
       limitMin: 10,
       limitMax: 200,
-      limitCount: 50,
+      limitCount: 20,
       // filtered list data
       listCount: 0,
       listLeft: 0,
