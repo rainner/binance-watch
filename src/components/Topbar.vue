@@ -31,26 +31,27 @@
           </button>
 
           <Dropdown class="topbar-dropdown">
-            <button slot="trigger"
-              class="topbar-btn icon-signal"
-              :class="{ 'text-gain': isConnected, 'text-danger': !isConnected }">
-            </button>
+            <button slot="trigger" class="topbar-btn icon-signal" :class="{ 'text-gain': isConnected, 'text-danger': !isConnected }"></button>
             <div slot="list" class="text-center">
-              <big>Socket Connection</big>
+
+              <div class="form-label pad-h">Socket Connection</div>
+
               <hr />
+              <div class="pad-h push-bottom">
+                <span class="text-default">Status:</span> &nbsp;
+                <span v-if="socketStatus == 0" class="text-loss">Diconnected <i class="icon-cry"></i></span>
+                <span v-else-if="socketStatus == 1" class="text-primary">Waiting... <i class="icon-clock"></i></span>
+                <span v-else-if="socketStatus == 2" class="text-gain">Connected <i class="icon-check"></i></span>
+                <br />
+                <span class="text-default">Time:</span> &nbsp;
+                <span class="text-bright">{{ socketTime }}</span>
+              </div>
 
-              <span class="text-default">Status:</span> &nbsp;
-              <span v-if="socketStatus == 0" class="text-loss">Diconnected <i class="icon-cry"></i></span>
-              <span v-else-if="socketStatus == 1" class="text-primary">Waiting... <i class="icon-clock"></i></span>
-              <span v-else-if="socketStatus == 2" class="text-gain">Connected <i class="icon-check"></i></span>
-              <br />
+              <div class="pad-h">
+                <button v-if="isConnected" class="form-btn icon-close iconLeft bg-danger-hover" @click="toggleConnection">Disconnect</button>
+                <button v-else class="form-btn icon-connection iconLeft bg-success-hover" @click="toggleConnection">Connect</button>
+              </div>
 
-              <span class="text-default">Time:</span> &nbsp;
-              <span class="text-bright">{{ socketTime }}</span>
-              <hr />
-
-              <button v-if="isConnected" class="form-btn icon-close iconLeft bg-danger-hover" @click="toggleConnection">Disconnect</button>
-              <button v-else class="form-btn icon-connection iconLeft bg-success-hover" @click="toggleConnection">Connect</button>
             </div>
           </Dropdown>
 

@@ -101,12 +101,12 @@
 
 <script>
 // custom modules
+import appOptions from '../configs/options';
 import Stream from '../modules/stream';
 import Scroller from '../modules/scroller';
 import msgQueue from '../modules/queue';
 import mailgun from '../modules/mailgun';
 import telegram from '../modules/telegram';
-import appOptions from '../modules/options';
 import utils from '../modules/utils';
 
 // sub components
@@ -182,7 +182,7 @@ export default {
     // merge new options and save
     setOptions( options ) {
       setTimeout( () => {
-        this.options = Object.assign( {}, this.options, options );
+        this.options = utils.deepMerge( {}, this.options, options );
         this.$ajax.setOptions( { proxy: this.options.proxy } );
         this.$notify.setOptions( { soundEnabled: this.options.sound } );
         this.$store.setData( this.optKey, this.options );
@@ -192,7 +192,7 @@ export default {
     // load saved options data from local store
     loadOptions() {
       let options = this.$store.getData( this.optKey );
-      this.options = Object.assign( {}, this.options, options );
+      this.options = utils.deepMerge( {}, this.options, options );
       this.$ajax.setOptions( { proxy: this.options.proxy } );
       this.$notify.setOptions( { soundEnabled: this.options.sound } );
     },
@@ -300,7 +300,6 @@ export default {
       this.socketStart = Date.now();
       this.socketInt = setInterval( this.computeSocketTime, 1000 );
       this.showNotice( 'Socket connection active.', 'success' );
-      this.fetchCoinsData();
     },
 
     // when socket connection ends
@@ -339,8 +338,9 @@ export default {
       this.socketStatus = 2;
 
       for ( let i = 0; i < this.priceData.length; ++i ) {
-        let p = this.priceData[ i ];
-        p.name = this.coinsData[ p.token ] || p.name || p.token;
+        let p    = this.priceData[ i ];
+        p.name   = this.coinsData[ p.token ] || p.name || p.token;
+        p.alarms = this.alarmsData.hasOwnProperty( p.symbol ) ? this.alarmsData[ p.symbol ].length : 0;
 
         // add main asset token to the list
         if ( this.assetsList.indexOf( p.asset ) < 0 ) {
@@ -437,10 +437,25 @@ export default {
       this.$refs.notify.show( message, type, timeout );
     },
 
+    // fetch wordlist files for sentiment analysis
+    fetchSentimentWords() {
+      Array( 'words', 'emoji' ).forEach( file => {
+        this.$ajax.get( 'public/afinn/'+ file +'.json', {
+          type: 'json',
+          proxy: false,
+          done: ( xhr, status, words ) => {
+            if ( typeof words !== 'object' ) return;
+            this.$sentiment.merge( words );
+          }
+        });
+      });
+    },
+
     // fetch list of all tokens and their names from API
     fetchCoinsData() {
       this.$ajax.get( 'https://coincap.io/map', {
         type: 'json',
+        proxy: false,
         done: ( xhr, status, list ) => {
           if ( !Array.isArray( list ) ) return;
           let data = {};
@@ -465,12 +480,15 @@ export default {
     this.setupGlobalHandlers();
     this.setupSocketHandlers();
     this.setupScrollHandlers();
+    this.fetchSentimentWords();
+    this.fetchCoinsData();
   },
 
   // start socket and other external data
   mounted() {
     this.setTitle();
     this.toggleSocket( true );
+    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 500 );
   },
 
   // cleanup and close connetions

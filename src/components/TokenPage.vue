@@ -88,11 +88,11 @@
 
     <!-- events and alarms -->
     <Tabs class="tokenpage-tabs pad-top push-bottom" :data="{ alarmsCount, newsCount }">
-      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News ('+ newsCount +')' ]" active>
-        <NewsList :newsData="newsData" :pairData="modalData" @listCount="onNewsCount"></NewsList>
-      </section>
-      <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Alarms ('+ alarmsCount +')' ]">
+      <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Alarms ('+ alarmsCount +')' ]" active>
         <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
+      </section>
+      <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News ('+ newsCount +')' ]">
+        <NewsList :newsData="newsData" :pairData="modalData" @listCount="onNewsCount"></NewsList>
       </section>
     </Tabs>
 

@@ -46,28 +46,12 @@
           <span>Aggregated global data for specific tokens.</span>
         </li>
         <li>
-          <a href="https://coinmarketcal.com/" target="_blank">Coin Market Cal</a> &nbsp;
-          <span>Hot upcoming cryptocurrency events and news.</span>
-        </li>
-        <li>
-          <a href="https://www.reddit.com/r/CryptoCurrency" target="_blank">Crypto on Reddit</a> &nbsp;
-          <span>The CryptoCurrency subreddit on Reddit.com.</span>
-        </li>
-        <li>
-          <a href="https://www.ccn.com/" target="_blank">Crypto News (CCN)</a> &nbsp;
-          <span>Latest CryptoCurrency news from the CCN site.</span>
-        </li>
-        <li>
-          <a href="https://ambcrypto.com/" target="_blank">AMB Crypto News</a> &nbsp;
-          <span>Latest CryptoCurrency news from the ABM Crypto site.</span>
-        </li>
-        <li>
-          <a href="https://coinlib.io/news" target="_blank">Coinlib News</a> &nbsp;
-          <span>Latest Aggregated crypto news from the Coinlib site.</span>
-        </li>
-        <li>
           <a href="https://www.mailgun.com/" target="_blank">Mailgun API</a> &nbsp;
-          <span>Mailgun API for outgoing notifications by e-mail.</span>
+          <span>Mailgun API for outgoing notifications via e-mail.</span>
+        </li>
+        <li>
+          <a href="https://core.telegram.org/bots#creating-a-new-bot" target="_blank">Telegram Bot API</a> &nbsp;
+          <span>Telegram Bot API for outgoing notifications via the app.</span>
         </li>
         <li>
           <a href="https://github.com/cjdowner/cryptocurrency-icons" target="_blank">Crypto Icons</a> &nbsp;

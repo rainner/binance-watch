@@ -100,10 +100,10 @@ export default {
     transition: none;
     opacity: 0.000000001;
     margin: 0;
-    padding: ( $padSpace / 2 ) 0;
+    padding: $padSpace 0;
+    min-width: 200px;
     max-width: 400px;
-    @include borderEffect;
-    background-color: lighten( $colorDocument, 5% );
+    background-color: lighten( $colorDocument, 8% );
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
     z-index: ( $zindexModals + 2 );
@@ -130,10 +130,6 @@ export default {
       display: block;
     }
 
-    & > div {
-      padding: ( $padSpace / 2 ) ( $padSpace * 2 );
-    }
-
     & > ul {
       display: block;
       list-style: none;
@@ -144,16 +140,16 @@ export default {
       & > li {
         display: block;
         margin: 0;
-        padding: ( $padSpace / 1.6 ) ( $padSpace * 1.6 );
+        padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
         text-align: left;
         white-space: nowrap;
 
         &.clickable {
-          border-top: 1px $lineStyle $lineColor;
-          background-color: transparent;
+          border-top: $lineWidth $lineStyle $lineColor;
+          background-color: rgba( 0, 0, 0, 0 );
 
           &:hover {
-            background-color: lighten( $colorDocument, 8% );
+            background-color: rgba( 0, 0, 0, 0.1 );
           }
           &:first-of-type {
             border-top: none;
