@@ -22,6 +22,15 @@ module.exports = {
     return data;
   },
 
+  // convert html tags to text content
+  stripHtml( text, removeUrls ) {
+    let div = document.createElement( 'div' );
+    div.innerHTML = String( text || '' );
+    let output = String( div.textContent || div.innerText || '' );
+    if ( removeUrls ) output = output.replace( /(https?\:\/\/[\w\-\.\?\=\&\%\/\#]+)/gi, '' );
+    return output;
+  },
+
   // convert relative path to full url
   fullUrl( relpath ) {
     let loc  = window.location;
@@ -170,7 +179,7 @@ module.exports = {
     let change  = isup  ? ( current - last ) : ( last - current );
     let percent = isnum ? ( change / last * 100.0 ) : 0.0;
     let sign    = isup  ? '+' : '-';
-    let arrow   = isup  ? '🔺' : '🔻';
+    let arrow   = isup  ? '▲' : '▼';
     let color   = isup  ? 'green' : 'red';
     return { change, percent, sign, arrow, color };
   },
@@ -192,6 +201,27 @@ module.exports = {
       out.push( { x, y } );
     }
     return out;
+  },
+
+  // shuffle an array
+  shuffle( o ) {
+    for ( let j, x, i = o.length; i; j = parseInt( Math.random() * i ), x = o[--i], o[i] = o[j], o[j] = x );
+    return o;
+  },
+
+  // deep merge obj arguments
+  deepMerge(){
+    for ( let i = 1; i < arguments.length; i++ ) {
+      for ( let key in arguments[ i ] )
+        if ( arguments[ i ].hasOwnProperty( key ) ) {
+          if ( typeof arguments[ 0 ][ key ] === 'object' && typeof arguments[ i ][ key ] === 'object' ) {
+            this.deepMerge( arguments[ 0 ][ key ], arguments[ i ][ key ] );
+          } else {
+            arguments[ 0 ][ key ] = arguments[ i ][ key ];
+          }
+        }
+      }
+    return arguments[ 0 ];
   },
 
   // return matching results from a list
