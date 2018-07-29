@@ -10,9 +10,12 @@
     <link href="favicon.ico" rel="shortcut icon" />
     <link href="public/css/fonts.css" rel="stylesheet" />
     <link href="public/bundles/app.min.css" rel="stylesheet" />
+    <style type="text/css">
+      body { background: #192029 url( 'public/images/body-bg.jpg' ) center top no-repeat; }
+    </style>
   </head>
-  <body id="doc" style="background-image: url( public/images/body-bg.jpg )">
-    <div id="app"></div>
+  <body id="doc">
+    <div id="app" v-cloak></div>
     <script src="public/bundles/app.min.js"></script>
   </body>
 </html>
