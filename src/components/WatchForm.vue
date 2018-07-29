@@ -11,10 +11,10 @@
       <div class="watchform-container" ref="watchform">
         <div class="container">
 
-          <div class="flex-row flex-top flex-space">
-            <div class="push-right icon-bell iconLeft text-clip">
-              <span v-if="active" class="text-gain">Watching for price change on selected {{ options.asset }} pairs.</span>
-              <span v-else>Get notifications for price action on pairs based on custom options.</span>
+          <div class="flex-row flex-middle flex-stretch">
+            <div class="flex-1 push-right">
+              <span class="icon-config iconLeft">Presets:</span>
+              <button v-for="p in watchPresets" :key="p.name" type="button" class="push-left text-info-hover" @click.prevent="applyPreset( p.name )">{{ p.name }}</button>
             </div>
             <div class="text-nowrap">
               <span class="icon-gauge iconLeft text-primary">{{ pairsCount() }}</span>
@@ -24,69 +24,71 @@
           <hr />
 
           <!-- form inputs -->
-          <form class="watchform-controls flex-row flex-top flex-space flex-wrap" @submit.prevent @change="formChange">
+          <form class="watchform-controls flex-row flex-middle flex-space flex-wrap" @submit.prevent @change="formChange">
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="icon-down-open">
-                <select v-model="options.asset">
+              <div class="icon-down-open iconFaded">
+                <select v-model="watchOptions.asset">
                   <option v-for="asset in assetsList" :key="asset" :value="asset">{{ asset }} Pairs</option>
                 </select>
               </div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open">
-                <select v-model="options.priceType">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.priceType">
                   <option value="change">Price Change</option>
                   <option value="gain">Price Gain</option>
                   <option value="loss">Price Loss</option>
                 </select>
               </div>
-              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="options.priceChange" />
-              <div :class="{ 'text-grey': options.priceChange === '0' }">{{ options.priceChange }}%</div>
+              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="watchOptions.priceChange" />
+              <div :class="{ 'text-grey': watchOptions.priceChange === '0' }">{{ watchOptions.priceChange }}%</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open">
-                <select v-model="options.volumeType">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.volumeType">
                   <option value="change">Vol Change</option>
                   <option value="gain">Vol Gain</option>
                   <option value="loss">Vol Loss</option>
                 </select>
               </div>
-              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="options.volumeChange" />
-              <div :class="{ 'text-grey': options.volumeChange === '0' }">{{ options.volumeChange }}%</div>
+              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="watchOptions.volumeChange" />
+              <div :class="{ 'text-grey': watchOptions.volumeChange === '0' }">{{ watchOptions.volumeChange }}%</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open">
-                <select v-model="options.priceCheck">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.timeCheck">
+                  <option value="less">Within last</option>
+                  <option value="more">Wait past</option>
+                </select>
+              </div>
+              <input class="flex-1 push-right" type="range" min="0" max="60" step="1" v-model="watchOptions.timeLimit" />
+              <div :class="{ 'text-grey': watchOptions.timeLimit === '0' }">{{ watchOptions.timeLimit | toNoun( 'min', 'mins' ) }}</div>
+            </div>
+
+            <div class="form-input text-nowrap push-bottom">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.priceCheck">
                   <option value="above">Price Above</option>
                   <option value="below">Price Below</option>
                 </select>
               </div>
-              <input class="push-right" type="text" placeholder="0.00000000" v-model="options.price" @keyup="numInput" />
-              <div class="text-grey">{{ options.asset }}</div>
+              <input class="push-right" type="text" placeholder="0.00000000" v-model="watchOptions.price" @keyup="numInput" />
+              <div class="text-grey">{{ watchOptions.asset }}</div>
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open">
-                <select v-model="options.volumeCheck">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.volumeCheck">
                   <option value="above">Vol Above</option>
                   <option value="below">Vol Below</option>
                 </select>
               </div>
-              <input class="push-right" type="text" placeholder="0" v-model="options.volume" @keyup="numInput" />
-              <div class="text-grey">{{ options.asset }}</div>
-            </div>
-
-            <div class="form-input text-nowrap push-bottom">
-              <div class="icon-down-open">
-                <select v-model="options.notify">
-                  <option value="repeat">Repeat all</option>
-                  <option value="once">Once per pair</option>
-                </select>
-              </div>
+              <input class="push-right" type="text" placeholder="0" v-model="watchOptions.volume" @keyup="numInput" />
+              <div class="text-grey">{{ watchOptions.asset }}</div>
             </div>
 
             <button
@@ -94,7 +96,7 @@
               class="form-btn iconLeft"
               :class="{ 'bg-danger-hover icon-stop': active, 'bg-success-hover icon-play': !active }"
               @click.prevent="toggleWatch">
-                {{ active ? elapsed : 'START' }}
+                {{ active ? 'Watching '+ elapsed +' ...' : 'Start watching ...' }}
             </button>
 
           </form>
@@ -107,6 +109,7 @@
 
 <script>
 // modules
+import presetOptions from "../configs/presets";
 import emoji from '../modules/emoji';
 import utils from '../modules/utils';
 
@@ -115,6 +118,7 @@ export default {
 
   // component props
   props: {
+    options: { type: Object, default() { return {} } },
     socketStatus: { type: Number, default: 0, required: false },
     scrollDir: { type: String, default: '', required: false },
     scrollPos: { type: Number, default: 0, required: false },
@@ -136,22 +140,21 @@ export default {
       start: 0,
       elapsed: '',
       snapshot: {},
-      // user options
-      options: {
+      // watchform options
+      watchPresets: presetOptions,
+      watchOptions: {
         asset: 'BTC', // asset pair
-        // price
         priceType: 'change', // change, gain, loss
         priceChange: '2', // change percent
         priceCheck: 'below', // above, below
         price: '', // custom price limit
-        // volume
         volumeType: 'gain', // change, gain, loss
-        volumeChange: '5', // change percent
+        volumeChange: '2', // change percent
         volumeCheck: 'above', // above, below
         volume: '', // custom volume limit
-        // other
-        notify: 'repeat',
-      }
+        timeCheck: 'less', // more, less
+        timeLimit: '30', // limit change by time (mins)
+      },
     }
   },
 
@@ -194,8 +197,8 @@ export default {
 
     // only allow numbers for some form inputs
     numInput( e ) {
-      this.options.price  = String( this.options.price ).replace( /[^\d\.\-]+/g, '' );
-      this.options.volume = String( this.options.volume ).replace( /[^\d\.\-]+/g, '' );
+      this.watchOptions.price  = String( this.watchOptions.price ).replace( /[^\d\.\-]+/g, '' );
+      this.watchOptions.volume = String( this.watchOptions.volume ).replace( /[^\d\.\-]+/g, '' );
     },
 
     // compute elapsed time for price watch
@@ -203,6 +206,28 @@ export default {
       let seconds  = ( Date.now() - this.start ) / 1000;
       let elapsed  = utils.elapsed( seconds );
       this.elapsed = elapsed ? elapsed : '0s';
+    },
+
+    // add a preset
+    addPreset( name, options ) {
+      if ( !name || this.watchPresets.filter( p => p.name === name ).length ) return;
+      options = Object.assign( {}, this.watchOptions, options );
+      this.watchPresets.push( { name, options } );
+    },
+
+    // remove preset
+    removePreset( name ) {
+      if ( !name ) return;
+      this.watchPresets = this.watchPresets.filter( p => p.name !== name );
+    },
+
+    // apply a preset
+    applyPreset( name ) {
+      let preset = name ? this.watchPresets.filter( p => p.name === name ).shift() : null;
+      if ( preset ) {
+        this.watchOptions = Object.assign( this.watchOptions, preset.options );
+        this.formChange();
+      }
     },
 
     // start price watch
@@ -265,11 +290,11 @@ export default {
 
     // compare watch form options against pair data from price list, snapshot, or both
     checkFormOptions( p ) {
-      let asset = String( this.options.asset || '' );
-      let priceCheck = String( this.options.priceCheck || '' );
-      let price = parseFloat( this.options.price ) || 0;
-      let volumeCheck = String( this.options.volumeCheck || '' );
-      let volume = parseInt( this.options.volume ) || 0;
+      let asset = String( this.watchOptions.asset || '' );
+      let priceCheck = String( this.watchOptions.priceCheck || '' );
+      let price = parseFloat( this.watchOptions.price ) || 0;
+      let volumeCheck = String( this.watchOptions.volumeCheck || '' );
+      let volume = parseInt( this.watchOptions.volume ) || 0;
 
       if ( asset && p.asset !== asset ) return false;
       if ( price && priceCheck === 'above' && p.close < price ) return false;
@@ -282,18 +307,19 @@ export default {
     // count total pairs for select option
     pairsCount() {
       let count = 0;
-      let asset = String( this.options.asset || '' );
+      let asset = String( this.watchOptions.asset || '' );
       this.priceData.forEach( p => { if ( this.checkFormOptions( p ) ) count++ } );
       return utils.noun( count, asset +' pair', asset +' pairs' );
     },
 
     // check current prices against snapshot based on options
     checkPrices() {
-      let priceType    = String( this.options.priceType || '' );
-      let priceChange  = parseFloat( this.options.priceChange ) || 0;
-      let volumeType   = String( this.options.volumeType || '' );
-      let volumeChange = parseFloat( this.options.volumeChange ) || 0;
-      let notify       = String( this.options.notify || 'once' );
+      let priceType    = String( this.watchOptions.priceType || '' );
+      let priceChange  = parseFloat( this.watchOptions.priceChange ) || 0;
+      let volumeType   = String( this.watchOptions.volumeType || '' );
+      let volumeChange = parseFloat( this.watchOptions.volumeChange ) || 0;
+      let timeCheck    = String( this.watchOptions.timeCheck || 'less' );
+      let timeLimit    = ( parseInt( this.watchOptions.timeLimit ) || 0 ) * 60; // convert mins to secs
       let now          = Date.now();
 
       this.priceData.forEach( p => {
@@ -304,13 +330,16 @@ export default {
         let s  = this.snapshot[ p.symbol ];
         let pc = utils.percent( p.close, s.close );
         let vc = utils.percent( p.assetVolume, s.assetVolume );
-
-        // already notified
-        if ( notify === 'once' && s.checked ) return;
+        let t  = ( now - s.time ) / 1000; // secs since last checked
 
         // nothing to check
         if ( !priceChange && !volumeChange ) return;
 
+        // check time period
+        if ( timeCheck && timeLimit ) {
+          if ( timeCheck === 'less' && t > timeLimit ) return;
+          if ( timeCheck === 'more' && t < timeLimit ) return;
+        }
         // check price change data
         if ( priceChange ) {
           if ( priceType === 'gain' && pc.sign === '-' ) return;
@@ -326,7 +355,7 @@ export default {
 
         // resolve emoji icons
         let titleIcon  = emoji( 'bell' );
-        let changeIcon = ( p.percent >= 0 ) ? emoji( 'gain' ) : emoji( 'loss' );
+        let changeIcon = ( p.percent >= 0 )  ? emoji( 'up' ) : emoji( 'down' );
         let priceIcon  = ( pc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
         let volumeIcon = ( vc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
         if ( p.percent >= 5 )  titleIcon = emoji( 'rocket' );
@@ -338,7 +367,7 @@ export default {
         let elapsed   = 'Change '+ emoji( 'clock' ) +' '+ utils.elapsed( ( now - s.time ) / 1000 );
         let curPrice  = 'Price '+ priceIcon +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
         let curVol    = 'Volume '+ volumeIcon +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
-        let title     = titleIcon +' '+ p.name +' ('+ p.pair +') '+ changeIcon +' '+ p.sign + Number( p.percent ).toFixed( 2 ) +'%';
+        let title     = titleIcon +'  '+ p.name +' ('+ p.pair +') '+ changeIcon +' '+ p.sign + Number( p.percent ).toFixed( 2 ) +'%';
         let info      = [ elapsed, curPrice, curVol ].join( '\n' );
         let icon      = utils.fullUrl( p.icon );
 
@@ -413,7 +442,6 @@ export default {
       }
 
       .watchform-controls {
-
         margin: 0 -( $padSpace / 2 );
 
         .form-input,
