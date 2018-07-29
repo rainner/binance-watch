@@ -82,7 +82,7 @@ module.exports = class Stream {
         let tokenVolume = Math.round( item.v );
         let assetVolume = Math.round( item.q );
         let sign        = ( percent >= 0 ) ? '+' : '';
-        let arrow       = ( percent >= 0 ) ? '🔺' : '🔻';
+        let arrow       = ( percent >= 0 ) ? '▲' : '▼';
         let history     = [];
 
         // keep up to 100 close values in the history for each symbol

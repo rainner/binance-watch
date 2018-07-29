@@ -85,7 +85,7 @@ export default class Notify {
       time       : Date.now(),
       curPrice   : curPrice,
       alarmPrice : alarmPrice,
-      arrow      : ( alarmPrice > curPrice ) ? '🔺' : '🔻',
+      arrow      : ( alarmPrice > curPrice ) ? '▲' : '▼',
       sign       : ( alarmPrice > curPrice ) ? '≥' : '≤',
       check      : ( alarmPrice > curPrice ) ? 'gain' : 'loss',
       action     : '', // todo: add custom actions
@@ -123,7 +123,7 @@ export default class Notify {
       if ( curPrice > a.alarmPrice ) diff = 'more than';
       if ( curPrice < a.alarmPrice ) diff = 'less than';
 
-      let title = [ '🔔', a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
+      let title = [ '🔔 ', a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
       let info  = a.symbol +' is now '+ diff +' your alert price of '+ a.alarmPrice +' '+ a.asset +'.';
 
       this.deleteAlarm( a.symbol, a.id );

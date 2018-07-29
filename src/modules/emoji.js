@@ -14,8 +14,8 @@ export default function( name ) {
     case 'gain'      :  return '📈';
     case 'loss'      :  return '📉';
     case 'bell'      :  return '🔔';
-    case 'up'        :  return '🔺';
-    case 'down'      :  return '🔻';
+    case 'up'        :  return '▲';
+    case 'down'      :  return '▼';
     case 'fire'      :  return '🔥';
     case 'rocket'    :  return '🚀';
     case 'moon'      :  return '🌕';
@@ -25,6 +25,8 @@ export default function( name ) {
     case 'clock'     :  return '⌚️';
     case 'money'     :  return '💰';
     case 'heart'     :  return '❤️';
+    case 'comment'   :  return '💬';
+    case 'note'      :  return '📝';
     case '100'       :  return '💯';
     case 'sos'       :  return '🆘';
     case 'denied'    :  return '🚫';
