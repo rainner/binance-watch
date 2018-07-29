@@ -74,6 +74,23 @@
     z-index: 10;
   }
 }
+// emoji alarm indicator
+.alarm-bubble {
+  position: relative;
+
+  &:before {
+    content: '⏳';
+    display: block;
+    position: absolute;
+    pointer-events: none;
+    font-size: 120%;
+    right: -0.2em;
+    top: -0.2em;
+    text-shadow:0 1px 3px rgba( 0, 0, 0, 0.5 );
+    animation: pulseFade 1s linear infinite;
+    z-index: 10;
+  }
+}
 
 // common margins
 .push-top {
@@ -91,6 +108,17 @@
 .push-all {
   margin: $padSpace;
 }
+.push-none {
+  margin: 0;
+}
+.push-h {
+  margin-left: $padSpace;
+  margin-right: $padSpace;
+}
+.push-v {
+  margin-top: $padSpace;
+  margin-bottom: $padSpace;
+}
 
 // common paddings
 .pad-top {
@@ -107,6 +135,17 @@
 }
 .pad-all {
   padding: $padSpace;
+}
+.pad-none {
+  padding: 0;
+}
+.pad-h {
+  padding-left: $padSpace;
+  padding-right: $padSpace;
+}
+.pad-v {
+  padding-top: $padSpace;
+  padding-bottom: $padSpace;
 }
 
 // common borders

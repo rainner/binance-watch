@@ -65,6 +65,11 @@
   color: $colorSecondary;
 }
 
+// faded icon
+.iconFaded:before {
+  opacity: 0.3;
+}
+
 // add pseudo icon element as fixed background
 .iconBg:before {
   display: block;

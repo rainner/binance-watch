@@ -101,6 +101,11 @@ ul {
   line-height: 1.5em;
   text-transform: none;
 }
+.text-monospace {
+  font-family: monospace;
+  font-weight: bold;
+  letter-spacing: -1px;
+}
 .text-left {
   text-align: left;
 }
@@ -137,11 +142,17 @@ ul {
 .text-underline {
   text-decoration: underline;
 }
+.text-striked {
+  text-decoration: line-through;
+}
 .text-italic {
   font-style: italic;
 }
 .text-bold {
   font-weight: bold;
+}
+.text-wrap {
+  @include textWrapAll;
 }
 .text-nowrap {
   @include textNoWrap;
