@@ -93,6 +93,7 @@
 @import "../scss/animations";
 @import "../scss/flexbox";
 @import "../scss/fontello";
+@import "../scss/emoji";
 @import "../scss/type";
 @import "../scss/forms";
 @import "../scss/tooltip";
@@ -223,6 +224,10 @@ export default {
         let d = this.priceData.filter( p => p.symbol === symbol ).shift();
         if ( d ) this.showModal( 'TokenPage', d.pair +' Info ', d );
       });
+      // show current route asap
+      setTimeout( () => {
+        this.$router.trigger( window.location.hash || '/' );
+      }, 400 );
     },
 
     // setup msg queue to go off on a timer
@@ -488,7 +493,6 @@ export default {
   mounted() {
     this.setTitle();
     this.toggleSocket( true );
-    setTimeout( () => { this.$router.trigger( window.location.hash ) }, 500 );
   },
 
   // cleanup and close connetions

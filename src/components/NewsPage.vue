@@ -34,7 +34,7 @@
 
                 <div class="twitter-accounts-list push-bottom border-top border-bottom">
                   <div class="twitter-accounts-item flex-row flex-middle flex-stretch" v-for="a in accountsList" :key="a.handle">
-                    <div class="flex-1 text-clip clickable push-right" title="Show tweets" v-tooltip @click="filterHandle = a.handle">
+                    <div class="flex-1 text-clip clickable push-right" title="Show tweets" v-tooltip @click="applyFilters( '', a.handle )">
                       <span class="icon-twtr iconLeft text-clip" :class="{ 'text-gain': a.active, 'text-danger text-striked': a.error !== '' }">{{ a.name }}</span>
                     </div>
                     <div class="push-right">
@@ -75,8 +75,9 @@
                 </div>
 
                 <hr />
-                <div class="form-label">Sentiment Analysis Chart</div>
-                <button class="icon-reset iconLeft text-bright-hover" @click="updateChart">Update chart data</button>
+                <div class="form-label">Other Options</div>
+                <button class="icon-reload iconLeft text-pill bg-info-hover" @click="updateChart( true )">Update sentiment data</button> <br />
+                <button class="icon-close iconLeft text-pill bg-info-hover" @click="flushTweets()">Flush tweets cache</button> <br />
               </div>
             </Dropdown>
 
@@ -103,7 +104,7 @@
             <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
             <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
             <div class="flex-5 text-nowrap if-medium"><span class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span></div>
-            <div class="newspage-chart-md text-nowrap text-monospace text-small if-small" :class="d.styles" v-html="d.sentiment"></div>
+            <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
             <div class="flex-1 text-nowrap text-right">
               <button class="icon-search iconLeft text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
             </div>
@@ -141,7 +142,7 @@
 
         <div class="newspage-list-item flex-row flex-top flex-stretch" v-for="t in tweetsList" :key="t.id">
 
-          <div class="push-right">
+          <div class="push-right" :class="{ 'alert-bubble': t.isNew }">
             <img class="newspage-list-image" :src="t.avatar" :alt="t.handle" />
           </div>
 
@@ -243,6 +244,12 @@ export default {
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
         list = utils.search( list, 'text', this.filterSearch );
       }
+      // check if a tweet is "new"
+      list = list.map( ( t, i ) => {
+        t.isNew = ( i < this.lastCount );
+        return t;
+      })
+      // done
       return list;
     },
 
@@ -294,10 +301,16 @@ export default {
       this.$bus.emit( 'newsData', { count, total, list } );
     },
 
+    // apply filters
+    applyFilters( search, handle ) {
+      this.filterSearch = String( search || '' ).trim();
+      this.filterHandle = String( handle || '' ).trim();
+    },
+
     // reset filters
     resetFilters() {
-      this.filterHandle = '';
       this.filterSearch = '';
+      this.filterHandle = '';
     },
 
     // reset number of new entries since last checked
@@ -332,7 +345,7 @@ export default {
     },
 
     // scan tweets against list of tokens from api and build sentiment analysis data for chart
-    updateChart() {
+    updateChart( notify ) {
       let data = [];
       this.priceData.forEach( p => {
         if ( p.asset !== 'BTC' ) return;
@@ -340,7 +353,7 @@ export default {
         let token  = p.token;
         let name   = p.name;
         let search = token +'|'+ name;
-        let list   = utils.search( this.twitterEntries, 'text', search );
+        let list   = utils.search( this.twitterEntries, 'text', search, true );
         let count  = list.length;
         if ( !count ) return;
 
@@ -348,7 +361,7 @@ export default {
         let route  = '/symbol/'+ token + asset;
         let text   = list.reduce( ( a, t ) => a += ' '+ t.text, '' ).trim();
         let sdata  = this.$sentiment.analyze( text );
-        let { score, positive, negative, comparative, icon, word, styles, sign, sentiment } = sdata;
+        let { score, positive, negative, comparative, sign, word, styles, sentiment } = sdata;
         data.push( { token, name, search, route, count, score, styles, sentiment } );
       });
 
@@ -362,6 +375,11 @@ export default {
         if ( barPercent > 60 ) { barColor = 'bg-primary'; }
         return Object.assign( d, { barPercent, barColor } );
       });
+
+      if ( notify ) {
+        if ( !data.length ) return this.$bus.emit( 'showNotice', 'No token mentions found yet.', 'warning' );
+        return this.$bus.emit( 'showNotice', 'Analisys data has been updated.', 'success' );
+      }
     },
 
     // save tweets list to local store
@@ -370,10 +388,20 @@ export default {
       this.$store.setData( this.storeKey, this.twitterEntries );
     },
 
+    // flush list of saved tweets from store
+    flushTweets() {
+      if ( !confirm( 'Delete cached tweets?' ) ) return;
+      this.twitterEntries = [];
+      this.$store.setData( this.storeKey, this.twitterEntries );
+      this.$bus.emit( 'showNotice', 'Cached tweets have been deleted.', 'success' );
+      this.emitData();
+    },
+
     // load saved tweets from local store
     loadTweets() {
       let tweets = this.$store.getData( this.storeKey );
       if ( Array.isArray( tweets ) ) this.twitterEntries = tweets;
+      this.emitData();
     },
 
     // add new tweets to the list
@@ -419,7 +447,7 @@ export default {
     // create new instance of Twitter handler for a handle
     createTwitterHandler( handle, fetch, save ) {
       if ( !handle || this.twitterHandlers.filter( t => t.handle === handle ).length ) return;
-      this.twitterHandlers.push( new Twitter( handle, { fetchDelay: 120, limitCount: 1 } ) );
+      this.twitterHandlers.push( new Twitter( handle, { fetchDelay: 300, limitCount: 1 } ) );
       if ( fetch ) this.fetchByHandle( handle );
       if ( save ) this.saveNewsSources();
     },
@@ -461,7 +489,7 @@ export default {
       let accounts = utils.shuffle( this.options.news.sources || [] );
       for ( let handle of accounts ) this.createTwitterHandler( handle );
       if ( this.twitterInterval ) clearInterval( this.twitterInterval );
-      this.twitterInterval = setInterval( this.fetchByInterval, 2000 );
+      this.twitterInterval = setInterval( this.fetchByInterval, 5000 );
       this.fetchByInterval();
     },
   },
@@ -470,10 +498,7 @@ export default {
   mounted() {
     this.setupTwitterTrackers();
     this.loadTweets();
-
-    document.addEventListener( 'focus', () => {
-      setTimeout( this.resetCount, 3000 );
-    });
+    document.addEventListener( 'blur', this.resetCount );
   },
 
   // component destroyed

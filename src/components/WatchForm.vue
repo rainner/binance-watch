@@ -110,7 +110,6 @@
 <script>
 // modules
 import presetOptions from "../configs/presets";
-import emoji from '../modules/emoji';
 import utils from '../modules/utils';
 
 // component
@@ -353,21 +352,18 @@ export default {
           if ( vc.percent < volumeChange ) return;
         }
 
-        // resolve emoji icons
-        let titleIcon  = emoji( 'bell' );
-        let changeIcon = ( p.percent >= 0 )  ? emoji( 'up' ) : emoji( 'down' );
-        let priceIcon  = ( pc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
-        let volumeIcon = ( vc.sign === '+' ) ? emoji( 'up' ) : emoji( 'down' );
-        if ( p.percent >= 5 )  titleIcon = emoji( 'rocket' );
-        if ( p.percent <= -5 ) titleIcon = emoji( 'sos' );
+        // resolve emoji title icons
+        let emoji = '🔔 ';
+        if ( p.percent >= 5 ) emoji = '🚀 ';
+        if ( p.percent <= -5 ) emoji = '🆘 ';
 
-        // we have a hit, prep notification
+        // we have a hit, prep notification info
         let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
         let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
-        let elapsed   = 'Change '+ emoji( 'clock' ) +' '+ utils.elapsed( ( now - s.time ) / 1000 );
-        let curPrice  = 'Price '+ priceIcon +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
-        let curVol    = 'Volume '+ volumeIcon +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
-        let title     = titleIcon +'  '+ p.name +' ('+ p.pair +') '+ changeIcon +' '+ p.sign + Number( p.percent ).toFixed( 2 ) +'%';
+        let elapsed   = 'Change ⌚ '+ utils.elapsed( ( now - s.time ) / 1000 );
+        let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
+        let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
+        let title     = [ emoji, p.name, '('+ p.symbol +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
         let info      = [ elapsed, curPrice, curVol ].join( '\n' );
         let icon      = utils.fullUrl( p.icon );
 

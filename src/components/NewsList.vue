@@ -3,7 +3,7 @@
 
     <div v-if="sentimentData" class="push-bottom">
       <span class="text-bright text-clip">Sentiment for {{ pairData.name }} is &nbsp;</span>
-      <span class="text-nowrap text-monospace text-small" :class="sentimentData.styles" v-html="sentimentData.sentiment"></span>
+      <span class="text-nowrap text-monospace" :class="sentimentData.styles" v-html="sentimentData.sentiment"></span>
     </div>
 
     <div v-if="!newsList.length" class="icon-info iconLeft text-grey push-bottom">
@@ -48,9 +48,7 @@ export default {
 
     // get filtered list and emit list length
     newsList() {
-      let list = this.getNewsList();
-      this.$emit( 'listCount', list.length );
-      return list;
+      return this.getNewsList();
     },
   },
 
@@ -61,7 +59,12 @@ export default {
     getNewsList() {
       let pair = this.pairData;
       let list = this.newsData.list || [];
-      if ( pair.token ) list = utils.search( list, 'text', pair.token +'|'+ pair.name );
+
+      if ( pair.token ) {
+        let search = pair.token +'|'+ pair.name;
+        list = utils.search( list, 'text', search, true );
+      }
+      this.$emit( 'listCount', list.length );
       return list;
     },
 

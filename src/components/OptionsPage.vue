@@ -64,7 +64,8 @@
             <p>
               External proxy server used to route outgoing HTTP requests from this app to get around the browser's built-in
               <a class="text-nowrap" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank">Cross-Origin Resource Sharing</a>
-              (CORS) protection.
+              (CORS) protection. You can run your own proxy server by installing
+              <a class="text-nowrap" href="https://github.com/Rob--W/cors-anywhere" target="_blank">CORS-Anywhere</a>.
             </p>
           </div>
         </section>
