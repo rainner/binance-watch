@@ -1,0 +1,87 @@
+/**
+ * Emoji classes
+ */
+[class^='e-']:before,
+[class*=' e-']:before {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  width: 1em;
+  line-height: 1em;
+  vertical-align: baseline;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-align: center;
+  text-decoration: none;
+  text-transform: none;
+  text-shadow: none;
+  font-weight: normal;
+  outline: none;
+  transition: none;
+  transform: scale( 1.25 );
+}
+
+// space right
+.eLeft:before {
+  margin-right: .6em;
+}
+
+// characters
+.e-100:before { content: '💯'; }
+.e-fire:before { content: '🔥'; }
+.e-explode:before { content: '💥'; }
+.e-like:before { content: '👍'; }
+.e-dislike:before { content: '👎'; }
+.e-shocked:before { content: '😱'; }
+.e-confused:before { content: '🤔'; }
+.e-hyped:before { content: '🤪'; }
+.e-love:before { content: '😍'; }
+.e-hate:before { content: '🤬'; }
+.e-happy:before { content: '😀'; }
+.e-sad:before { content: '☹️'; }
+.e-sick:before { content: '😷'; }
+.e-dead:before { content: '😵'; }
+.e-chart:before { content: '📊'; }
+.e-gain:before { content: '📈'; }
+.e-loss:before { content: '📉'; }
+.e-up:before { content: '▲'; }
+.e-down:before { content: '▼'; }
+.e-clock:before { content: '⌚️'; }
+.e-time:before { content: '⏳'; }
+.e-lock:before { content: '🔓'; }
+.e-key:before { content: '🔑'; }
+.e-sound:before { content: '🔊'; }
+.e-bell:before { content: '🔔'; }
+.e-siren:before { content: '🚨'; }
+.e-alarm:before { content: '⏰'; }
+.e-alert:before { content: '⚠️'; }
+.e-heart:before { content: '❤️'; }
+.e-rocket:before { content: '🚀'; }
+.e-commet:before { content: '💬'; }
+.e-moon:before { content: '🌕'; }
+.e-star:before { content: '⭐️'; }
+.e-sun:before { content: '☀️'; }
+.e-globe:before { content: '🌎'; }
+.e-money:before { content: '💰'; }
+.e-comment:before { content: '☄️'; }
+.e-note:before { content: '📝'; }
+.e-mail:before { content: '📩'; }
+.e-chain:before { content: '🔗'; }
+.e-sos:before { content: '🆘'; }
+.e-denied:before { content: '🚫'; }
+.e-avoid:before { content: '⛔️'; }
+.e-connection:before { content: '📡'; }
+.e-battery:before { content: '🔋'; }
+.e-disk:before { content: '💽'; }
+.e-calendar:before { content: '📆'; }
+.e-bag:before { content: '👛'; }
+.e-users:before { content: '👥'; }
+.e-user:before { content: '👤'; }
+.e-check:before { content: '✔️'; }
+.e-close:before { content: '✖️'; }
+.e-pin:before { content: '📌'; }
+.e-location:before { content: '📍'; }
+.e-search:before { content: '🔎'; }
+.e-config:before { content: '⚙️'; }
+.e-gift:before { content: '🎁'; }

@@ -53,6 +53,7 @@ body {
   font-size: calc( #{$fontSize} - 6px );
   line-height: $fontSpace;
   background-color: $colorDocument;
+  background-image: linear-gradient( to bottom, $colorDocumentDark 0, $colorDocument 60% );
   background-attachment: fixed;
   background-position: center top;
   background-repeat: no-repeat;

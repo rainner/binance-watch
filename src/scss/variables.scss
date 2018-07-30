@@ -25,14 +25,15 @@ $zindexAlerts: 9999;
 // base font options
 $fontSize: 17px;
 $fontSpace: 1.4em;
-$fontWeight: 700;
+$fontWeight: normal;
 $fontFamily: 'Open Sans Condensed', 'Contrail One', Capriola, Consolas, Monaco, monospace;
-$fontFixed: Consolas, "Andale Mono", Monaco, "Courier New", monospace;
+$fontFixed: Consolas, Monaco, monospace;
 
 // document colors
 $colorDocument: #192029;
 $colorDocumentText: #babbbc;
 $colorDocumentLight: lighten( $colorDocument, 3% );
+$colorDocumentDark: darken( $colorDocument, 6% );
 
 // default colors
 $colorDefault: #828a98;

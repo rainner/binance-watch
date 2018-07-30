@@ -82,12 +82,12 @@ ul {
 // pill style wrappers for text elements
 .text-pill {
   display: inline-block;
-  font-size: inherit;
-  line-height: 1.2em;
-  padding: 0 .6em 1px .6em;
-  // text-transform: uppercase;
-  background: $colorBright linear-gradient( 180deg, transparent, rgba(0,0,0,0.2) );
-  color: $colorBrightText;
+  font-size: 78%;
+  text-transform: uppercase;
+  line-height: 1.3em;
+  padding: 1px .8em 2px .8em;
+  background: $colorDefault linear-gradient( 180deg, transparent, rgba( #000, 0.2 ) );
+  color: $colorDefaultText;
   border-radius: 100px;
   box-shadow: $shadowPaper;
 }
@@ -102,9 +102,9 @@ ul {
   text-transform: none;
 }
 .text-monospace {
-  font-family: monospace;
+  font-family: $fontFixed;
   font-weight: bold;
-  letter-spacing: -1px;
+  letter-spacing: -.5px;
 }
 .text-left {
   text-align: left;
