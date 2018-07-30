@@ -97,35 +97,43 @@ module.exports = {
     let list = this._splitWords( text );
     let total = list.length;
     let i = total;
+    let c = [];
 
+    // loop filtered input words
     while ( i-- ) {
       if ( !this._afinn.hasOwnProperty( list[ i ] ) ) continue; // not found
+      if ( c.indexOf( list[ i ] ) >= 0 ) continue; // already checked this word
 
       let w = list[ i ]; // current word
       let p = ( i > 0 ) ? list[ i - 1 ] : ''; // previous word
       let s = parseFloat( this._afinn[ w ] ) | 0; // word score
 
-      if ( p && s !== 0 ) {
-        if ( this._negators.indexOf( p ) >= 0 ) s = -Math.abs( s ); // negate
-        if ( this._amplifiers.indexOf( p ) >= 0 ) s += s; // amplify
-      }
+      if ( !p || !s ) continue; // no score
+      c.push( w ); // cache word
+
+      if ( this._negators.indexOf( p ) >= 0 ) s = -Math.abs( s ); // negate
+      if ( this._amplifiers.indexOf( p ) >= 0 ) s += s; // amplify
       if ( s > 0 ) positive += s;
       if ( s < 0 ) negative += s;
       score += s;
     }
-    let params = [ '🤔', 'Neutral', 'text-info', '+' ];
-    if ( score >  0 )  params = [ '😍', 'Positive', 'text-success', '+' ];
-    if ( score >  5 )  params = [ '💗', 'Loved', 'text-gain', '+' ];
-    if ( score <  0 )  params = [ '😱', 'Negative', 'text-danger', '-' ];
-    if ( score < -5 )  params = [ '🤬', 'Hated', 'text-loss', '-' ];
 
-    let [ icon, word, styles, sign ] = params;
-    let scoreNum  = Math.abs( score );
-    let scoreStr  = String( sign + ( scoreNum < 10 ? '0'+ scoreNum : ''+ scoreNum ) );
-    let sentiment = [ icon, scoreStr, word ].join( '&nbsp;' );
+    // build params based on score
+    let params                = [ '?', 'Neutral', 'e-confused eLeft text-info' ];
+    if ( score ==  1 ) params = [ '+', 'Ok',      'e-confused eLeft text-success' ];
+    if ( score >   1 ) params = [ '+', 'Good',    'e-happy eLeft text-gain' ];
+    if ( score >   9 ) params = [ '+', 'Loved',   'e-love eLeft text-gain' ];
+    if ( score == -1 ) params = [ '-', 'Ok',      'e-confused eLeft text-danger' ];
+    if ( score <  -1 ) params = [ '-', 'Bad',     'e-sad eLeft text-loss' ];
+    if ( score <  -9 ) params = [ '-', 'Hated',   'e-hate eLeft text-loss' ];
 
+    // build sentiment info
+    let [ sign, word, styles ] = params;
+    let sentiment = [ sign + Math.abs( score ), word ].join( ' ' );
+
+    // build final data
     comparative = total ? ( score / total ) : 0;
-    return { score, positive, negative, comparative, icon, word, styles, sign, sentiment };
+    return { score, positive, negative, comparative, sign, word, styles, sentiment };
   },
 
   // filter input text into word list
@@ -146,7 +154,7 @@ module.exports = {
 
     // clean string
     output = output
-    .replace( /(https?\:\/\/[^\/\s]+\b)/g, ' ' ) // replace first part of links
+    // .replace( /(https?\:\/\/[^\/\s]+\b)/g, ' ' ) // replace first part of links
     .replace( /([\`\'\’]+)/g, "'" ) // normalize apostrophes
     .replace( /([\“\”\“\”\"]+)/g, '"' ) // normalize quotes
     .replace( /([^a-zA-Z0-9\']+)/g, ' $1 ' ) // add space around special chars
