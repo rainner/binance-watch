@@ -244,11 +244,6 @@ export default {
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
         list = utils.search( list, 'text', this.filterSearch );
       }
-      // check if a tweet is "new"
-      list = list.map( ( t, i ) => {
-        t.isNew = ( i < this.lastCount );
-        return t;
-      })
       // done
       return list;
     },
@@ -316,6 +311,7 @@ export default {
     // reset number of new entries since last checked
     resetCount() {
       if ( !this.active ) return;
+      this.twitterEntries.forEach( t => { t.isNew = false; } );
       this.lastCount = 0;
       this.emitData();
     },
@@ -414,8 +410,11 @@ export default {
       }
       if ( Array.isArray( tweets ) && tweets.length ) {
         let tweet;
+
         for ( tweet of tweets ) {
           if ( this.twitterEntries.filter( t => t.id === tweet.id ).length ) return;
+          tweet.isNew = true; // set tweet as new
+
           this.twitterEntries.unshift( tweet );
           this.twitterEntries = this.twitterEntries.slice( 0, this.options.news.max );
         }
