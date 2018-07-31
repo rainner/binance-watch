@@ -166,6 +166,7 @@ export default {
 
       this.$ajax.get( url, {
         type: 'text',
+        proxy: false, // don't proxy the proxy
 
         error: ( xhr, status, error ) => {
           this.testing = false;
