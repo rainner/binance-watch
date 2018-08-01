@@ -17,7 +17,7 @@
 
           <!-- control heading -->
           <div class="newspage-controls-title push-right text-clip text-center flex-1">
-            <big>Twitter News ({{ lastCount }}/{{ twitterEntries.length }})</big>
+            <big>Twitter News ({{ newCount }}/{{ twitterEntries.length }})</big>
           </div>
 
           <!-- control dropdown menus -->
@@ -62,22 +62,35 @@
               <button slot="trigger" class="form-btn bg-grey-hover icon-config" title="Options" v-tooltip></button>
               <div slot="list" class="pad-h">
 
-                <div class="form-label">News &amp; Notifications Options</div>
-                <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
-                <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
-                <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
-
-                <hr />
-                <div class="form-label">Limit Number of Entries</div>
-                <div class="flex-row flex-middle flex-stretch">
-                  <input class="flex-1 push-right" type="range" min="10" max="200" step="5" v-model="options.news.max" @change="applyOptions" />
-                  <span class="text-primary">{{ options.news.max }}</span>
+                <div class="push-bottom">
+                  <div class="form-label">News &amp; Notifications Options</div>
+                  <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
+                  <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
+                  <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
                 </div>
 
-                <hr />
-                <div class="form-label">Other Options</div>
-                <button class="icon-reload iconLeft text-pill bg-info-hover" @click="updateChart( true )">Update sentiment data</button> <br />
-                <button class="icon-close iconLeft text-pill bg-info-hover" @click="flushTweets()">Flush tweets cache</button> <br />
+                <div class="push-bottom">
+                  <div class="form-label">Limit Entries by Age</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="1" max="30" step="1" v-model="options.news.days" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.days | toNoun( 'day', 'days' ) }}</span>
+                  </div>
+                </div>
+
+                <div class="push-bottom">
+                  <div class="form-label">Limit Number of Entries</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="10" :max="maxCount" step="1" v-model="options.news.max" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.max }}</span>
+                  </div>
+                </div>
+
+                <div class="push-bottom">
+                  <div class="form-label">Other Options</div>
+                  <button class="icon-reload iconLeft text-bright-hover" @click="updateChart( true )">Update sentiment data</button> <br />
+                  <button class="icon-close iconLeft text-bright-hover" @click="flushTweets()">Flush tweets cache</button> <br />
+                </div>
+
               </div>
             </Dropdown>
 
@@ -124,7 +137,7 @@
               <span class="text-grey">Can't find anything matching your search input.</span>
             </div>
             <div v-else-if="filterHandle">
-              <h3 class="text-bright">No News Data For <span class="text-primary">{{ filterLabel }}</span></h3>
+              <h3 class="text-bright">No News Data For <a class="text-primary-hover" :href="'https://twitter.com/'+ filterHandle" target="_blank">{{ filterLabel }}</a></h3>
               <span class="text-grey">There are no entries available for the selected news source.</span>
             </div>
             <div v-else>
@@ -153,8 +166,7 @@
                 <small class="text-smaller text-grey-hover">@{{ t.handle }}</small>
               </h3>
               <div class="text-clip if-small">
-                <small class="text-grey icon-clock iconLeft">{{ t.time }}</small> &nbsp;
-                <a class="text-primary-hover icon-link" :href="t.link" target="_blank" title="Open tweet" v-tooltip></a>
+                <a class="text-default-hover text-small icon-link iconLeft" :href="t.link" target="_blank" title="View tweet" v-tooltip>{{ t.time | toElapsed }} ago</a>
               </div>
             </div>
             <div class="newspage-list-text text-bright text-wrap" v-html="t.text"></div>
@@ -207,8 +219,8 @@ export default {
       totalTokens: 0,
       chartData: [],
       // count data
-      lastCount: 0,
-      maxCount: 50,
+      newCount: 0,
+      maxCount: 100,
     }
   },
 
@@ -244,6 +256,10 @@ export default {
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
         list = utils.search( list, 'text', this.filterSearch );
       }
+      // limit number of tweets visible
+      if ( this.options.news.max ) {
+        list = list.slice( 0, this.options.news.max );
+      }
       // done
       return list;
     },
@@ -278,19 +294,21 @@ export default {
   // custom methods
   methods: {
 
-    // apply options
-    applyOptions( options ) {
-      this.$bus.emit( 'setOptions', options );
-    },
-
     // open external link
     openLink( link ) {
       window.open( link, '_blank' );
     },
 
+    // apply options
+    applyOptions( options ) {
+      this.$bus.emit( 'setOptions', options );
+      this.sortCapTweets();
+      this.saveTweets();
+    },
+
     // emit news data
     emitData() {
-      let count = this.lastCount;
+      let count = this.newCount;
       let total = this.twitterEntries.length;
       let list  = this.twitterEntries.slice();
       this.$bus.emit( 'newsData', { count, total, list } );
@@ -308,14 +326,6 @@ export default {
       this.filterHandle = '';
     },
 
-    // reset number of new entries since last checked
-    resetCount() {
-      if ( !this.active ) return;
-      this.twitterEntries.forEach( t => { t.isNew = false; } );
-      this.lastCount = 0;
-      this.emitData();
-    },
-
     // add news to notification and msg queue
     setNotification( tweet ) {
       let { name, text, avatar, link } = tweet;
@@ -324,14 +334,10 @@ export default {
       // remove html and urls from tweet text
       text = utils.stripHtml( text, true );
 
-      // increase new entries indicator if away
-      if ( isaway ) {
-        this.lastCount += 1;
-        this.$bus.emit( 'mainMenuAlert' );
-      }
       // show tweet notification only if enabled and away
       if ( this.options.news.notify && isaway ) {
         this.$notify.add( '💬  '+ name, text, avatar, e => { this.$bus.emit( 'setRoute', '/news' ) } );
+        this.$bus.emit( 'mainMenuAlert' );
       }
       // always send notification via api if enabled
       if ( this.options.news.send ) {
@@ -343,8 +349,11 @@ export default {
     // scan tweets against list of tokens from api and build sentiment analysis data for chart
     updateChart( notify ) {
       let data = [];
+      let tokens = [];
+
       this.priceData.forEach( p => {
-        if ( p.asset !== 'BTC' ) return;
+        if ( tokens.indexOf( p.token ) >= 0 ) return;
+        tokens.push( p.token );
 
         let token  = p.token;
         let name   = p.name;
@@ -378,6 +387,52 @@ export default {
       }
     },
 
+    // check if tweets exists
+    hasTweet( tweet ) {
+      return this.twitterEntries.filter( t => t.id === tweet.id ).length ? true : false;
+    },
+
+    // check if tweet is too old
+    oldTweet( tweet ) {
+      let days = parseInt( this.options.news.days ) | 0;
+      let secs = ( Date.now() - tweet.time ) / 1000;
+      let age  = Math.ceil( secs / 86400 );
+      return ( age > days );
+    },
+
+    // manage tweets list
+    sortCapTweets( tweet ) {
+      let list = this.twitterEntries.slice(); // copy
+
+      // add new tweet to list
+      if ( typeof tweet === 'object' && 'id' in tweet ) {
+        tweet.isNew = true;
+        list.push( tweet );
+      }
+      // filter out old tweets
+      list = list.filter( t => {
+        return !this.oldTweet( t );
+      });
+      // sort tweets from new to old
+      list = list.sort( ( a, b ) => {
+        if ( a.time > b.time ) return -1;
+        if ( a.time < b.time ) return 1;
+        return 0;
+      });
+      // cap and update
+      list = list.slice( 0, this.maxCount );
+      this.newCount = list.filter( t => t.isNew ).length;
+      this.twitterEntries = list;
+    },
+
+    // reset number of new entries
+    resetTweets() {
+      this.twitterEntries.forEach( t => { t.isNew = false; } );
+      this.newCount = 0;
+      this.emitData();
+      this.saveTweets();
+    },
+
     // save tweets list to local store
     saveTweets() {
       if ( !this.twitterEntries.length ) return;
@@ -388,6 +443,7 @@ export default {
     flushTweets() {
       if ( !confirm( 'Delete cached tweets?' ) ) return;
       this.twitterEntries = [];
+      this.newCount = 0;
       this.$store.setData( this.storeKey, this.twitterEntries );
       this.$bus.emit( 'showNotice', 'Cached tweets have been deleted.', 'success' );
       this.emitData();
@@ -400,25 +456,25 @@ export default {
       this.emitData();
     },
 
-    // add new tweets to the list
+    // fetch handler
     onTweetsHandler( err, handle, tweets ) {
-      if ( err ) {
-        console.warn( err );
+      // there was a problem fetching tweets, log
+      if ( err ) console.warn( err );
+      // done checking this handle, remove indicator
+      if ( handle ) this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
+      // no tweets found for this handle
+      if ( !Array.isArray( tweets ) || !tweets.length ) return;
+      // add new tweets to the list
+      let count = 0;
+      for ( let tweet of tweets ) {
+        if ( this.hasTweet( tweet ) ) continue; // exists
+        if ( this.oldTweet( tweet ) ) continue; // too old
+        this.sortCapTweets( tweet ); // add and sort
+        this.setNotification( tweet ); // notify
+        count++;
       }
-      if ( handle ) {
-        this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
-      }
-      if ( Array.isArray( tweets ) && tweets.length ) {
-        let tweet;
-
-        for ( tweet of tweets ) {
-          if ( this.twitterEntries.filter( t => t.id === tweet.id ).length ) return;
-          tweet.isNew = true; // set tweet as new
-
-          this.twitterEntries.unshift( tweet );
-          this.twitterEntries = this.twitterEntries.slice( 0, this.options.news.max );
-        }
-        this.setNotification( tweet );
+      // update and save only if something was added
+      if ( count ) {
         this.updateChart();
         this.emitData();
         this.saveTweets();
@@ -457,10 +513,12 @@ export default {
       this.twitterHandlers = this.twitterHandlers.filter( t => t.handle !== handle );
       this.twitterEntries  = this.twitterEntries.filter( t => t.handle !== handle );
       this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
+      this.resetFilters();
+      this.sortCapTweets();
+      this.updateChart();
+      this.emitData();
       this.saveNewsSources();
       this.saveTweets();
-      this.resetFilters();
-      this.updateChart();
     },
 
     // fetches tweets manually for a handle
@@ -488,16 +546,18 @@ export default {
       let accounts = utils.shuffle( this.options.news.sources || [] );
       for ( let handle of accounts ) this.createTwitterHandler( handle );
       if ( this.twitterInterval ) clearInterval( this.twitterInterval );
-      this.twitterInterval = setInterval( this.fetchByInterval, 5000 );
+      this.twitterInterval = setInterval( this.fetchByInterval, 3000 );
       this.fetchByInterval();
     },
   },
 
   // component mounted
   mounted() {
-    this.setupTwitterTrackers();
     this.loadTweets();
-    document.addEventListener( 'blur', this.resetCount );
+    this.sortCapTweets();
+    this.setupTwitterTrackers();
+    this.$bus.on( 'resetNews', this.resetTweets );
+    document.addEventListener( 'blur', this.resetTweets );
   },
 
   // component destroyed
