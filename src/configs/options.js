@@ -14,14 +14,16 @@ export default {
     refetch: true,  // aut re-fetch news on a timer
     notify: false,  // show push notifications for news
     send: false,    // include news in outgoing notifications (email/telegram)
-    delay: 120,     // how long to wait before fetching again from each source
+    delay: 300,     // how long to wait before fetching again from each source (secs)
     max: 100,       // max number of news entries to show
+    days: 1,        // only show entries posted within this number of days
     sources: [      // twitter accounts for latest crypto news
       'coinbase',
       'binance',
       'HuobiGlobal',
       'YobitExchange',
       'BittrexExchange',
+      'Coinsquare',
       'hitbtc',
       'Cryptopia_NZ',
       'Bitstamp',
