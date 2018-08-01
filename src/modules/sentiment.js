@@ -43,6 +43,7 @@ module.exports = {
     "fuckin",
     "insanely",
     "ridiculously",
+    "massively",
     "amazingly",
     "crazy",
     "really",
