@@ -176,6 +176,7 @@ export default {
       this.$ajax.get( endpoint, {
         type: 'json',
         cache: 3600,
+        proxy: false,
 
         error: ( xhr, status, error ) => {
           this.$bus.emit( 'showNotice', error, 'warning' );
