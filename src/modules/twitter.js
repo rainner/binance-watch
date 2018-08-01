@@ -134,11 +134,11 @@ export default class Twitter {
 
       // format time
       let d = new Date( time );
-      time = d.toDateString();
+      let date = d.toDateString();
 
       // add tweet to list and update account info
       this.setData( { uid, handle, name, avatar } );
-      output.push( { id, uid, time, name, handle, avatar, text, link } );
+      output.push( { id, uid, time, date, name, handle, avatar, text, link } );
       count++;
     }
     return output;
