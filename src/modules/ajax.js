@@ -17,6 +17,7 @@ export default class Ajax {
       // proxy url to preppend to outgoing requests
       proxy: '',
     };
+    this._url = null;
     this.setOptions( options );
   }
 
@@ -87,6 +88,10 @@ export default class Ajax {
       address = options.proxy.trim() + address;
     }
 
+    // build info about url
+    try { this._url = new URL( address ); }
+    catch ( err ) { this._url = null; }
+
     // init request handler
     xhr.open( method, address, true );
     xhr.responseType = type;
@@ -114,7 +119,7 @@ export default class Ajax {
 
     // data load handler
     xhr.addEventListener( 'load', e => {
-      let { status, response, error } = this._responseParams( xhr, type );
+      let { status, response, error, host } = this._responseParams( xhr, type );
 
       if ( status && status < 400 ) {
         if ( cacheTime ) store.setData( cacheKey, response, cacheTime );
@@ -128,24 +133,24 @@ export default class Ajax {
 
     // request error handler
     xhr.addEventListener( 'error', e => {
-      let { status, response, error } = this._responseParams( xhr, type );
-      onError( xhr, status, 'There was a problem sending the request to the server.' );
+      let { status, response, error, host } = this._responseParams( xhr, type );
+      onError( xhr, status, error );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
     });
 
     // request abort handler
     xhr.addEventListener( 'abort', e => {
-      let { status, response, error } = this._responseParams( xhr, type );
-      onError( xhr, status, 'The HTTP request has been aborted by the client.' );
+      let { status, response, error, host } = this._responseParams( xhr, type );
+      onError( xhr, status, 'The HTTP request has been aborted by the client ('+ host +').' );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
     });
 
     // request timeout handler
     xhr.addEventListener( 'timeout', e => {
-      let { status, response, error } = this._responseParams( xhr, type );
-      onError( xhr, status, 'The HTTP request has been aborted due to the server not responding in time.' );
+      let { status, response, error, host } = this._responseParams( xhr, type );
+      onError( xhr, status, 'The HTTP request has been aborted due to the server not responding in time ('+ host +').' );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
     });
@@ -156,24 +161,33 @@ export default class Ajax {
 
   // get response status and data from xhr
   _responseParams( xhr, type ) {
+    let host     = this._getHost();
     let status   = xhr.status | 0;
     let response = ( type === 'text' ) ? xhr.responseText : xhr.response;
     let error    = '';
     // error based on status codes
-    if ( status === 400 ) error = status +': The request could not be understood by the server due to malformed syntax.';
-    if ( status === 401 ) error = status +': You are not authorized to view the response of this request without authentication.';
-    if ( status === 403 ) error = status +': The server understood the request, but is refusing to fulfill it.';
-    if ( status === 404 ) error = status +': The server did not find anything matching the requested route.';
-    if ( status === 405 ) error = status +': The method specified for this request is not allowed for the requested route.';
-    if ( status === 407 ) error = status +': The client must first authenticate itself with the proxy server to make requests.';
-    if ( status === 408 ) error = status +': The server did not produce a response in time for the requested route.';
-    if ( status === 500 ) error = status +': The server encountered an unexpected condition which prevented it from fulfilling the request.';
-    if ( status === 503 ) error = status +': The server is unable to handle the request due to temporary overloading or maintenance.';
+    if ( status === 400 ) error = status +': The request could not be understood by the server due to malformed syntax ('+ host +').';
+    if ( status === 401 ) error = status +': You are not authorized to view the response of this request without authentication ('+ host +').';
+    if ( status === 403 ) error = status +': The server understood the request, but is refusing to fulfill it ('+ host +').';
+    if ( status === 404 ) error = status +': The server did not find anything matching the requested route ('+ host +').';
+    if ( status === 405 ) error = status +': The method specified for this request is not allowed for the requested route ('+ host +').';
+    if ( status === 407 ) error = status +': The client must first authenticate itself with the proxy server to make requests ('+ host +').';
+    if ( status === 408 ) error = status +': The server did not produce a response in time for the requested route ('+ host +').';
+    if ( status === 500 ) error = status +': The server encountered an unexpected condition which prevented it from fulfilling the request ('+ host +').';
+    if ( status === 503 ) error = status +': The server is unable to handle the request due to temporary overloading or maintenance ('+ host +').';
     // fallback error messages
-    if ( !error && status ) error = status +': There has been a problem with the response from the server.';
-    if ( !error ) error = 'There has been a problem sending the request to the server.';
+    if ( !error && status ) error = status +': There has been a problem with the response from the server ('+ host +').';
+    if ( !error ) error = 'There has been a problem sending the request to the server ('+ host +').';
     // response params
-    return { status, response, error };
+    return { status, response, error, host };
+  }
+
+  // get host name for current request
+  _getHost() {
+    if ( !this._url ) return '';
+    let proto = this._url.protocol || 'http:';
+    let host  = this._url.host     || 'localhost';
+    return proto +'//'+ host +'/...';
   }
 
   // url encode object data
