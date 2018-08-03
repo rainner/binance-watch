@@ -444,7 +444,7 @@ export default {
 
     // fetch wordlist files for sentiment analysis
     fetchSentimentWords() {
-      Array( 'words', 'emoji' ).forEach( file => {
+      Array( 'words' ).forEach( file => {
         this.$ajax.get( 'public/afinn/'+ file +'.json', {
           type: 'json',
           proxy: false,
@@ -467,6 +467,8 @@ export default {
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' );
             let name  = String( list[ i ].name || '' ).replace( /[^\w\-]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
+            if ( token === 'BCH' ) token = 'BCC';
+            if ( token === 'MIOTA' ) token = 'IOTA';
             if ( token && name ) data[ token ] = name;
           }
           this.coinsData = data;
