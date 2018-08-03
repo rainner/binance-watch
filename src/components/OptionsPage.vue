@@ -21,8 +21,13 @@
 
     <div class="push-bottom">
       <div class="form-label push-bottom">
-        Latest News &amp; Events <i class="icon-down-open"></i>
+        Latest News &amp; Search <i class="icon-down-open"></i>
       </div>
+      <Toggle class="push-bottom"
+        :text="'Force case-sensitive search for news & sentiment chart'"
+        v-model="options.news.send"
+        @change="applyOptions">
+      </Toggle>
       <Toggle class="push-bottom"
         :text="'Auto re-fetch latest news data on a timer'"
         v-model="options.news.refetch"
