@@ -28,9 +28,17 @@
               <div slot="list">
 
                 <div class="flex-row flex-top flex-space pad-h">
-                  <div class="flex-1 push-right form-label">Twitter Accounts</div>
+                  <div class="flex-1 push-right form-label">Twitter News Sources</div>
                   <button v-if="filterHandle" class="icon-list iconLeft" @click="filterHandle = ''">Show all</button>
                 </div>
+
+                <form class="twitter-accounts-form pad-h push-bottom" action="#" autocomplete="off" @submit.prevent="accountFormHandler">
+                  <div class="form-input text-nowrap">
+                    <div class="icon-twtr iconLeft"></div>
+                    <input class="flex-1" type="text" name="handle" placeholder="Add twitter @handle..." />
+                    <button class="icon-add text-primary-hover" type="submit"></button>
+                  </div>
+                </form>
 
                 <div class="twitter-accounts-list push-bottom border-top border-bottom">
                   <div class="twitter-accounts-item flex-row flex-middle flex-stretch" v-for="a in accountsList" :key="a.handle">
@@ -45,15 +53,13 @@
                   </div>
                 </div>
 
-                <div class="form-label pad-h">Add New Account</div>
+                <div class="form-label pad-h">Load or Save Accounts</div>
 
-                <form class="twitter-accounts-form pad-h" action="#" autocomplete="off" @submit.prevent="accountFormHandler">
-                  <div class="form-input text-nowrap">
-                    <div class="icon-twtr iconLeft"></div>
-                    <input class="flex-1" type="text" name="handle" placeholder="Twitter handle..." />
-                    <button class="icon-add text-primary-hover" type="submit"></button>
-                  </div>
-                </form>
+                <div class="text-nowrap pad-h">
+                  <button class="icon-add iconLeft text-bright-hover" @click="importAccounts()">Import List</button>
+                  <span class="text-grey">&nbsp;&nbsp;</span>
+                  <button class="icon-save iconLeft text-bright-hover" @click="exportAccounts()">Export List</button>
+                </div>
 
               </div>
             </Dropdown> &nbsp;
@@ -64,9 +70,10 @@
 
                 <div class="push-bottom">
                   <div class="form-label">News &amp; Notifications Options</div>
+                  <Toggle class="push-top" :text="'Force case-sensitive search'" v-model="options.search.strict" @change="applyOptions"></Toggle>
                   <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
                   <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
-                  <Toggle class="push-top" :text="'E-mail notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
+                  <Toggle class="push-top" :text="'E-mail news notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
                 </div>
 
                 <div class="push-bottom">
@@ -85,7 +92,7 @@
                   </div>
                 </div>
 
-                <div class="push-bottom">
+                <div>
                   <div class="form-label">Other Options</div>
                   <button class="icon-reload iconLeft text-bright-hover" @click="updateChart( true )">Update sentiment data</button> <br />
                   <button class="icon-close iconLeft text-bright-hover" @click="flushTweets()">Flush tweets cache</button> <br />
@@ -116,10 +123,12 @@
             <div class="newspage-chart-sm text-clip text-bright">{{ d.token }}</div>
             <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
             <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
-            <div class="flex-5 text-nowrap if-medium"><span class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span></div>
+            <div class="flex-5 text-nowrap if-medium">
+              <span v-if="d.barPercent" class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span>
+            </div>
             <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
             <div class="flex-1 text-nowrap text-right">
-              <button class="icon-search iconLeft text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
+              <button v-if="d.route" class="icon-search iconLeft text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
             </div>
           </div>
         </div>
@@ -220,7 +229,7 @@ export default {
       chartData: [],
       // count data
       newCount: 0,
-      maxCount: 100,
+      maxCount: 200,
     }
   },
 
@@ -254,7 +263,7 @@ export default {
       }
       // filter by search text against tweet name, handle and text
       if ( this.filterSearch && this.filterSearch.length > 1 ) {
-        list = utils.search( list, 'text', this.filterSearch );
+        list = utils.search( list, 'text', this.filterSearch, this.options.search.strict );
       }
       // limit number of tweets visible
       if ( this.options.news.max ) {
@@ -351,25 +360,34 @@ export default {
       let data = [];
       let tokens = [];
 
+      // build unique list of tokens from binance api
       this.priceData.forEach( p => {
-        if ( tokens.indexOf( p.token ) >= 0 ) return;
-        tokens.push( p.token );
+        if ( tokens.filter( t => t.token === p.token ).length ) return;
+        let { token, name } = p;
+        let asset = ( token === 'BTC' ) ? 'USDT' : 'BTC';
+        let route = '/symbol/'+ token + asset;
+        tokens.push( { token, name, route } );
+      });
 
+      // add other things to the list
+      tokens.push( { token: 'Crypto', name: 'Cryptocurrency', route: '' } );
+
+      // build sentiment
+      tokens.forEach( p => {
         let token  = p.token;
         let name   = p.name;
+        let route  = p.route;
         let search = token +'|'+ name;
-        let list   = utils.search( this.twitterEntries, 'text', search, true );
+        let list   = utils.search( this.twitterEntries, 'text', search, this.options.search.strict );
         let count  = list.length;
         if ( !count ) return;
-
-        let asset  = ( token === 'BTC' ) ? 'USDT' : 'BTC';
-        let route  = '/symbol/'+ token + asset;
         let text   = list.reduce( ( a, t ) => a += ' '+ t.text, '' ).trim();
         let sdata  = this.$sentiment.analyze( text );
         let { score, positive, negative, comparative, sign, word, styles, sentiment } = sdata;
         data.push( { token, name, search, route, count, score, styles, sentiment } );
       });
 
+      // calculate percent
       let max = data.reduce( ( m, d ) => d.count > m ? d.count : m, 0 );
       this.chartData = data.map( d => {
         let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
@@ -381,15 +399,60 @@ export default {
         return Object.assign( d, { barPercent, barColor } );
       });
 
-      if ( notify ) {
+      if ( notify === true ) {
         if ( !data.length ) return this.$bus.emit( 'showNotice', 'No token mentions found yet.', 'warning' );
         return this.$bus.emit( 'showNotice', 'Analisys data has been updated.', 'success' );
       }
     },
 
+    // export list of account handles as json file
+    exportAccounts() {
+      let list = this.twitterHandlers.map( t => t.handle ); // list of handles
+      let data = 'data:text/json;charset=utf-8,'+ encodeURIComponent( JSON.stringify( list ) );
+      let link = document.createElement( 'a' );
+      link.setAttribute( 'style', 'display:block; overflow:hidden; visibility:hidden; max-height:0;' );
+      link.setAttribute( 'href', data );
+      link.setAttribute( 'download', 'twitter_handles_'+ Date.now() +'.json' );
+      document.body.appendChild( link );
+      link.click();
+      link.remove();
+    },
+
+    // import list of account handles from json file
+    importAccounts() {
+      let input = document.createElement( 'input' );
+      input.setAttribute( 'style', 'display:block; overflow:hidden; visibility:hidden; max-height:0;' );
+      input.setAttribute( 'type', 'file' );
+      input.setAttribute( 'accept', '.json' );
+      input.addEventListener( 'change', this.onFileImport );
+      document.body.appendChild( input );
+      input.click();
+      input.remove();
+    },
+
+     // handler for file select event
+    onFileImport( e ) {
+      if ( !e || !e.target ) return;
+      if ( !e.target.files || !e.target.files.length ) return;
+      if ( !( 'FileReader' in window ) ) return this.$bus.emit( 'showNotice', 'File import not supported.', 'warning' );
+
+      let reader = new FileReader();
+      reader.readAsText( e.target.files[ 0 ], 'utf-8' );
+      reader.addEventListener( 'load', e => {
+
+        let list   = JSON.parse( e.target.result || '[]' ) || [];
+        let total  = list.length || 0;
+        let loaded = utils.noun( total, 'account', 'accounts' );
+
+        if ( !Array.isArray( list ) || !total ) return this.$bus.emit( 'showNotice', 'Invalid file data.', 'warning' );
+        for ( let handle of list ) this.createTwitterHandler( handle );
+        this.$bus.emit( 'showNotice', 'Imported '+ loaded +' from file.', 'success' );
+      });
+    },
+
     // check if tweets exists
     hasTweet( tweet ) {
-      return this.twitterEntries.filter( t => t.id === tweet.id ).length ? true : false;
+      return this.twitterEntries.filter( t => t.id === tweet.id ).length;
     },
 
     // check if tweet is too old
@@ -475,9 +538,8 @@ export default {
       }
       // update and save only if something was added
       if ( count ) {
-        this.updateChart();
-        this.emitData();
         this.saveTweets();
+        this.emitData();
       }
     },
 
@@ -501,10 +563,19 @@ export default {
 
     // create new instance of Twitter handler for a handle
     createTwitterHandler( handle, fetch, save ) {
-      if ( !handle || this.twitterHandlers.filter( t => t.handle === handle ).length ) return;
-      this.twitterHandlers.push( new Twitter( handle, { fetchDelay: 300, limitCount: 1 } ) );
-      if ( fetch ) this.fetchByHandle( handle );
-      if ( save ) this.saveNewsSources();
+      if ( !handle ) return false; // nope
+      if ( this.twitterHandlers.filter( t => t.handle === handle ).length ) return true; // exists
+      try {
+        const handler = new Twitter( handle, { fetchDelay: 300, limitCount: 1 } );
+        this.twitterHandlers.push( handler ); // add
+        if ( fetch ) this.fetchByHandle( handle );
+        if ( save ) this.saveNewsSources();
+        return true;
+      }
+      catch( err ) {
+        console.log( 'createTwitterHandlerError:', err.message || err );
+        return false;
+      }
     },
 
     // remove instance of Twitter handler from list
@@ -515,7 +586,6 @@ export default {
       this.twitterChecking = this.twitterChecking.filter( h => h !== handle );
       this.resetFilters();
       this.sortCapTweets();
-      this.updateChart();
       this.emitData();
       this.saveNewsSources();
       this.saveTweets();
