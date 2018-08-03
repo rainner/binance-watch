@@ -28,6 +28,8 @@ module.exports = {
     "didn't",
     "wasnt",
     "wasn't",
+    "havent",
+    "haven't",
     "ain't",
     "aint",
     "werent",
@@ -51,6 +53,7 @@ module.exports = {
 
   // common acronyms translations
   _translate: {
+    "ta": "technical analysis",
     "dae": "does anybody else",
     "ama": "ask me anything",
     "dm": "direct message",
@@ -82,6 +85,8 @@ module.exports = {
     "rekt": "wrecked",
     "hodl": "hold on for dear life",
     "2fa": "two factor authentication",
+    "sob": "son of a bitch",
+    "gr8": "great",
   },
 
   // build afinn wordlist
@@ -112,8 +117,8 @@ module.exports = {
       if ( !p || !s ) continue; // no score
       c.push( w ); // cache word
 
-      if ( this._negators.indexOf( p ) >= 0 ) s = -Math.abs( s ); // negate
-      if ( this._amplifiers.indexOf( p ) >= 0 ) s += s; // amplify
+      if ( this._negators.indexOf( p ) >= 0 ) s *= -1; // flip
+      if ( this._amplifiers.indexOf( p ) >= 0 ) s += s; // double
       if ( s > 0 ) positive += s;
       if ( s < 0 ) negative += s;
       score += s;
@@ -149,17 +154,16 @@ module.exports = {
 
     // translate acronyms
     Object.keys( this._translate ).forEach( acro => {
-      const regx = new RegExp( '\\b('+ acro +')\\b', 'gi' );
+      const regx = new RegExp( '\\b('+ acro +')\\b', 'g' );
       output = output.replace( regx, this._translate[ acro ] );
     });
 
     // clean string
     output = output
-    // .replace( /(https?\:\/\/[^\/\s]+\b)/g, ' ' ) // replace first part of links
     .replace( /([\`\'\’]+)/g, "'" ) // normalize apostrophes
     .replace( /([\“\”\“\”\"]+)/g, '"' ) // normalize quotes
-    .replace( /([^a-zA-Z0-9\']+)/g, ' $1 ' ) // add space around special chars
-    .replace( /[\-\"\{\}\[\]\(\)\~\!\@\#\$\%\^\&\*\=\_\+\:\;\,\.\/\?\<\>]+/gi, ' ' ) // remove some special chars
+    .replace( /([\-]+)/g, '-' ) // normalize dashes
+    .replace( /([^a-z\'\-]+)/g, ' ' ) // only allow these
     .replace( /[\t\r\n\s\uFEFF\xA0]+/g, ' ' ) // remove whitespace
     .trim();
 
