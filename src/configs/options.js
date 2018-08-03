@@ -9,6 +9,11 @@ export default {
   // cors proxy for outgoing http requests
   proxy: 'https://cors-anywhere.herokuapp.com/',
 
+  // search options
+  search: {
+    strict: true,  // force case-sensitive search
+  },
+
   // news related options
   news: {
     refetch: true,  // aut re-fetch news on a timer
