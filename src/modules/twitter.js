@@ -96,7 +96,6 @@ export default class Twitter {
   parseTweets( doc ) {
     let limit  = this.options.limitCount | 0;
     let count  = 0;
-    let now    = Date.now();
     let output = [];
 
     // look for profile avatar
@@ -104,7 +103,7 @@ export default class Twitter {
     avatar = avatar ? avatar.src : '';
 
     // look for items
-    let items = doc.querySelectorAll( 'li.stream-item' ) || [];
+    let items = doc.querySelectorAll( '.stream-item' ) || [];
 
     // loop tweet list items
     for ( let i = 0; i < items.length; ++i ) {
@@ -112,11 +111,12 @@ export default class Twitter {
 
       // look for tweet containers
       let item    = items[ i ];
-      let tweet   = item ? item.querySelector( '.js-stream-tweet' ) : null;
-      let content = item ? item.querySelector( '.js-tweet-text' ) : null;
+      let tweet   = item ? item.querySelector( '.js-stream-tweet' ) : null; // metadata tag
+      let posted  = item ? item.querySelector( '.js-short-timestamp' ) : null; // date tag
+      let content = item ? item.querySelector( '.js-tweet-text' ) : null; // tweet wrapper
 
       // check a few things, skip if needed
-      if ( !item || !tweet || !content ) continue;
+      if ( !item || !tweet || !posted || !content ) continue;
       if ( this.options.skipPinned && item.classList.contains( 'js-pinned' ) ) continue;
       if ( this.options.skipRetweet && tweet.hasAttribute( 'data-retweet-id' ) ) continue;
 
@@ -126,11 +126,12 @@ export default class Twitter {
       let name   = tweet.getAttribute( 'data-name' ) || '';
       let handle = tweet.getAttribute( 'data-screen-name' ) || '';
       let link   = 'https://twitter.com'+ tweet.getAttribute( 'data-permalink-path' ) || '';
-      let time   = Number( item.querySelector( '.js-short-timestamp' ).getAttribute( 'data-time-ms' ) || now );
+      let time   = Number( posted.getAttribute( 'data-time-ms' ) ) || 0;
       let text   = this.options.cleanTweets ? this._cleanTweet( content.textContent ) : String( content.innerHTML || '' ).trim();
 
-      // check tweet data and if tweet has already been added
+      // check tweet data and timestamp
       if ( !id || !uid || !handle || !text ) continue;
+      if ( !time || time < 0 ) continue;
 
       // format time
       let d = new Date( time );
