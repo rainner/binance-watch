@@ -70,10 +70,10 @@
 
                 <div class="push-bottom">
                   <div class="form-label">News &amp; Notifications Options</div>
-                  <Toggle class="push-top" :text="'Force case-sensitive search'" v-model="options.search.strict" @change="applyOptions"></Toggle>
                   <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
                   <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
                   <Toggle class="push-top" :text="'E-mail news notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
+                  <Toggle class="push-top" :text="'Force case-sensitive search'" v-model="options.search.strict" @change="applyOptions"></Toggle>
                 </div>
 
                 <div class="push-bottom">
@@ -112,23 +112,23 @@
       <div class="container">
         <div class="card newspage-chart">
           <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
-            <div class="newspage-chart-sm text-nowrap">Token</div>
             <div class="newspage-chart-md text-clip">Name</div>
+            <div class="newspage-chart-sm text-clip">Token</div>
             <div class="newspage-chart-sm text-nowrap text-right">Tweets</div>
             <div class="flex-5 text-nowrap if-medium">Mention %</div>
             <div class="newspage-chart-md text-nowrap if-small">Sentiment</div>
             <div class="flex-1 text-nowrap text-right">Details</div>
           </div>
           <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.search">
-            <div class="newspage-chart-sm text-clip text-bright">{{ d.token }}</div>
-            <div class="newspage-chart-md text-nowrap text-default">{{ d.name }}</div>
+            <div class="newspage-chart-md text-clip text-bright icon-search iconLeft">{{ d.name }}</div>
+            <div class="newspage-chart-sm text-clip text-default">{{ d.token }}</div>
             <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
             <div class="flex-5 text-nowrap if-medium">
               <span v-if="d.barPercent" class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span>
             </div>
             <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
             <div class="flex-1 text-nowrap text-right">
-              <button v-if="d.route" class="icon-search iconLeft text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
+              <button v-if="d.route" class="text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
             </div>
           </div>
         </div>
@@ -282,13 +282,7 @@ export default {
         let count = this.twitterEntries.filter( t => t.handle === handle ).length;
         return { uid, handle, name, avatar, url, last, error, active, checking, count };
       });
-      return list.sort( ( a, b ) => {
-        let _a = a.name.toUpperCase();
-        let _b = b.name.toUpperCase();
-        if ( _a < _b ) return -1;
-        if ( _a > _b ) return 1;
-        return 0;
-      });
+      return utils.sort( list, 'name', 'asc' );
     },
 
     // sort-by label for buttons, etc
@@ -370,7 +364,8 @@ export default {
       });
 
       // add other things to the list
-      tokens.push( { token: 'Crypto', name: 'Cryptocurrency', route: '' } );
+      tokens.push( { token: 'Crypto', name: 'Cryptocurrency', route: '/symbol/BTCUSDT' } );
+      tokens.push( { token: 'XBT', name: 'BTC Contract', route: '/symbol/BTCUSDT' } );
 
       // build sentiment
       tokens.forEach( p => {
@@ -389,7 +384,7 @@ export default {
 
       // calculate percent
       let max = data.reduce( ( m, d ) => d.count > m ? d.count : m, 0 );
-      this.chartData = data.map( d => {
+      data = data.map( d => {
         let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
         let barPercent = Math.round( ratio * 100 );
         let barColor = 'bg-grey';
@@ -398,6 +393,9 @@ export default {
         if ( barPercent > 60 ) { barColor = 'bg-primary'; }
         return Object.assign( d, { barPercent, barColor } );
       });
+
+      // sort chart list by token name and update
+      this.chartData = utils.sort( data, 'name', 'asc' );
 
       if ( notify === true ) {
         if ( !data.length ) return this.$bus.emit( 'showNotice', 'No token mentions found yet.', 'warning' );
@@ -443,10 +441,19 @@ export default {
         let list   = JSON.parse( e.target.result || '[]' ) || [];
         let total  = list.length || 0;
         let loaded = utils.noun( total, 'account', 'accounts' );
+        let count  = 0;
 
-        if ( !Array.isArray( list ) || !total ) return this.$bus.emit( 'showNotice', 'Invalid file data.', 'warning' );
-        for ( let handle of list ) this.createTwitterHandler( handle );
-        this.$bus.emit( 'showNotice', 'Imported '+ loaded +' from file.', 'success' );
+        if ( !Array.isArray( list ) || !total ) {
+          return this.$bus.emit( 'showNotice', 'Invalid file data.', 'warning' );
+        }
+        for ( let handle of list ) {
+          if ( this.createTwitterHandler( handle ) ) count++;
+        }
+        if ( !count ) {
+          return this.$bus.emit( 'showNotice', 'There was a problem importing '+ loaded +' from file.', 'warning' );
+        }
+        this.$bus.emit( 'showNotice', 'Imported '+ count +'/'+ total +' accounts from file.', 'success' );
+        this.saveNewsSources();
       });
     },
 
@@ -544,11 +551,14 @@ export default {
     },
 
     // save current list of tracked accounts to store
-    saveNewsSources() {
+    saveNewsSources( notice ) {
       const sources = this.twitterHandlers.map( tw => tw.handle );
       this.options.news.sources = sources;
       this.applyOptions( this.options );
-      this.$bus.emit( 'showNotice', 'News source list has been saved.', 'success' );
+      if ( notice ) {
+        if ( typeof notice === 'string' ) this.$bus.emit( 'showNotice', notice, 'success' );
+        this.$bus.emit( 'showNotice', 'Accounts list updated successfully.', 'success' );
+      }
     },
 
     // handle adding accounts from a form
@@ -566,10 +576,10 @@ export default {
       if ( !handle ) return false; // nope
       if ( this.twitterHandlers.filter( t => t.handle === handle ).length ) return true; // exists
       try {
-        const handler = new Twitter( handle, { fetchDelay: 300, limitCount: 1 } );
+        const handler = new Twitter( handle, { fetchDelay: 180, limitCount: 1 } );
         this.twitterHandlers.push( handler ); // add
         if ( fetch ) this.fetchByHandle( handle );
-        if ( save ) this.saveNewsSources();
+        if ( save ) this.saveNewsSources( true );
         return true;
       }
       catch( err ) {
@@ -587,7 +597,7 @@ export default {
       this.resetFilters();
       this.sortCapTweets();
       this.emitData();
-      this.saveNewsSources();
+      this.saveNewsSources( true );
       this.saveTweets();
     },
 
@@ -627,7 +637,9 @@ export default {
     this.sortCapTweets();
     this.setupTwitterTrackers();
     this.$bus.on( 'resetNews', this.resetTweets );
-    document.addEventListener( 'blur', this.resetTweets );
+    // set new tweets as read when going away from page
+    document.body.setAttribute( 'tabindex', '0' ); // chrome fix
+    document.body.addEventListener( 'blur', this.resetTweets );
   },
 
   // component destroyed
