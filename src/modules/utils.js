@@ -186,18 +186,24 @@ module.exports = {
 
   // calc chart points for given dimensions and values
   points( width, height, values ) {
-    let min = values.reduce( ( min, val ) => val < min ? val : min, values[ 0 ] );
-    let max = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
-    let len = values.length;
-    let range = max - min;
-    let gap = width / ( len - 1 );
-    let out = [];
+    width  = parseFloat( width ) || 0;
+    height = parseFloat( height ) || 0;
+    values = Array.isArray( values ) ? values : [];
+    values = values.map( n => parseFloat( n ) || 0 );
 
-    for ( let i = 0; i < values.length; ++i ) {
+    let min   = values.reduce( ( min, val ) => val < min ? val : min, values[ 0 ] );
+    let max   = values.reduce( ( max, val ) => val > max ? val : max, values[ 0 ] );
+    let len   = values.length;
+    let half  = height / 2;
+    let range = ( max > min ) ? ( max - min ) : height;
+    let gap   = ( len > 1 ) ? ( width / ( len - 1 ) ) : 1;
+    let out   = [];
+
+    for ( let i = 0; i < len; ++i ) {
       let d = values[ i ];
       let val = 2 * ( ( d - min ) / range - 0.5 );
       let x = i * gap;
-      let y = -val * height / 2 * 0.9 + height / 2;
+      let y = -val * half * 0.8 + half;
       out.push( { x, y } );
     }
     return out;
@@ -231,6 +237,36 @@ module.exports = {
     let options = strict ? 'g' : 'gi';
     let regex   = new RegExp( search, options );
     return list.filter( obj => obj[ key ].search( regex ) >= 0 );
+  },
+
+  // sort objects in an array by a key
+  sort( list, key, order ) {
+    if ( !Array.isArray( list ) || !key ) return [];
+    if ( !key || typeof key !== 'string' ) return list;
+
+    // check order, default to ascending
+    order = ( order && /^(asc|desc)$/i.test( order ) ) ? order.toLowerCase() : 'asc';
+
+    return list.sort( ( a, b ) => {
+      let _a = a[ key ];
+      let _b = b[ key ];
+
+      if ( _a && _b ) {
+        // ignore case when soerting strings
+        _a = ( typeof _a === 'string' ) ? _a.toUpperCase() : _a;
+        _b = ( typeof _b === 'string' ) ? _b.toUpperCase() : _b;
+
+        if ( order === 'asc' ) {
+          if ( _a < _b ) return -1;
+          if ( _a > _b ) return 1;
+        }
+        if ( order === 'desc' ) {
+          if ( _a > _b ) return -1;
+          if ( _a < _b ) return 1;
+        }
+      }
+      return 0;
+    });
   },
 
   // look over anything with a custom callback: loop( data, ( key, val ) => { ... } )
