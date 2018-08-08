@@ -138,7 +138,7 @@
           </div>
 
           <div class="tokenlist-item-chart push-left flex-2 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
-            <LineChart :width="300" :height="30" :values="p.history"></LineChart>
+            <LineChart :width="300" :height="38" :values="p.history"></LineChart>
           </div>
 
           <div class="tokenlist-item-volume text-right text-clip flex-2">
@@ -236,22 +236,6 @@ export default {
       let list  = this.priceData.slice(); // copy
       let limit = parseInt( this.limitCount ) | 0;
 
-      // sort list based column and order
-      list = list.sort( ( a, b ) => {
-        let _a = a[ this.sortBy ];
-        let _b = b[ this.sortBy ];
-
-        if ( this.sortOrder === 'asc' ) {
-          if ( _a < _b ) return -1;
-          if ( _a > _b ) return 1;
-        }
-        if ( this.sortOrder === 'desc' ) {
-          if ( _a > _b ) return -1;
-          if ( _a < _b ) return 1;
-        }
-        return 0;
-      });
-
       // filter by trading asset
       if ( this.filterAsset ) {
         list = list.filter( p => p.asset === this.filterAsset );
@@ -260,6 +244,9 @@ export default {
       if ( this.searchToken && this.searchToken.length > 1 ) {
         list = utils.search( list, 'token', this.searchToken );
       }
+      // sort list based column and order
+      list = utils.sort( list, this.sortBy, this.sortOrder );
+
       // compute list totals before cutting the list
       let total = list.length;
       this.limitMax  = total;
@@ -406,6 +393,10 @@ export default {
         .polyline { stroke: $colorDefault; }
         &.gain .polyline { stroke: $colorGain; }
         &.loss .polyline { stroke: $colorLoss; }
+
+        .circle { fill: $colorDefault; }
+        &.gain .circle { fill: $colorGain; }
+        &.loss .circle { fill: $colorLoss; }
       }
     }
   }

@@ -134,7 +134,7 @@ export default {
       newsCount: 0,
       // line chart
       chartWidth: 800,
-      chartHeight: 100,
+      chartHeight: 120,
       chartData: [],
     }
   },
@@ -170,7 +170,11 @@ export default {
 
     // fetch token data from api
     fetchGlobalData() {
-      const endpoint = 'https://coincap.io/page/'+ this.modalData.token;
+      let token = this.modalData.token;
+      token = ( token === 'BCC' ) ? 'BCH' : token;
+      token = ( token === 'IOTA' ) ? 'IOT' : token;
+
+      let endpoint = 'https://coincap.io/page/'+ token;
 
       this.spinner( 'globalSpinner', 'show', 'loading market data' );
       this.$ajax.get( endpoint, {
@@ -184,7 +188,7 @@ export default {
         },
 
         success: ( xhr, status, response ) => {
-          if ( !response || !response.id ) return this.spinner( 'globalSpinner', 'error', 'No data for '+ this.modalData.token );
+          if ( !response || !response.id ) return this.spinner( 'globalSpinner', 'error', 'No data for '+ token );
           this.spinner( 'globalSpinner', 'hide' );
 
           if ( response.rank )         this.coinRank    = response.rank;
@@ -198,10 +202,8 @@ export default {
 
     // fetch last 24h candle data
     fetchChartData() {
-      const symbol = this.modalData.symbol;
-      const interval = '1h';
-      const limit = '168';
-      const endpoint = 'https://api.binance.com/api/v1/klines?symbol='+ symbol +'&interval='+ interval +'&limit='+ limit;
+      let symbol = this.modalData.symbol;
+      let endpoint = 'https://api.binance.com/api/v1/klines?symbol='+ symbol +'&interval=1h&limit=168';
 
       this.spinner( 'chartSpinner', 'show', 'loading chart data' );
       this.$ajax.get( endpoint, {
@@ -253,6 +255,7 @@ export default {
 
   .tokenpage-chart {
     .polyline { stroke: $colorPrimary; }
+    .circle { fill: lighten( $colorPrimary, 12% ); }
   }
 }
 </style>
