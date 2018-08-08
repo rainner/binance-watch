@@ -83,13 +83,10 @@ module.exports = class Stream {
         let assetVolume = Math.round( item.q );
         let sign        = ( percent >= 0 ) ? '+' : '';
         let arrow       = ( percent >= 0 ) ? '▲' : '▼';
-        let history     = [];
+        let history     = cache.hasOwnProperty( symbol ) ? cache[ symbol ].history : [];
 
         // keep up to 100 close values in the history for each symbol
-        if ( cache.hasOwnProperty( symbol ) ) {
-          history = cache[ symbol ].history;
-          if ( history.length > 100 ) history = history.slice( history.length - 100 );
-        }
+        if ( history.length > 100 ) history = history.slice( history.length - 100 );
         history.push( close );
 
         // buils final symbol data
