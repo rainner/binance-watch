@@ -156,6 +156,7 @@ export default {
       options: appOptions,
       watching: false,
       // app data
+      priceList: [],
       priceData: [],
       assetsList: [],
       historyData: [],
@@ -184,8 +185,10 @@ export default {
     setOptions( options ) {
       setTimeout( () => {
         this.options = utils.deepMerge( {}, this.options, options );
+        let a = this.options.audio;
+
         this.$ajax.setOptions( { proxy: this.options.proxy } );
-        this.$notify.setOptions( { soundEnabled: this.options.sound } );
+        this.$notify.setOptions( { soundEnabled: a.enabled, soundVolume: a.volume, soundFile: a.file } );
         this.$store.setData( this.optKey, this.options );
       }, 100 );
     },
@@ -193,9 +196,11 @@ export default {
     // load saved options data from local store
     loadOptions() {
       let options = this.$store.getData( this.optKey );
+      let a = this.options.audio;
+
       this.options = utils.deepMerge( {}, this.options, options );
       this.$ajax.setOptions( { proxy: this.options.proxy } );
-      this.$notify.setOptions( { soundEnabled: this.options.sound } );
+      this.$notify.setOptions( { soundEnabled: a.enabled, soundVolume: a.volume, soundFile: a.file } );
     },
 
     // set loaded news data from somewhere
@@ -280,6 +285,7 @@ export default {
 
     // setup scroller handlers
     setupScrollHandlers() {
+      this.$bus.on( 'jumpTo', ( dest, cb ) => _scroller.jumpTo( dest, cb ) );
       _scroller.onChange( pos => { this.scrollPos = pos; } );
       _scroller.onDown( pos => { this.scrollDir = 'down'; } );
       _scroller.onUp( pos => { this.scrollDir = 'up'; } );
@@ -292,18 +298,11 @@ export default {
       _stream.on( 'close', this.onSocketClose );
     },
 
-    // convert socket timestamp to text
-    computeSocketTime() {
-      if ( !this.socketStart ) return;
-      let secs = ( Date.now() - this.socketStart ) / 1000;
-      this.socketTime = utils.elapsed( secs );
-    },
-
     // when socket connection opens
     onSocketOpen( ws, e ) {
       this.socketStatus = 1;
       this.socketStart = Date.now();
-      this.socketInt = setInterval( this.computeSocketTime, 1000 );
+      this.socketInt = setInterval( this.priceDataIntervalHandler, 1000 );
       this.showNotice( 'Socket connection active.', 'success' );
     },
 
@@ -337,32 +336,50 @@ export default {
       }
     },
 
+    // add base asset pair to the list
+    saveAssetPair( asset ) {
+      if ( !asset || this.assetsList.indexOf( asset ) >= 0 ) return;
+      this.assetsList.push( asset );
+    },
+
+    // update pair data inside modals
+    updateModalPairData( pair ) {
+      if ( !this.modalData || !this.modalData.symbol ) return;
+      if ( !pair || !pair.symbol || this.modalData.symbol !== pair.symbol ) return;
+      this.modalData = pair;
+    },
+
+    // updates price data list from socket on an interval
+    priceDataIntervalHandler() {
+      let data  = [];
+      let total = this.priceList.length;
+      let secs  = ( Date.now() - this.socketStart ) / 1000;
+
+      for ( let i = 0; i < total; ++i ) {
+        let p    = this.priceList[ i ];
+        p.name   = this.coinsData[ p.token ] || p.name || p.token;
+        p.alarms = this.$notify.alarmsCount( p.symbol );
+
+        if ( p.alarms ) {
+          this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
+            let icon = utils.fullUrl( alertData.icon );
+            this.addMsgQueue( { title, info, icon } );
+            this.$history.add( title, info, icon );
+            this.$bus.emit( 'mainMenuAlert' );
+          });
+        }
+        this.saveAssetPair( p.asset );
+        this.updateModalPairData( p );
+        data.push( p );
+      }
+      this.socketTime = utils.elapsed( secs );
+      this.priceData = data;
+    },
+
     // when live price data is recieved
     onTickerData( list ) {
-      this.priceData = list;
+      this.priceList = list;
       this.socketStatus = 2;
-
-      for ( let i = 0; i < this.priceData.length; ++i ) {
-        let p    = this.priceData[ i ];
-        p.name   = this.coinsData[ p.token ] || p.name || p.token;
-        p.alarms = this.alarmsData.hasOwnProperty( p.symbol ) ? this.alarmsData[ p.symbol ].length : 0;
-
-        // add main asset token to the list
-        if ( this.assetsList.indexOf( p.asset ) < 0 ) {
-          this.assetsList.push( p.asset );
-        }
-        // if modal is open for a symbol, pass latest price data to it
-        if ( this.modalData && this.modalData.symbol && this.modalData.symbol === p.symbol ) {
-          this.modalData = p;
-        }
-        // trigger custom alarms for pair
-        this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-          let icon = utils.fullUrl( alertData.icon );
-          this.addMsgQueue( { title, info, icon } );
-          this.$history.add( title, info, icon );
-          this.$bus.emit( 'mainMenuAlert' );
-        });
-      }
     },
 
     // control watchform component
