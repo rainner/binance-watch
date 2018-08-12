@@ -252,7 +252,7 @@ module.exports = {
       let _b = b[ key ];
 
       if ( _a && _b ) {
-        // ignore case when soerting strings
+        // ignore case when sorting strings
         _a = ( typeof _a === 'string' ) ? _a.toUpperCase() : _a;
         _b = ( typeof _b === 'string' ) ? _b.toUpperCase() : _b;
 
