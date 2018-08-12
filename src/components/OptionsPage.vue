@@ -6,7 +6,22 @@
         Browser Notifications <i class="icon-down-open"></i>
       </div>
       <Toggle class="push-bottom" :text="'Grant permission to receive browser notifications'" v-model="canNotify" @click="askNotifyPermission"></Toggle>
-      <Toggle class="push-bottom" :text="'Play a notification sound effect'" v-model="options.sound" @change="applyOptions"></Toggle>
+      <Toggle class="push-bottom" :text="'Play a notification sound effect'" v-model="options.audio.enabled" @change="applyOptions"></Toggle>
+
+      <div class="flex-row flex-middle flex-stretch">
+        <div class="form-input push-right">
+          <span class="text-grey push-right">Notification</span>
+          <span class="text-grey icon-down-open"></span>
+          <select v-model="options.audio.file" @change="applyOptions">
+            <option v-for="a of audioList" :key="a.name" :value="a.file" @click="playAudio( a.file )">{{ a.name }}</option>
+          </select>
+        </div>
+        <div class="form-input">
+          <span class="text-grey push-right">Volume</span>
+          <input type="range" min="0" max="1" step="0.1" v-model="options.audio.volume" @change="applyOptions" />
+          <span class="push-left">{{ options.audio.volume }}</span>
+        </div>
+      </div>
     </div>
 
     <hr />
@@ -118,6 +133,26 @@ export default {
       canNotify: false,
       urlSuccess: true,
       testing: false,
+      // notification choices
+      audioFiles: [
+        { name: 'Audio 1', file: 'public/audio/audio_1.mp3' },
+        { name: 'Audio 2', file: 'public/audio/audio_2.mp3' },
+        { name: 'Audio 3', file: 'public/audio/audio_3.mp3' },
+        { name: 'Audio 4', file: 'public/audio/audio_4.mp3' },
+        { name: 'Audio 5', file: 'public/audio/audio_5.mp3' },
+      ]
+    }
+  },
+
+  // computed methods
+  computed: {
+
+    // build dropdown audio list
+    audioList() {
+      return this.audioFiles.map( a => {
+        a.selected = ( a.file === this.options.audio.file ) ? true : false;
+        return a;
+      });
     }
   },
 
@@ -126,7 +161,16 @@ export default {
 
     // apply options
     applyOptions() {
-      this.$bus.emit( 'setOptions', { proxy: this.corsProxy } );
+      let options = Object.assign( {}, this.options, { proxy: this.corsProxy } );
+      this.$bus.emit( 'setOptions', options );
+    },
+
+    // play audio file
+    playAudio( file ) {
+      let audio = new Audio();
+      audio.volume = parseFloat( this.options.audio.volume ) || 1;
+      audio.src = file;
+      audio.play();
     },
 
     // test cors proxy url
