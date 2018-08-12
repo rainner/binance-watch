@@ -18,8 +18,10 @@ export default class Notify {
       storeKey: 'price_alarms_data',
       // default notification image file
       imageFile: 'public/images/notification.png',
-      // audio file to play on with notifications`
-      soundFile: 'public/audio/notification.mp3',
+      // audio file to play on with notifications
+      soundFile: 'public/audio/audio_3.mp3',
+      // volume of notification sound ( 0 - 1 )
+      soundVolume: 1,
       // toggle notification sound
       soundEnabled: true,
     };
@@ -45,7 +47,14 @@ export default class Notify {
   // merge new options
   setOptions( options ) {
     this._options = Object.assign( {}, this._options, options );
+    // set audio file
     this._audio.src = this._options.soundFile;
+    // check and set audio volume
+    let vol = parseFloat( this._options.soundVolume ) || 1;
+    vol = ( vol > 1 ) ? vol / 100 : vol;
+    vol = ( vol > 1 ) ? 1 : vol;
+    vol = ( vol < 0 ) ? 0 : vol;
+    this._audio.volume = vol;
   }
 
   // load saved alarms data from local store
@@ -70,6 +79,12 @@ export default class Notify {
       let alarms = this.getAlarms();
       this._callback( alarms );
     }
+  }
+
+  // could saved alarms for a symbol
+  alarmsCount( symbol ) {
+    if ( !symbol || !this._alarms.hasOwnProperty( symbol ) ) return 0;
+    return this._alarms[ symbol ].length;
   }
 
   // add price alert data for a symbol
@@ -110,8 +125,7 @@ export default class Notify {
 
   // check if alert is triggered for a symbol object
   checkAlarm( symbol, curPrice, callback ) {
-    if ( !this.canNotify() ) return;
-    if ( !symbol || !this._alarms.hasOwnProperty( symbol ) ) return;
+    if ( !this.canNotify() || !this.alarmsCount( symbol ) ) return;
 
     callback = ( typeof callback === 'function' ) ? callback : function() {};
 
@@ -154,7 +168,7 @@ export default class Notify {
 
   // create notifications from the queue on a timer
   _watchQueue() {
-    setTimeout( this._watchQueue.bind( this ), 1000 );
+    setTimeout( this._watchQueue.bind( this ), 500 );
     if ( !this.canNotify() || !this._queue.length ) return;
 
     let { id, time, title, body, icon, link } = this._queue.shift();
