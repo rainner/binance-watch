@@ -124,18 +124,22 @@ module.exports = {
       score += s;
     }
 
-    // build params based on score
-    let params                = [ '?', 'Neutral', 'e-confused eLeft text-info' ];
-    if ( score ==  1 ) params = [ '+', 'Ok',      'e-confused eLeft text-success' ];
-    if ( score >   1 ) params = [ '+', 'Good',    'e-happy eLeft text-gain' ];
-    if ( score >   9 ) params = [ '+', 'Loved',   'e-love eLeft text-gain' ];
-    if ( score == -1 ) params = [ '-', 'Ok',      'e-confused eLeft text-danger' ];
-    if ( score <  -1 ) params = [ '-', 'Bad',     'e-sad eLeft text-loss' ];
-    if ( score <  -9 ) params = [ '-', 'Hated',   'e-hate eLeft text-loss' ];
+    // sentiment string params
+    let params                 = [ '',  'Neutral',  'e-confused eLeft text-info' ];
+    // positive
+    if ( score ===  1 ) params = [ '+', 'Ok', 'e-confused eLeft text-warning' ];
+    if ( score >    1 ) params = [ '+', 'Good', 'e-happy eLeft text-success' ];
+    if ( score >    9 ) params = [ '+', 'Positive', 'e-love eLeft text-gain' ];
+    if ( score >   19 ) params = [ '+', 'Great', 'e-rocket eLeft text-gain' ];
+    // negative
+    if ( score === -1 ) params = [ '-', 'Ok', 'e-confused eLeft text-warning' ];
+    if ( score <   -1 ) params = [ '-', 'Bad', 'e-sad eLeft text-danger' ];
+    if ( score <   -9 ) params = [ '-', 'Negative', 'e-hate eLeft text-loss' ];
+    if ( score <  -19 ) params = [ '-', 'Rekt', 'e-siren eLeft text-loss' ];
 
     // build sentiment info
     let [ sign, word, styles ] = params;
-    let sentiment = [ sign + Math.abs( score ), word ].join( ' ' );
+    let sentiment = [ word, sign + Math.abs( score ) ].join( ' ' );
 
     // build final data
     comparative = total ? ( score / total ) : 0;
