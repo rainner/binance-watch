@@ -3,11 +3,15 @@
  */
 export default {
 
-  // notification sounds
-  sound: true,
-
   // cors proxy for outgoing http requests
   proxy: 'https://cors-anywhere.herokuapp.com/',
+
+  // notification audio
+  audio: {
+    enabled: true,
+    volume: 0.5,
+    file: 'public/audio/audio_2.mp3',
+  },
 
   // search options
   search: {

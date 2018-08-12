@@ -46,11 +46,11 @@ export default [
       priceCheck: 'below',
       price: '',
       volumeType: 'gain',
-      volumeChange: '2',
+      volumeChange: '1',
       volumeCheck: 'above',
       volume: '',
       timeCheck: 'less',
-      timeLimit: '10',
+      timeLimit: '30',
     }
   },
   // small change withing 15 minutes on coins with some volume
@@ -59,15 +59,15 @@ export default [
     options: {
       asset: 'BTC',
       priceType: 'change',
-      priceChange: '3',
-      priceCheck: 'below',
-      price: '',
+      priceChange: '2',
+      priceCheck: 'above',
+      price: '0.00000100',
       volumeType: 'gain',
-      volumeChange: '5',
+      volumeChange: '1',
       volumeCheck: 'above',
-      volume: '100',
+      volume: '',
       timeCheck: 'less',
-      timeLimit: '30',
+      timeLimit: '10',
     }
   },
   // small change for cheap coins
