@@ -94,7 +94,6 @@
 
                 <div>
                   <div class="form-label">Other Options</div>
-                  <button class="icon-reload iconLeft text-bright-hover" @click="updateChart( true )">Update sentiment data</button> <br />
                   <button class="icon-close iconLeft text-bright-hover" @click="flushTweets()">Flush tweets cache</button> <br />
                 </div>
 
@@ -111,24 +110,54 @@
     <section class="push-bottom" v-if="chartData.length">
       <div class="container">
         <div class="card newspage-chart">
-          <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
-            <div class="newspage-chart-md text-clip">Name</div>
-            <div class="newspage-chart-sm text-clip">Token</div>
-            <div class="newspage-chart-sm text-nowrap text-right">Tweets</div>
-            <div class="flex-5 text-nowrap if-medium">Mention %</div>
-            <div class="newspage-chart-md text-nowrap if-small">Sentiment</div>
-            <div class="flex-1 text-nowrap text-right">Details</div>
-          </div>
-          <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartData" :key="d.token" @click="filterSearch = d.search">
-            <div class="newspage-chart-md text-clip text-bright icon-search iconLeft">{{ d.name }}</div>
-            <div class="newspage-chart-sm text-clip text-default">{{ d.token }}</div>
-            <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
-            <div class="flex-5 text-nowrap if-medium">
-              <span v-if="d.barPercent" class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span>
+          <div class="newspage-chart-header">
+            <div class="newspage-chart-row flex-row flex-middle flex-stretch">
+              <div class="newspage-chart-md text-clip">
+                <span class="clickable" @click="sortChart( 'name' )">
+                  Name <i v-if="chartSort === 'name'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
+                </span>
+              </div>
+              <div class="newspage-chart-sm text-clip">
+                <span class="clickable" @click="sortChart( 'token' )">
+                  Token <i v-if="chartSort === 'token'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
+                </span>
+              </div>
+              <div class="newspage-chart-sm text-nowrap text-right">
+                <span class="clickable" @click="sortChart( 'count' )">
+                  Tweets <i v-if="chartSort === 'count'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
+                </span>
+              </div>
+              <div class="flex-5 text-nowrap text-grey if-medium">
+                <span>Mention %</span>
+              </div>
+              <div class="newspage-chart-md text-nowrap if-small">
+                <span class="clickable" @click="sortChart( 'sentiment' )">
+                  Sentiment <i v-if="chartSort === 'sentiment'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
+                </span>
+              </div>
+              <div class="flex-1 text-nowrap text-grey text-right">
+                <span>Details</span>
+              </div>
             </div>
-            <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
-            <div class="flex-1 text-nowrap text-right">
-              <button v-if="d.route" class="text-default-hover" @click.stop="$bus.emit( 'setRoute', d.route )">Details</button>
+          </div>
+          <div class="newspage-chart-content">
+            <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartList" :key="d.token" @click="applyFilters( d.search, '' )">
+              <div class="newspage-chart-md text-clip text-bright"><i class="icon-search text-grey"></i> {{ d.name }}</div>
+              <div class="newspage-chart-sm text-clip text-default">{{ d.token }}</div>
+              <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
+              <div class="flex-5 text-nowrap if-medium">
+                <span v-if="d.barPercent" class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span>
+              </div>
+              <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
+              <div class="flex-1 text-nowrap text-right">
+                <button v-if="d.route" class="text-default-hover icon-chart-line" @click.stop="$bus.emit( 'setRoute', d.route )"></button>
+              </div>
+            </div>
+          </div>
+          <div class="newspage-chart-footer">
+            <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
+              <div class="flex-1 text-clip">Sentiment analysis for {{ chartData.length | toNoun( 'token', 'tokens' ) }} found in all available tweets.</div>
+              <div class="text-right"><button class="icon-reload iconLeft text-default-hover" @click="updateChart( true )">Reload</button></div>
             </div>
           </div>
         </div>
@@ -159,15 +188,12 @@
     </section>
 
     <!-- news list -->
-    <section class="newspage-list">
+    <section class="newspage-list" id="newspage-list">
       <div class="container">
-
         <div class="newspage-list-item flex-row flex-top flex-stretch" v-for="t in tweetsList" :key="t.id">
-
           <div class="push-right" :class="{ 'alert-bubble': t.isNew }">
             <img class="newspage-list-image" :src="t.avatar" :alt="t.handle" />
           </div>
-
           <div class="flex-1">
             <div class="newspage-list-header flex-row flex-space">
               <h3 class="text-clip clickable" @click="openLink( 'https://twitter.com/'+ t.handle )">
@@ -180,9 +206,7 @@
             </div>
             <div class="newspage-list-text text-bright text-wrap" v-html="t.text"></div>
           </div>
-
         </div>
-
       </div>
     </section>
 
@@ -227,6 +251,8 @@ export default {
       // coins data
       totalTokens: 0,
       chartData: [],
+      chartSort: 'name',
+      chartOrder: 'asc',
       // count data
       newCount: 0,
       maxCount: 200,
@@ -252,6 +278,13 @@ export default {
 
   // computed methods
   computed: {
+
+    // get sorted chart list
+    chartList() {
+      let list = this.chartData.slice(); // copy
+      list = utils.sort( list, this.chartSort, this.chartOrder );
+      return list;
+    },
 
     // get filtered list
     tweetsList() {
@@ -336,6 +369,7 @@ export default {
 
       // remove html and urls from tweet text
       text = utils.stripHtml( text, true );
+      if ( !text ) return;
 
       // show tweet notification only if enabled and away
       if ( this.options.news.notify && isaway ) {
@@ -347,6 +381,19 @@ export default {
         let info  = `<a href="${ link }">${ text }</a>`;
         this.$bus.emit( 'msgQueue', { name, info, avatar } );
       }
+    },
+
+    // sort sentiment chart
+    sortChart( prop ) {
+      if ( !this.chartData.length ) return;
+      if ( !prop || typeof prop !== 'string' ) return;
+
+      if ( prop === this.chartSort ) {
+        this.chartOrder = ( this.chartOrder === 'asc' ) ? 'desc' : 'asc';
+      } else {
+        this.chartOrder = 'asc';
+      }
+      this.chartSort = prop;
     },
 
     // scan tweets against list of tokens from api and build sentiment analysis data for chart
@@ -384,7 +431,7 @@ export default {
 
       // calculate percent
       let max = data.reduce( ( m, d ) => d.count > m ? d.count : m, 0 );
-      data = data.map( d => {
+      this.chartData = data.map( d => {
         let ratio = ( max > 0 ) ? ( d.count / max ) : 0.1;
         let barPercent = Math.round( ratio * 100 );
         let barColor = 'bg-grey';
@@ -394,12 +441,9 @@ export default {
         return Object.assign( d, { barPercent, barColor } );
       });
 
-      // sort chart list by token name and update
-      this.chartData = utils.sort( data, 'name', 'asc' );
-
       if ( notify === true ) {
         if ( !data.length ) return this.$bus.emit( 'showNotice', 'No token mentions found yet.', 'warning' );
-        return this.$bus.emit( 'showNotice', 'Analisys data has been updated.', 'success' );
+        return this.$bus.emit( 'showNotice', 'Sentiment table has been reloaded.', 'success' );
       }
     },
 
@@ -573,8 +617,12 @@ export default {
 
     // create new instance of Twitter handler for a handle
     createTwitterHandler( handle, fetch, save ) {
-      if ( !handle ) return false; // nope
-      if ( this.twitterHandlers.filter( t => t.handle === handle ).length ) return true; // exists
+      if ( !handle ) return false;
+
+      if ( this.twitterHandlers.filter( t => t.handle === handle ).length ) {
+        if ( save ) this.$bus.emit( 'showNotice', 'Account already exists.', 'warning' );
+        return true;
+      }
       try {
         const handler = new Twitter( handle, { fetchDelay: 180, limitCount: 1 } );
         this.twitterHandlers.push( handler ); // add
@@ -583,7 +631,7 @@ export default {
         return true;
       }
       catch( err ) {
-        console.log( 'createTwitterHandlerError:', err.message || err );
+        console.warn( 'createTwitterHandlerError:', err.message || err );
         return false;
       }
     },
@@ -626,7 +674,7 @@ export default {
       let accounts = utils.shuffle( this.options.news.sources || [] );
       for ( let handle of accounts ) this.createTwitterHandler( handle );
       if ( this.twitterInterval ) clearInterval( this.twitterInterval );
-      this.twitterInterval = setInterval( this.fetchByInterval, 3000 );
+      this.twitterInterval = setInterval( this.fetchByInterval, 5000 );
       this.fetchByInterval();
     },
   },
@@ -712,15 +760,6 @@ export default {
       position: relative;
       padding: 0 $padSpace;
 
-      &:first-of-type {
-        margin-bottom: ( $padSpace / 2 );
-      }
-      & + .newspage-chart-row {
-        border-top: 1px $lineStyle $lineColor;
-      }
-      & + .newspage-chart-row:hover {
-        background-color: rgba( #000, 0.1 );
-      }
       .newspage-chart-sm {
         width: 80px;
       }
@@ -735,6 +774,29 @@ export default {
       }
       & > div + div {
         margin-left: 1em;
+      }
+    }
+
+    .newspage-chart-header {
+      padding-bottom: ( $padSpace / 2 );
+      border-bottom: $lineWidth $lineStyle $lineColor;
+    }
+
+    .newspage-chart-footer {
+      padding-top: ( $padSpace / 2 );
+      border-top: $lineWidth $lineStyle $lineColor;
+    }
+
+    .newspage-chart-content {
+      overflow: hidden;
+      overflow-y: auto;
+      max-height: 316px;
+
+      & > .newspage-chart-row:nth-child( odd ) {
+        background-color: rgba( #000, 0.085 );
+      }
+      & > .newspage-chart-row:hover {
+        background-color: rgba( #000, 0.2 );
       }
     }
   }
