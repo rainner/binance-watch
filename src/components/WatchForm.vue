@@ -229,38 +229,38 @@ export default {
       }
     },
 
-    // start price watch
-    startWatch() {
-      if ( this.watchSto ) clearInterval( this.watchSto );
-      if ( this.timerSto ) clearInterval( this.timerSto );
-      if ( this.active ) return;
-
-      if ( this.socketStatus !== 2 ) {
-        return this.$bus.emit( 'showNotice', 'Socket connection is not active.', 'warning' );
-      }
-      this.watchSto = setInterval( this.checkPrices, 2000 );
-      this.timerSto = setInterval( this.computeWatchTime, 1000 );
-      this.start    = Date.now();
-      this.active   = true;
-
-      this.buildSnapshot();
+    // watch tick handler
+    onWatch() {
       this.computeWatchTime();
       this.checkPrices();
-      this.$emit( 'onStartWatch' );
+    },
+
+    // start price watch
+    startWatch() {
+      if ( this.active ) return;
+      if ( this.socketStatus !== 2 ) return this.$bus.emit( 'showNotice', 'Socket connection is not active.', 'warning' );
+      if ( this.watchSto ) clearInterval( this.watchSto );
+
+      this.buildSnapshot();
+      this.start    = Date.now();
+      this.watchSto = setInterval( this.onWatch, 1000 );
+      this.active   = true;
+
       this.$bus.emit( 'showNotice', 'Price watch is now active.', 'success' );
+      this.$emit( 'onStartWatch' );
     },
 
     // stop price watch
     stopWatch() {
-      if ( this.watchSto ) clearInterval( this.watchSto );
-      if ( this.timerSto ) clearInterval( this.timerSto );
       if ( !this.active ) return;
+      if ( this.watchSto ) clearInterval( this.watchSto );
 
       this.active = false;
       this.snapshot = {};
-      this.$emit( 'onStopWatch' );
-      this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
+
       this.$notify.flush();
+      this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
+      this.$emit( 'onStopWatch' );
     },
 
     // toggle price watch
@@ -278,12 +278,10 @@ export default {
 
     // make a copy of current prices to start comparing against
     buildSnapshot() {
-      let time = Date.now();
-      let checked = false;
-
+      let checked = Date.now();
       this.priceData.forEach( p => {
         let { symbol, token, asset, close, assetVolume } = p;
-        this.snapshot[ symbol ] = { symbol, token, asset, close, assetVolume, time, checked };
+        this.snapshot[ symbol ] = { symbol, token, asset, close, assetVolume, checked };
       });
     },
 
@@ -329,27 +327,34 @@ export default {
         let s  = this.snapshot[ p.symbol ];
         let pc = utils.percent( p.close, s.close );
         let vc = utils.percent( p.assetVolume, s.assetVolume );
-        let t  = ( now - s.time ) / 1000; // secs since last checked
+        let t  = ( now - s.checked ) / 1000; // secs since last checked
 
         // nothing to check
         if ( !priceChange && !volumeChange ) return;
 
-        // check time period
-        if ( timeCheck && timeLimit ) {
-          if ( timeCheck === 'less' && t > timeLimit ) return;
-          if ( timeCheck === 'more' && t < timeLimit ) return;
-        }
         // check price change data
         if ( priceChange ) {
           if ( priceType === 'gain' && pc.sign === '-' ) return;
           if ( priceType === 'loss' && pc.sign === '+' ) return;
           if ( pc.percent < priceChange ) return;
         }
+
         // check volume change data
         if ( volumeChange ) {
           if ( volumeType === 'gain' && vc.sign === '-' ) return;
           if ( volumeType === 'loss' && vc.sign === '+' ) return;
           if ( vc.percent < volumeChange ) return;
+        }
+
+        // update symbol snapshot data
+        this.snapshot[ p.symbol ].close = p.close;
+        this.snapshot[ p.symbol ].assetVolume = p.assetVolume;
+        this.snapshot[ p.symbol ].checked = now;
+
+        // check time period
+        if ( timeCheck && timeLimit ) {
+          if ( timeCheck === 'less' && t > timeLimit ) return;
+          if ( timeCheck === 'more' && t < timeLimit ) return;
         }
 
         // resolve emoji title icons
@@ -360,18 +365,12 @@ export default {
         // we have a hit, prep notification info
         let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
         let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
-        let elapsed   = 'Change ⌚ '+ utils.elapsed( ( now - s.time ) / 1000 );
+        let elapsed   = 'Change ⌚ '+ utils.elapsed( t );
         let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
         let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
-        let title     = [ emoji, p.name, '('+ p.symbol +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
+        let title     = [ emoji, p.name, '('+ p.pair +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
         let info      = [ elapsed, curPrice, curVol ].join( '\n' );
         let icon      = utils.fullUrl( p.icon );
-
-        // update symbol snapshot data
-        this.snapshot[ p.symbol ].close = p.close;
-        this.snapshot[ p.symbol ].assetVolume = p.assetVolume;
-        this.snapshot[ p.symbol ].time = now;
-        this.snapshot[ p.symbol ].checked = true;
 
         // norify, add to history and mail queue
         this.$history.add( title, info, icon );
