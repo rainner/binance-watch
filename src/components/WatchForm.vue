@@ -42,7 +42,7 @@
                   <option value="loss">Price Loss</option>
                 </select>
               </div>
-              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="watchOptions.priceChange" />
+              <input class="flex-1 push-right" type="range" min="0.0" max="100.0" step="0.5" v-model="watchOptions.priceChange" />
               <div :class="{ 'text-grey': watchOptions.priceChange === '0' }">{{ watchOptions.priceChange }}%</div>
             </div>
 
@@ -54,7 +54,7 @@
                   <option value="loss">Vol Loss</option>
                 </select>
               </div>
-              <input class="flex-1 push-right" type="range" min="0" max="100" step="1" v-model="watchOptions.volumeChange" />
+              <input class="flex-1 push-right" type="range" min="0.0" max="100.0" step="0.5" v-model="watchOptions.volumeChange" />
               <div :class="{ 'text-grey': watchOptions.volumeChange === '0' }">{{ watchOptions.volumeChange }}%</div>
             </div>
 
@@ -89,6 +89,16 @@
               </div>
               <input class="push-right" type="text" placeholder="0" v-model="watchOptions.volume" @keyup="numInput" />
               <div class="text-grey">{{ watchOptions.asset }}</div>
+            </div>
+
+             <div class="form-input text-nowrap push-bottom">
+              <div class="push-right icon-down-open iconFaded">
+                <select v-model="watchOptions.filterType">
+                  <option value="allow">Allow Tokens</option>
+                  <option value="deny">Deny Tokens</option>
+                </select>
+              </div>
+              <input class="push-right" type="text" placeholder="TOKEN1, TOKEN2, ..." v-model="watchOptions.filterText"  />
             </div>
 
             <button
@@ -153,6 +163,8 @@ export default {
         volume: '', // custom volume limit
         timeCheck: 'less', // more, less
         timeLimit: '30', // limit change by time (mins)
+        filterType: 'deny', // deny, allow
+        filterText: '', // csv tokens str
       },
     }
   },
@@ -317,11 +329,20 @@ export default {
       let volumeChange = parseFloat( this.watchOptions.volumeChange ) || 0;
       let timeCheck    = String( this.watchOptions.timeCheck || 'less' );
       let timeLimit    = ( parseInt( this.watchOptions.timeLimit ) || 0 ) * 60; // convert mins to secs
+      let filterType   = String( this.watchOptions.filterType || '' );
+      let filterText   = String( this.watchOptions.filterText || '' );
       let now          = Date.now();
 
       this.priceData.forEach( p => {
         if ( !this.snapshot.hasOwnProperty( p.symbol ) ) return;
         if ( !this.checkFormOptions( p ) ) return;
+
+        // filter token name
+        if ( filterText && filterText.length > 1 ) {
+          let reg = new RegExp( '^('+ filterText.trim().split( /[^a-zA-Z]+/g ).join( '|' ).toUpperCase() +')$' );
+          if ( filterType === 'allow' && !reg.test( p.token ) ) return;
+          if ( filterType === 'deny' && reg.test( p.token ) ) return;
+        }
 
         // get snapshot, price and volume change data
         let s  = this.snapshot[ p.symbol ];
