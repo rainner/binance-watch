@@ -97,9 +97,10 @@ module.exports = {
 
   // format number to money
   money( num, fixed ) {
-    return Number( num ).toFixed( fixed | 0 ).replace( /./g, ( c, i, a ) => {
-      return i && c !== "." && ( ( a.length - i ) % 3 === 0 ) ? ',' + c : c;
-    });
+    num   = parseFloat( num ) || 0;
+    fixed = parseInt( fixed ) || 0;
+    let o = { style: 'decimal', minimumFractionDigits: fixed, maximumFractionDigits: fixed };
+    return new Intl.NumberFormat( 'en-US', o ).format( num );
   },
 
   // convert candle time (1m, 1h, etc) into readable string
