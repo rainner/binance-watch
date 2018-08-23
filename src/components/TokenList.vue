@@ -54,22 +54,25 @@
                 v-text="sortByLabel" title="Sort Options" v-tooltip>
               </button>
               <ul slot="list">
-                <li class="clickable" @click="toggleSort( 'token' )">
+                <li class="clickable" @click="toggleSort( 'token', 'asc' )">
                   <i class="icon-bitcoin iconLeft"></i> Token
                 </li>
-                <li class="clickable" @click="toggleSort( 'percent' )">
+                <li class="clickable" @click="toggleSort( 'percent', 'desc' )">
                   <i class="icon-percent iconLeft"></i> Percent
                 </li>
-                <li class="clickable" @click="toggleSort( 'close' )">
+                <li class="clickable" @click="toggleSort( 'close', 'desc' )">
                   <i class="icon-chart-line iconLeft"></i> Price
                 </li>
-                <li class="clickable" @click="toggleSort( 'change' )">
+                 <li class="clickable" @click="toggleSort( 'volatility', 'desc' )">
+                  <i class="icon-chart-line iconLeft"></i> Volatility
+                </li>
+                <li class="clickable" @click="toggleSort( 'change', 'desc' )">
                   <i class="icon-clock iconLeft"></i> Change
                 </li>
-                <li class="clickable" @click="toggleSort( 'assetVolume' )">
+                <li class="clickable" @click="toggleSort( 'assetVolume', 'desc' )">
                   <i class="icon-chart-area iconLeft"></i> Volume
                 </li>
-                <li class="clickable" @click="toggleSort( 'trades' )">
+                <li class="clickable" @click="toggleSort( 'trades', 'desc' )">
                   <i class="icon-reload iconLeft"></i> Trades
                 </li>
               </ul>
@@ -80,7 +83,7 @@
                 v-text="filterAsset" title="Filter Asset" v-tooltip>
               </button>
               <ul slot="list">
-                <li class="clickable" v-for="asset in assetsList" :key="asset" @click="filterAsset = asset">
+                <li class="clickable" v-for="asset in assetsList" :key="asset" @click="toggleAsset( asset )">
                   <i class="icon-star iconLeft"></i> {{ asset }}
                 </li>
               </ul>
@@ -115,13 +118,23 @@
     <section class="tokenlist-list">
       <div class="container">
 
+        <div class="tokenlist-item flex-row flex-middle flex-stretch" v-if="tickerList.length">
+          <div class="tokenlist-item-icon push-right if-small"></div>
+          <div class="tokenlist-item-symbol text-clip flex-1"><span class="text-default-hover icon-bitcoin iconLeft clickable" @click="toggleSort( 'token', 'asc' )">Token</span></div>
+          <div class="tokenlist-item-price text-right text-clip flex-2"><span class="text-default-hover icon-chart-line iconLeft clickable" @click="toggleSort( 'close', 'desc' )">Price</span></div>
+          <div class="tokenlist-item-chart push-left flex-2 if-medium disabled"></div>
+          <div class="tokenlist-item-price text-clip push-left flex-1"><span class="text-default-hover icon-percent iconLeft clickable" @click="toggleSort( 'percent', 'desc' )">Percent</span></div>
+          <div class="tokenlist-item-volume text-right text-clip flex-2"><span class="text-default-hover icon-chart-area iconLeft clickable" @click="toggleSort( 'assetVolume', 'desc' )">Volume</span></div>
+          <div class="tokenlist-item-trades text-right text-clip flex-2 if-large"><span class="text-default-hover icon-list-add iconLeft clickable" @click="toggleSort( 'trades', 'desc' )">Book</span></div>
+        </div>
+
         <div v-for="p in tickerList"
           class="tokenlist-item flex-row flex-middle flex-stretch clickable"
           :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }"
           @click.stop="setRoute( p.route )"
           :key="p.symbol">
 
-          <div class="tokenlist-item-icon" :class="{ 'alarm-bubble': p.alarms }">
+          <div class="tokenlist-item-icon push-right if-small" :class="{ 'alarm-bubble': p.alarms }">
             <TokenIcon :pairData="p"></TokenIcon>
           </div>
 
@@ -131,26 +144,27 @@
           </div>
 
           <div class="tokenlist-item-price text-right text-clip flex-2">
-            <big class="text-nowrap text-bright">{{ p.close | toSats }}</big>
-            <span class="text-grey">{{ p.asset }}</span> <br />
-            <span class="text-nowrap color">{{ p.sign }}{{ p.percent | toCents }}%</span>
-            <span class="text-nowrap text-grey">{{ p.sign }}{{ p.change | toSats }}</span>
+            <big class="text-nowrap text-bright">{{ p.close | toFixed( p.asset ) }} <span class="text-grey">{{ p.asset }}</span></big> <br />
+            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toFixed( p.asset ) }} <span class="text-grey">24H</span></span>
           </div>
 
-          <div class="tokenlist-item-chart push-left flex-2 if-medium" :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }">
-            <LineChart :width="300" :height="38" :values="p.history"></LineChart>
+          <div class="tokenlist-item-chart push-left flex-2 if-medium">
+            <LineChart :width="300" :height="35" :values="p.history"></LineChart>
+          </div>
+
+          <div class="tokenlist-item-price text-clip push-left flex-1">
+            <big class="text-nowrap color">{{ p.sign }}{{ p.percent | toMoney( 3 ) }}%</big> <br />
+            <span class="text-grey icon-chart-line iconLeft" title="Volatility score" v-tooltip>{{ p.volatility | toFixed( 3 ) }}</span>
           </div>
 
           <div class="tokenlist-item-volume text-right text-clip flex-2">
-            <big class="text-nowrap text-bright">{{ p.assetVolume | toCommas }}</big>
-            <span class="text-nowrap text-grey">{{ p.asset }}</span> <br />
-            <span class="text-nowrap text-default">{{ p.tokenVolume | toCommas }}</span>
-            <span class="text-nowrap text-grey">{{ p.token }}</span>
+            <big class="text-nowrap text-bright">{{ p.assetVolume | toMoney }} <span class="text-nowrap text-grey">{{ p.asset }}</span></big> <br />
+            <span class="text-nowrap text-default">{{ p.tokenVolume | toMoney }} <span class="text-nowrap text-grey">{{ p.token }}</span></span>
           </div>
 
           <div class="tokenlist-item-trades text-right text-clip flex-2 if-large">
-            <big class="text-nowrap text-bright">{{ p.trades | toCommas }}</big> <br />
-            <button class="text-primary-hover icon-chart-line iconLeft" @click.stop="tradeLink( p.token, p.asset )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
+            <big class="text-nowrap text-bright">{{ p.trades | toMoney }}</big> <br />
+            <button class="text-primary-hover" @click.stop="tradeLink( p.token, p.asset )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
           </div>
 
         </div>
@@ -200,14 +214,15 @@ export default {
   // comonent data
   data() {
     return {
+      optKey: 'tokens_sort_options',
       // filter/sorting/limit options
-      filterAsset: 'BTC',
+      filterAsset: 'USDT',
       searchToken: '',
       sortOrder: 'desc',
       sortBy: 'assetVolume',
       limitMin: 10,
       limitMax: 200,
-      limitCount: 20,
+      limitCount: 50,
       // filtered list data
       listCount: 0,
       listLeft: 0,
@@ -267,6 +282,7 @@ export default {
         case 'token'       :  return 'Token';
         case 'percent'     :  return 'Percent';
         case 'close'       :  return 'Price';
+        case 'volatility'  :  return 'Volatility';
         case 'change'      :  return 'Change';
         case 'assetVolume' :  return 'Volume';
         case 'tokenVolume' :  return 'Volume';
@@ -301,31 +317,64 @@ export default {
 
     // lick to binance site with ref id added
     tradeLink( token, asset ) {
-      let pair = token +'_'+ asset;
-      this.$bus.emit( 'handleClick', 'binance', '/trade.html?symbol='+ pair, '_blank' );
-    },
-
-    // build token history chart points for SVG polyline
-    chartPoints( width, height, values ) {
-      let data = utils.points( width, height, values );
-      let out  = data.map( d => d.x +','+ d.y );
-      return out.join( ' ' );
+      this.$bus.emit( 'handleClick', 'binance', '/en/trade/'+ token +'_'+ asset +'/', '_blank' );
     },
 
     // set list limit value
     limitList( num ) {
       this.limitCount = parseInt( num ) | 0;
+      this.saveSortOptions();
     },
 
     // change list sort order for selected key
-    toggleSort( sortBy ) {
-      if ( sortBy === this.sortBy ) {
-        this.sortOrder = ( this.sortOrder === 'asc' ) ? 'desc' : 'asc';
-        return;
-      }
-      this.sortBy = sortBy;
-      this.sortOrder = ( this.sortBy === 'token' ) ? 'asc' : 'desc';
+    toggleSort( sort, order ) {
+      if ( this.sortBy !== sort ) { this.sortOrder = order || 'asc'; } // initial order
+      else { this.sortOrder = ( this.sortOrder === 'asc' ) ? 'desc' : 'asc'; } // toggle order
+      this.sortBy = sort; // sort column
+      this.saveSortOptions();
     },
+
+    // filter by asset
+    toggleAsset( asset ) {
+      this.filterAsset = String( asset || 'BTC' );
+      this.saveSortOptions();
+    },
+
+    // process volatility value for a token
+    calcVolatility( value ) {
+      let str = 'Low';
+      if ( value > 1 ) str = 'Normal';
+      if ( value > 3 ) str = 'High';
+      if ( value > 5 ) str = 'Volitile';
+      if ( value > 9 ) str = 'Extreme';
+      return str;
+    },
+
+    // load sorting options from store
+    loadSortOptions() {
+      let options = this.$store.getData( this.optKey );
+      if ( !options || typeof options !== 'object' ) return;
+      if ( options.filterAsset ) this.filterAsset = options.filterAsset;
+      if ( options.sortOrder )   this.sortOrder   = options.sortOrder;
+      if ( options.sortBy )      this.sortBy      = options.sortBy;
+      if ( options.limitCount )  this.limitCount  = options.limitCount;
+    },
+
+    // save current sorting options
+    saveSortOptions() {
+      this.$store.setData( this.optKey, {
+        filterAsset : this.filterAsset,
+        sortOrder   : this.sortOrder,
+        sortBy      : this.sortBy,
+        limitCount  : this.limitCount,
+      });
+    },
+
+  },
+
+  // before mounted
+  beforeMount() {
+    this.loadSortOptions();
   },
 
   // waiting for socket
@@ -372,11 +421,20 @@ export default {
       border-radius: $lineJoin;
 
       &:hover { background-color: lighten( $colorDocumentLight, 2% ); }
+
+      .color { color: $colorGrey; }
+      polyline { stroke: $colorGrey; }
+      circle { fill: $colorGrey; }
+
       &.gain .color { color: $colorGain; }
+      &.gain polyline { stroke: $colorGain; }
+      &.gain circle { fill: $colorGain; }
+
       &.loss .color { color: $colorLoss; }
+      &.loss polyline { stroke: $colorLoss; }
+      &.loss circle { fill: $colorLoss; }
 
       .tokenlist-item-icon {
-        margin-right: 1em;
         width: $iconSize;
       }
       .tokenlist-item-symbol,
@@ -387,16 +445,8 @@ export default {
       }
       .tokenlist-item-chart {
         padding: .5em;
-        background-color: rgba( #000, 0.2 );
+        background-image: radial-gradient( ellipse at top right, rgba( #000, 0.2 ) 0%, rgba( #000, 0 ) 100% );
         border-radius: $lineJoin;
-
-        .polyline { stroke: $colorDefault; }
-        &.gain .polyline { stroke: $colorGain; }
-        &.loss .polyline { stroke: $colorLoss; }
-
-        .circle { fill: $colorDefault; }
-        &.gain .circle { fill: $colorGain; }
-        &.loss .circle { fill: $colorLoss; }
       }
     }
   }
