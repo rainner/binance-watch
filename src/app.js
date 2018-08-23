@@ -38,14 +38,15 @@ Vue.directive( 'tooltip', {
 });
 
 // global filters used to format currency and price change values
-Vue.filter( 'toElapsed', time => utils.elapsed( ( Date.now() - time ) / 1000 ) );
-Vue.filter( 'toDate', time => utils.date( time ) );
-Vue.filter( 'toCommas', num => utils.money( num, 0 ) );
-Vue.filter( 'toCurrency', num => utils.money( num, 2 ) );
 Vue.filter( 'toNoun', ( num, s, p ) => utils.noun( num, s, p ) );
-Vue.filter( 'toCents', num => Number( num ).toFixed( 3 ) );
-Vue.filter( 'toSats', num => Number( num ).toFixed( 8 ) );
-Vue.filter( 'toNumber', num => Number( num ).toFixed( 0 ) );
+Vue.filter( 'toElapsed', ( time ) => utils.elapsed( ( Date.now() - time ) / 1000 ) );
+Vue.filter( 'toDate', ( time ) => utils.date( time ) );
+Vue.filter( 'toMoney', ( num, decimals ) => utils.money( num, decimals ) );
+Vue.filter( 'toFixed', ( num, asset ) => {
+  if ( typeof asset === 'number' ) return Number( num ).toFixed( asset );
+  if ( /^(T?USDT?)$/.test( asset ) ) return utils.money( num, 3 );
+  return Number( num ).toFixed( 8 );
+});
 
 // init and/or render
 new Vue({
