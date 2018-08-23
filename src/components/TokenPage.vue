@@ -9,7 +9,7 @@
           <h1 class="tokenpage-name text-bright">{{ modalData.name }}</h1>
           <div class="pad-left" v-if="coinRank">
             <span class="text-label text-clip">Rank</span> <br />
-            <big class="text-secondary">#{{ coinRank | toCommas }}</big>
+            <big class="text-secondary">#{{ coinRank | toMoney }}</big>
           </div>
         </div>
       </div>
@@ -17,11 +17,11 @@
         <div class="flex-row flex-middle">
           <div class="text-clip push-right">
             <span class="text-label text-clip">Price</span> <br />
-            <big class="text-bright">{{ modalData.close | toSats }}</big>
+            <big class="text-bright">{{ modalData.close | toFixed( modalData.asset ) }}</big>
           </div>
           <div class="text-clip">
             <span class="text-label text-clip">Open 24h</span> <br />
-            <big class="text-default">{{ modalData.open | toSats }}</big>
+            <big class="text-default">{{ modalData.open | toFixed( modalData.asset ) }}</big>
           </div>
         </div>
       </div>
@@ -33,20 +33,20 @@
     <div class="tokenpage-change flex-row flex-middle flex-space">
       <div class="text-clip push-right">
         <span class="text-label text-clip">Change 24h</span> <br />
-        <big class="color">{{ modalData.sign }}{{ modalData.change | toSats }}</big>
+        <big class="color">{{ modalData.sign }}{{ modalData.change | toFixed( modalData.asset ) }}</big>
       </div>
       <div class="text-clip">
         <span class="text-label text-clip">Percent 24h</span> <br />
-        <big class="text-clip color">{{ modalData.sign }}{{ modalData.percent | toCents }}%</big>
+        <big class="text-clip color">{{ modalData.sign }}{{ modalData.percent | toFixed( 3 ) }}%</big>
         <big class="text-grey">{{ modalData.arrow }}</big>
       </div>
       <div class="text-clip">
         <span class="text-label text-clip">{{ modalData.asset }} Vol. 24h</span> <br />
-        <big class="text-primary">{{ modalData.assetVolume | toCommas }}</big>
+        <big class="text-primary">{{ modalData.assetVolume | toMoney }}</big>
       </div>
       <div class="text-clip">
         <span class="text-label text-clip">{{ modalData.token }} Vol. 24h</span> <br />
-        <big class="text-primary">{{ modalData.tokenVolume | toCommas }}</big>
+        <big class="text-primary">{{ modalData.tokenVolume | toMoney }}</big>
       </div>
     </div>
 
@@ -58,19 +58,19 @@
       <div class="tokenpage-change flex-row flex-middle flex-space" v-if="coinRank">
         <div class="text-clip">
           <span class="text-label text-clip">Market Cap</span> <br />
-          <big class="text-primary">{{ marketCap | toCommas }}</big>
+          <big class="text-primary">{{ marketCap | toMoney }}</big>
         </div>
         <div class="text-clip">
           <span class="text-label text-clip">Supply</span> <br />
-          <big class="text-primary">{{ totalSupply | toCommas }}</big>
+          <big class="text-primary">{{ totalSupply | toMoney }}</big>
         </div>
         <div class="text-clip">
           <span class="text-label text-clip">Total Volume</span> <br />
-          <big class="text-bright">{{ totalVolume | toCommas }}</big>
+          <big class="text-bright">{{ totalVolume | toMoney }}</big>
         </div>
         <div class="text-clip">
           <span class="text-label text-clip">USD Value</span> <br />
-          <big class="text-bright">${{ usdPrice | toCents }}</big>
+          <big class="text-bright">${{ usdPrice | toMoney( 3 ) }}</big>
         </div>
       </div>
     </div>

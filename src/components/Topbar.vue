@@ -16,8 +16,8 @@
         <div class="topbar-prices flex-row flex-middle flex-1">
           <div class="text-clip clickable" v-for="a in assetPrices" :key="a.token" @click="setRoute( a.route )">
             <span class="text-bright">{{ a.token }}</span>
-            <span :class="{ 'text-gain': ( a.percent > 0 ), 'text-loss': ( a.percent < 0 ) }">{{ a.sign }}{{ a.percent | toCents }}%</span> <br />
-            <span class="text-default">${{ a.close | toCurrency }} {{ a.arrow }}</span> <br />
+            <span :class="{ 'text-gain': ( a.percent > 0 ), 'text-loss': ( a.percent < 0 ) }">{{ a.sign }}{{ a.percent | toFixed( 3 ) }}%</span> <br />
+            <span class="text-default">{{ a.close | toFixed( a.asset ) }} {{ a.arrow }}</span> <br />
           </div>
         </div>
 
