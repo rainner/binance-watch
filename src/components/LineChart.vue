@@ -1,5 +1,5 @@
 <template>
-  <section class="linechart-wrap" :style="'height: '+ ( height - 10 ) +'px;'">
+  <section class="linechart-wrap">
     <svg :viewBox="svgBox" xmlns="http://www.w3.org/2000/svg">
       <polyline class="polyline" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" :points="chartPoints" />
       <circle class="circle" :cx="cx" :cy="cy" r="3" fill="#f0f0f0" stroke="none" />
