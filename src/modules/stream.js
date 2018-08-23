@@ -2,6 +2,7 @@
  * Handles socket and other rest API connecitons to Binance from the web client.
  */
 const symbolData = require( './symbol' );
+const utils = require( './utils' );
 
 module.exports = class Stream {
 
@@ -53,6 +54,34 @@ module.exports = class Stream {
   }
 
   /**
+   * Come up with some fake history prices to fill in the initial line chart
+   * @param {Number}  close  Current price
+   */
+  fakeHistory( close ) {
+    let num = close * 0.0001; // faction of current price
+    let min = -Math.abs( num );
+    let max = Math.abs( num );
+    let out = [];
+
+    for ( let i = 0; i < 10; ++i ) {
+      let rand = Math.random() * ( max - min ) + min;
+      out.push( close + rand );
+    }
+    return out;
+  }
+
+  /**
+   * Calculate volatility for recent price
+   * @param {Array}  history  List of recent close prices
+   */
+  calcVolatility( history ) {
+    let min = history.reduce( ( min, val ) => val < min ? val : min, history[ 0 ] );
+    let max = history.reduce( ( max, val ) => val > max ? val : max, history[ 0 ] );
+    let { percent } = utils.percent( min, max );
+    return percent;
+  }
+
+  /**
    * Get last 24h ticker data for all pairs
    * @param {function}  callback   Handler function for symbol data
    */
@@ -61,12 +90,12 @@ module.exports = class Stream {
 
     let wsname   = 'ticker';
     let endpoint = this._baseurl +'/ws/!ticker@arr';
+    let hcap     = 120;
     let cache    = {};
 
     this._close( wsname );
     this._start( wsname, endpoint, e => {
-      let list   = JSON.parse( e.data );
-      let output = [];
+      let list = JSON.parse( e.data );
 
       // process data for each symbol and add to cache
       for ( let i = 0; i < list.length; ++i ) {
@@ -83,20 +112,24 @@ module.exports = class Stream {
         let assetVolume = Math.round( item.q );
         let sign        = ( percent >= 0 ) ? '+' : '';
         let arrow       = ( percent >= 0 ) ? '▲' : '▼';
-        let history     = cache.hasOwnProperty( symbol ) ? cache[ symbol ].history : [];
+        let history     = cache.hasOwnProperty( symbol ) ? cache[ symbol ].history : this.fakeHistory( close );
+        let volatility  = 0;
 
         // keep up to 100 close values in the history for each symbol
-        if ( history.length > 100 ) history = history.slice( history.length - 100 );
+        if ( history.length > hcap ) history = history.slice( history.length - hcap );
         history.push( close );
+
+        // calculate volatility values
+        volatility = this.calcVolatility( history );
 
         // buils final symbol data
         cache[ symbol ] = symbolData( symbol, {
-          open, high, low, close, change, percent, trades, tokenVolume, assetVolume, sign, arrow, history
+          open, high, low, close, change, percent, trades, tokenVolume, assetVolume, sign, arrow, history, volatility
         });
       }
 
       // convert cache object to final prices list for each symbol
-      Object.keys( cache ).forEach( symbol => { output.push( cache[ symbol ] ) } );
+      let output = Object.keys( cache ).map( s => cache[ s ] );
       callback( output );
     });
   }
