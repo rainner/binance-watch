@@ -103,7 +103,7 @@
 <script>
 // custom modules
 import appOptions from '../configs/options';
-import Stream from '../modules/stream';
+import Binance from '../modules/binance';
 import Scroller from '../modules/scroller';
 import msgQueue from '../modules/queue';
 import mailgun from '../modules/mailgun';
@@ -125,7 +125,7 @@ import DonatePage from './DonatePage.vue';
 import TokenPage from './TokenPage.vue';
 
 // helper class instances
-const _stream = new Stream();
+const _binance = new Binance();
 const _scroller = new Scroller();
 
 // component
@@ -171,6 +171,7 @@ export default {
       socketStatus: 0, // ( 0: off, 1: wait, 2: on )
       socketStart: 0,
       socketInt: null,
+      socketReconnect: false,
       socketTime: '',
       // page scroll data
       scrollDir: '',
@@ -293,9 +294,16 @@ export default {
 
     // setup socket handlers
     setupSocketHandlers() {
-      _stream.on( 'open', this.onSocketOpen );
-      _stream.on( 'error', this.onSocketError );
-      _stream.on( 'close', this.onSocketClose );
+      _binance.on( 'open', this.onSocketOpen );
+      _binance.on( 'error', this.onSocketError );
+      _binance.on( 'close', this.onSocketClose );
+    },
+
+    // show socket related notifications
+    socketNotify( message ) {
+      if ( document.hasFocus() ) return;
+      let d = new Date();
+      this.$notify.add( '📡 Socket Status', message +' \nNow: '+ d.toLocaleString() );
     },
 
     // when socket connection opens
@@ -304,15 +312,7 @@ export default {
       this.socketStart = Date.now();
       this.socketInt = setInterval( this.priceDataIntervalHandler, 1000 );
       this.showNotice( 'Socket connection active.', 'success' );
-    },
-
-    // when socket connection ends
-    onSocketError( ws, e ) {
-      if ( this.socketInt ) clearInterval( this.socketInt );
-      this.socketStatus = 0;
-      this.socketStart = 0;
-      console.info( 'Socket-Error:', e.message || e );
-      this.showNotice( 'Socket connection error.', 'warning' );
+      this.socketNotify( 'Socket connection is now active.' );
     },
 
     // when socket connection ends
@@ -320,19 +320,35 @@ export default {
       if ( this.socketInt ) clearInterval( this.socketInt );
       this.socketStatus = 0;
       this.socketStart = 0;
-      this.showNotice( 'Socket connection closed.', 'warning' );
       this.toggleWatchform( 'stop' );
+      this.showNotice( 'Socket connection closed.', 'warning' );
+      this.socketNotify( 'Socket connection has closed.' );
+
+      if ( this.socketReconnect ) {
+        setTimeout( () => { this.toggleSocket( true ); }, 5000 );
+      }
+    },
+
+    // when socket connection ends
+    onSocketError( ws, e ) {
+      if ( this.socketInt ) clearInterval( this.socketInt );
+      this.socketStatus = 0;
+      this.socketStart = 0;
+      this.showNotice( 'Socket connection error.', 'warning' );
+      this.socketNotify( 'Socket connection error, check the console for more details.' );
+      console.info( 'Socket-Error:', e.message || e );
     },
 
     // handle socket connection
     toggleSocket( toggle ) {
       this.socketStatus = 1;
+      this.socketReconnect = toggle;
 
       if ( toggle === true && !this.socketStart ) {
-        return _stream.getTickerData( this.onTickerData );
+        _binance.getPrices( this.onTickerData );
       }
       if ( toggle === false && this.socketStart ) {
-        return _stream.closeSockets();
+        _binance.close();
       }
     },
 
@@ -356,13 +372,12 @@ export default {
       let secs  = ( Date.now() - this.socketStart ) / 1000;
 
       for ( let i = 0; i < total; ++i ) {
-        let p    = this.priceList[ i ];
-        p.name   = this.coinsData[ p.token ] || p.name || p.token;
+        let p = this.priceList[ i ];
         p.alarms = this.$notify.alarmsCount( p.symbol );
 
         if ( p.alarms ) {
           this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-            let icon = utils.fullUrl( alertData.icon );
+            let icon = utils.fullUrl( alertData.image );
             this.addMsgQueue( { title, info, icon } );
             this.$history.add( title, info, icon );
             this.$bus.emit( 'mainMenuAlert' );
@@ -373,7 +388,7 @@ export default {
         data.push( p );
       }
       this.socketTime = utils.elapsed( secs );
-      this.priceData = data;
+      this.priceData  = data;
     },
 
     // when live price data is recieved
@@ -482,12 +497,13 @@ export default {
           if ( !Array.isArray( list ) ) return;
           let data = {};
           for ( let i = 0; i < list.length; ++i ) {
-            let token = String( list[ i ].symbol || '' );
-            let name  = String( list[ i ].name || '' ).replace( /[^\w\-]+/g, ' ' ).replace( /\s\s+/g, ' ' ).trim();
+            let token = String( list[ i ].symbol || '' ).toUpperCase();
+            let name  = String( list[ i ].name || '' ).replace( /[^\w\.\-]+/g, ' ' ).replace( /[\.]+/g, '.' ).replace( /[\-]+/g, '-' ).replace( /[\n\r\t\s]+/g, ' ' ).trim();
             if ( token === 'BCH' ) token = 'BCC';
             if ( token === 'MIOTA' ) token = 'IOTA';
             if ( token && name ) data[ token ] = name;
           }
+          _binance.setNames( data );
           this.coinsData = data;
         },
       });
