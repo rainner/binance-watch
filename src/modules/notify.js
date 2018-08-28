@@ -2,7 +2,6 @@
  * Push notifications and custom alarms handler class
  */
 import store from './store';
-import symbolData from './symbol';
 import utils from './utils';
 
 export default class Notify {
@@ -88,24 +87,17 @@ export default class Notify {
   }
 
   // add price alert data for a symbol
-  saveAlarm( symbol, curPrice, alarmPrice ) {
-    symbol     = String( symbol || '' ).replace( /[^\w]+/g, '' ).toUpperCase();
-    curPrice   = parseFloat( curPrice );
-    alarmPrice = parseFloat( alarmPrice );
+  saveAlarm( pairData, alarmPrice ) {
+    if ( !pairData.symbol || pairData.close === alarmPrice ) return false;
 
-    if ( !symbol || !curPrice || !alarmPrice || curPrice === alarmPrice ) return false;
+    let { symbol, token, asset, pair, image } = pairData;
+    let id      = utils.randString( 20 );
+    let time    = Date.now();
+    let arrow   = ( alarmPrice > pairData.close ) ? '▲' : '▼';
+    let sign    = ( alarmPrice > pairData.close ) ? '≥' : '≤';
+    let check   = ( alarmPrice > pairData.close ) ? 'gain' : 'loss';
+    let alert   = { id, time, arrow, sign, check, symbol, token, asset, pair, image, alarmPrice };
 
-    let alert = symbolData( symbol, {
-      id         : utils.randString( 20 ),
-      time       : Date.now(),
-      curPrice   : curPrice,
-      alarmPrice : alarmPrice,
-      arrow      : ( alarmPrice > curPrice ) ? '▲' : '▼',
-      sign       : ( alarmPrice > curPrice ) ? '≥' : '≤',
-      check      : ( alarmPrice > curPrice ) ? 'gain' : 'loss',
-      action     : '', // todo: add custom actions
-      active     : true,
-    });
     if ( !this._alarms.hasOwnProperty( symbol ) ) this._alarms[ symbol ] = [];
     this._alarms[ symbol ] = this._alarms[ symbol ].filter( a => { return ( a.alarmPrice !== alert.alarmPrice ) } );
     this._alarms[ symbol ].push( alert );
@@ -126,7 +118,6 @@ export default class Notify {
   // check if alert is triggered for a symbol object
   checkAlarm( symbol, curPrice, callback ) {
     if ( !this.canNotify() || !this.alarmsCount( symbol ) ) return;
-
     callback = ( typeof callback === 'function' ) ? callback : function() {};
 
     this._alarms[ symbol ].forEach( a => {
@@ -137,11 +128,11 @@ export default class Notify {
       if ( curPrice > a.alarmPrice ) diff = 'more than';
       if ( curPrice < a.alarmPrice ) diff = 'less than';
 
-      let title = [ '🔔 ', a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
+      let title = [ '⏰ ', a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
       let info  = a.symbol +' is now '+ diff +' your alert price of '+ a.alarmPrice +' '+ a.asset +'.';
 
       this.deleteAlarm( a.symbol, a.id );
-      this.add( title, info, a.icon );
+      this.add( title, info, a.image );
       callback( title, info, a );
     });
   }
