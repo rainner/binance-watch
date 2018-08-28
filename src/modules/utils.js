@@ -33,6 +33,7 @@ module.exports = {
 
   // convert relative path to full url
   fullUrl( relpath ) {
+    if ( /^([\w\-]+\:)?\/\/.*$/.test( relpath ) ) return relpath;
     let loc  = window.location;
     let path = String( loc.pathname || '' ).replace( /\/+$/g, '' );
     let rel  = String( relpath || '' ).replace( /^\/+/g, '' );
