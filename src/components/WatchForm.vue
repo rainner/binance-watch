@@ -253,10 +253,11 @@ export default {
       if ( this.socketStatus !== 2 ) return this.$bus.emit( 'showNotice', 'Socket connection is not active.', 'warning' );
       if ( this.watchSto ) clearInterval( this.watchSto );
 
-      this.buildSnapshot();
-      this.start    = Date.now();
+      this.start = Date.now();
       this.watchSto = setInterval( this.onWatch, 1000 );
-      this.active   = true;
+      this.active = true;
+      this.buildSnapshot();
+      this.onWatch();
 
       this.$bus.emit( 'showNotice', 'Price watch is now active.', 'success' );
       this.$emit( 'onStartWatch' );
@@ -269,7 +270,6 @@ export default {
 
       this.active = false;
       this.snapshot = {};
-
       this.$notify.flush();
       this.$bus.emit( 'showNotice', 'Price watch has stopped.', 'warning' );
       this.$emit( 'onStopWatch' );
@@ -379,7 +379,7 @@ export default {
         }
 
         // resolve emoji title icons
-        let emoji = '🔔 ';
+        let emoji = '⚠️ ';
         if ( p.percent >= 5 ) emoji = '🚀 ';
         if ( p.percent <= -5 ) emoji = '🆘 ';
 
@@ -391,7 +391,7 @@ export default {
         let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
         let title     = [ emoji, p.name, '('+ p.pair +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
         let info      = [ elapsed, curPrice, curVol ].join( '\n' );
-        let icon      = utils.fullUrl( p.icon );
+        let icon      = utils.fullUrl( p.image );
 
         // norify, add to history and mail queue
         this.$history.add( title, info, icon );

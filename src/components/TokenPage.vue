@@ -5,7 +5,7 @@
     <div class="tokenpage-header flex-grid">
       <div class="flex-grid-item flex-1">
         <div class="flex-row flex-middle">
-          <TokenIcon class="push-right" :pairData="modalData"></TokenIcon>
+          <TokenIcon class="push-right" :image="modalData.image" :alt="modalData.token"></TokenIcon>
           <h1 class="tokenpage-name text-bright">{{ modalData.name }}</h1>
           <div class="pad-left" v-if="coinRank">
             <span class="text-label text-clip">Rank</span> <br />

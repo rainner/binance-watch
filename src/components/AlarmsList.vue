@@ -25,7 +25,7 @@
           <span class="text-default icon-alarm iconLeft"></span>
           <span class="text-bright">{{ a.pair }}</span>
           <span class="text-big" :class="[ 'text-'+ a.check ]">&nbsp;{{ a.sign }}&nbsp;</span>
-          <span class="text-bright">{{ a.alarmPrice | toSats }}</span>
+          <span class="text-bright">{{ a.alarmPrice | toFixed( a.asset ) }}</span>
           <span class="text-default">{{ a.asset }}</span>
         </div>
         <div class="text-clip push-right">
@@ -94,18 +94,15 @@ export default {
     // save a new alert for this token
     saveAlarm( e ) {
       let price = parseFloat( e.target.alarmPrice.value ) || 0;
-      let pair  = this.pairData;
+      let { symbol, asset, close } = this.pairData;
 
-      if ( !pair.symbol ) {
-        return this.$bus.emit( 'showNotice', 'No symbol pair selected.', 'warning' );
+      if ( !price || price === close ) {
+        let word = ( price === close ) ? 'different' : 'valid';
+        return this.$bus.emit( 'showNotice', 'Please enter a '+ word +' '+ asset +' price.', 'warning' );
       }
-      if ( !price || price === pair.close ) {
-        let word = ( price === pair.close ) ? 'different' : 'valid';
-        return this.$bus.emit( 'showNotice', 'Please enter a '+ word +' '+ pair.asset +' price.', 'warning' );
-      }
-      let saved = this.$notify.saveAlarm( pair.symbol, pair.close, price );
+      let saved = this.$notify.saveAlarm( this.pairData, price );
       if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'New alarm for '+ pair.symbol +' has been saved.', 'success' );
+      this.$bus.emit( 'showNotice', 'New alarm for '+ symbol +' has been saved.', 'success' );
     },
 
     // remove an alert from the list by id

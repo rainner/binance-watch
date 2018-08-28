@@ -18,7 +18,7 @@
     <div class="flex-list flex-middle flex-stretch">
       <div v-for="e in historyData" :key="e.id" class="flex-item">
         <div class="push-right">
-          <TokenIcon :pairData="{ icon: e.icon, token: 'N/A' }"></TokenIcon>
+          <TokenIcon :image="e.icon"></TokenIcon>
         </div>
         <div class="flex-1 push-right">
           <span class="text-bright">{{ e.title }}</span> <br />

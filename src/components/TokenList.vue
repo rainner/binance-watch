@@ -135,7 +135,7 @@
           :key="p.symbol">
 
           <div class="tokenlist-item-icon push-right if-small" :class="{ 'alarm-bubble': p.alarms }">
-            <TokenIcon :pairData="p"></TokenIcon>
+            <TokenIcon :image="p.image" :alt="p.token"></TokenIcon>
           </div>
 
           <div class="tokenlist-item-symbol text-clip flex-1">
@@ -171,8 +171,8 @@
 
         <!-- if there are more items not included in list due to limit option -->
         <div class="tokenlist-item flex-row flex-middle flex-stretch" v-if="listLeft">
-          <div class="tokenlist-item-icon text-clip">
-            <TokenIcon></TokenIcon>
+          <div class="tokenlist-item-icon push-right if-small">
+            <TokenIcon :image="'public/images/icons/default_.png'"></TokenIcon>
           </div>
           <div class="tokenlist-item-price text-clip text-grey flex-1">
             <span class="text-default">{{ listLeftText }} more ...</span> <br />

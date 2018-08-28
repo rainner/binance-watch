@@ -1,6 +1,6 @@
 <template>
   <div class="tokenicon-wrap">
-    <img class="tokenicon-image" @error="imageError" :src="imgfile" :alt="tokenName" />
+    <img class="tokenicon-image" @error="imageError" :src="image" :alt="alt" />
   </div>
 </template>
 
@@ -10,16 +10,8 @@ export default {
 
   // component props
   props: {
-    pairData: { type: Object, default() { return {} } },
-  },
-
-  // component data
-  data() {
-    return {
-      imgfile: '',
-      tokenName: '',
-      giveup: false,
-    }
+    image: { type: String, default: '', required: true },
+    alt: { type: String, default: 'ICON' },
   },
 
   // custom mounted
@@ -27,22 +19,8 @@ export default {
 
     // handler for token images that don't exist
     imageError( e ) {
-      // try a default token image file
-      if ( !this.giveup ) {
-        this.imgfile = 'public/images/icons/default_.png';
-        this.giveup = true;
-        return;
-      }
-      // no luck with images, try css styles
       e.target.classList.add( 'default' );
-      this.imgfile = '';
     },
-  },
-
-  // component mounted
-  mounted() {
-    this.imgfile = this.pairData.icon || '';
-    this.tokenName = this.pairData.token || 'N/A';
   },
 }
 </script>
@@ -58,6 +36,8 @@ export default {
   .tokenicon-image {
     display: block;
     position: relative;
+    overflow: hidden;
+    text-align: center;
     width: $iconSize;
     height: auto;
 
@@ -66,8 +46,6 @@ export default {
       flex-direction: row;
       align-items: center;
       justify-content: center;
-      text-align: center;
-      overflow: hidden;
       color: $colorInfoText;
       background-color: $colorInfo;
       border-radius: 100%;
