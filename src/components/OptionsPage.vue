@@ -5,15 +5,18 @@
       <div class="form-label push-bottom">
         Browser Notifications <i class="icon-down-open"></i>
       </div>
-      <Toggle class="push-bottom" :text="'Grant permission to receive browser notifications'" v-model="canNotify" @click="askNotifyPermission"></Toggle>
-      <Toggle class="push-bottom" :text="'Play a notification sound effect'" v-model="options.audio.enabled" @change="applyOptions"></Toggle>
+
+      <div class="push-bottom">
+        <Toggle :text="'Grant permission to receive browser notifications'" v-model="canNotify" @click="askNotifyPermission"></Toggle>
+        <Toggle :text="'Play a notification sound effect'" v-model="options.audio.enabled" @change="applyOptions"></Toggle>
+      </div>
 
       <div class="flex-row flex-middle flex-stretch">
         <div class="form-input push-right">
-          <span class="text-grey push-right">Notification</span>
+          <span class="text-grey push-right">Sound</span>
           <span class="text-grey icon-down-open"></span>
-          <select v-model="options.audio.file" @change="applyOptions">
-            <option v-for="a of audioList" :key="a.name" :value="a.file" @click="playAudio( a.file )">{{ a.name }}</option>
+          <select v-model="options.audio.file" @change="playAudio( options.audio.file )">
+            <option v-for="a of audioList" :key="a.name" :value="a.file">{{ a.name }}</option>
           </select>
         </div>
         <div class="form-input">
@@ -36,14 +39,23 @@
         <section btn-class="icon-network" btn-name="CORS Proxy" active>
           <form class="cors-form flex-row flex-middle flex-stretch push-bottom" action="#" @submit="corsFormSubmit" :disabled="testing">
             <div class="form-input flex-1 push-right">
-              <span class="text-nowrap text-grey push-right">Proxy URL:</span>
+              <span class="text-nowrap text-grey push-right">Proxy:</span>
               <input type="text" name="proxyurl" placeholder="https://..." v-model="corsProxy" @blur="applyOptions" />
               <span class="push-left" :class="{ 'icon-check text-gain': urlSuccess, 'icon-close text-loss': !urlSuccess, 'icon-clock text-warning': testing }"></span>
             </div>
-            <button class="form-btn bg-grey-hover" type="submit">
+            <button class="form-btn bg-info-hover push-right push-small" type="submit">
               <i class="icon-reload" :class="{ 'iconSpin': testing }"></i> Test
             </button>
+            <button class="form-btn bg-success-hover" type="button" @click="addProxy( corsProxy )">
+              <i class="icon-check"></i> Save
+            </button>
           </form>
+          <div class="flex-list push-bottom">
+            <div v-for="p of proxyList" :key="p.url" class="flex-item flex-row flex-middle flex-stretch">
+              <div class="flex-1 icon-network iconLeft clickable text-clip push-right" :class="{ 'text-success': p.selected }" @click="setProxy( p.url )">{{ p.url }}</div>
+              <button class="icon-close text-danger-hover" type="button" @click="removeProxy( p.url )"></button>
+            </div>
+          </div>
           <div class="text-small text-grey">
             <p>
               External proxy server used to route outgoing HTTP requests from this app to get around the browser's built-in
@@ -115,6 +127,7 @@
 // sub components
 import Tabs from './Tabs.vue';
 import Toggle from './Toggle.vue';
+import utils from '../modules/utils';
 
 export default {
 
@@ -153,7 +166,15 @@ export default {
         a.selected = ( a.file === this.options.audio.file ) ? true : false;
         return a;
       });
-    }
+    },
+
+    // list of saved proxies
+    proxyList() {
+      return this.options.proxylist.map( url => {
+        let selected = ( url === this.options.proxy ) ? true : false;
+        return { url, selected };
+      });
+    },
   },
 
   // custom methods
@@ -167,14 +188,36 @@ export default {
 
     // play audio file
     playAudio( file ) {
-      let audio = new Audio();
-      audio.volume = parseFloat( this.options.audio.volume ) || 1;
-      audio.src = file;
-      audio.play();
+      utils.playAudio( file, this.options.audio.volume );
+      this.applyOptions();
+    },
+
+    // add proxy to options list
+    addProxy( url ) {
+      if ( !url ) return;
+      this.options.proxylist = this.options.proxylist.filter( p => p !== url );
+      this.options.proxylist.push( url );
+      this.$bus.emit( 'showNotice', 'Proxy URL added to list.', 'success' );
+      this.applyOptions();
+    },
+
+    // remove proxy from options list
+    removeProxy( url ) {
+      if ( !url ) return;
+      this.options.proxylist = this.options.proxylist.filter( p => p !== url );
+      this.$bus.emit( 'showNotice', 'Proxy URL removed from list.', 'success' );
+      this.applyOptions();
+    },
+
+    // set active proxy from list
+    setProxy( url ) {
+      this.corsProxy = url;
+      this.options.proxy = url;
+      this.applyOptions();
     },
 
     // test cors proxy url
-    corsTest( url ) {
+    testProxy( url ) {
       this.testing = true;
 
       this.$ajax.get( url, {
@@ -202,7 +245,7 @@ export default {
     corsFormSubmit( e ) {
       e.preventDefault();
       let url = e.target.proxyurl.value || '';
-      this.corsTest( url );
+      this.testProxy( url );
     },
 
     // ask user for notification permission
