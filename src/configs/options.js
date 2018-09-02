@@ -5,6 +5,11 @@ export default {
 
   // cors proxy for outgoing http requests
   proxy: 'https://cors-anywhere.herokuapp.com/',
+  proxylist: [
+    'https://cors-anywhere.herokuapp.com/',
+    'https://localhost:4343/',
+    'http://localhost:8080/',
+  ],
 
   // notification audio
   audio: {
@@ -23,8 +28,11 @@ export default {
     refetch: true,  // aut re-fetch news on a timer
     notify: false,  // show push notifications for news
     send: false,    // include news in outgoing notifications (email/telegram)
+    interval: 5,    // how often to try fetching from each source (secs)
     delay: 300,     // how long to wait before fetching again from each source (secs)
-    max: 100,       // max number of news entries to show
+    tweets: 1,      // how many tweets to fetch at once from each source
+    total: 200,     // how many total tweets to store
+    max: 50,        // max number of news entries to show
     days: 1,        // only show entries posted within this number of days
     sources: [      // twitter accounts for latest crypto news
       'coinbase',
