@@ -50,7 +50,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   margin: 0 0 $padSpace 0;
-  padding: ( $padSpace / 2 ) $padSpace;
+  padding: $padSpaceSmall $padSpace;
   line-height: 2em;
 }
 
@@ -95,57 +95,83 @@
 // common margins
 .push-top {
   margin-top: $padSpace;
+  &.push-small { margin-top: $padSpaceSmall; }
 }
 .push-right {
   margin-right: $padSpace;
+  &.push-small { margin-right: $padSpaceSmall; }
 }
 .push-bottom {
   margin-bottom: $padSpace;
+  &.push-small { margin-bottom: $padSpaceSmall; }
 }
 .push-left {
   margin-left: $padSpace;
+  &.push-small { margin-left: $padSpaceSmall; }
 }
 .push-all {
   margin: $padSpace;
-}
-.push-none {
-  margin: 0;
+  &.push-small { margin: $padSpaceSmall; }
 }
 .push-h {
   margin-left: $padSpace;
   margin-right: $padSpace;
+  &.push-small {
+    margin-left: $padSpaceSmall;
+    margin-right: $padSpaceSmall;
+  }
 }
 .push-v {
   margin-top: $padSpace;
   margin-bottom: $padSpace;
+  &.push-small {
+    margin-top: $padSpaceSmall;
+    margin-bottom: $padSpaceSmall;
+  }
+}
+.push-none {
+  margin: 0;
 }
 
 // common paddings
 .pad-top {
   padding-top: $padSpace;
+  &.pad-small { padding-top: $padSpaceSmall; }
 }
 .pad-right {
   padding-right: $padSpace;
+  &.pad-small { padding-right: $padSpaceSmall; }
 }
 .pad-bottom {
   padding-bottom: $padSpace;
+  &.pad-small { padding-bottom: $padSpaceSmall; }
 }
 .pad-left {
   padding-left: $padSpace;
+  &.pad-small { padding-left: $padSpaceSmall; }
 }
 .pad-all {
   padding: $padSpace;
-}
-.pad-none {
-  padding: 0;
+  &.pad-small { padding: $padSpaceSmall; }
 }
 .pad-h {
   padding-left: $padSpace;
   padding-right: $padSpace;
+  &.pad-small {
+    padding-left: $padSpaceSmall;
+    padding-right: $padSpaceSmall;
+  }
 }
 .pad-v {
   padding-top: $padSpace;
   padding-bottom: $padSpace;
+  &.pad-small {
+    padding-top: $padSpaceSmall;
+    padding-bottom: $padSpaceSmall;
+  }
+}
+.pad-none {
+  padding: 0;
 }
 
 // common borders

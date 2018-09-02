@@ -45,6 +45,38 @@ select > option {
   color: $colorDocument !important;
 }
 
+// range sliders
+@mixin sliderTrack {
+  width: 100%;
+  height: 3px;
+  background: $colorDocument;
+  color: transparent !important;
+  border-color: transparent !important;
+  border-radius: $lineJoin !important;
+  border: 0 !important;
+}
+@mixin sliderThumb {
+  width: 1.2em;
+  height: 1.2em;
+  margin: -.55em 0 0 0;
+  border-radius: 50%;
+  box-shadow: $shadowPaper;
+  background: $colorSuccess;
+  color: transparent !important;
+  border-color: transparent !important;
+  border: 0 !important;
+}
+input[type="range"] {
+  // track
+  &::-webkit-slider-runnable-track { @include sliderTrack; }
+  &::-moz-range-track { @include sliderTrack; }
+  &::-ms-track { @include sliderTrack; }
+  // thumb
+  &::-webkit-slider-thumb { -webkit-appearance: none; @include sliderThumb; }
+  &::-moz-range-thumb { @include sliderThumb; }
+  &::-ms-thumb { @include sliderThumb; }
+}
+
 // row container for a form element
 .form-row {
   display: block;
@@ -58,7 +90,6 @@ select > option {
 // common form element label text style
 .form-label {
   display: block;
-  margin: 0 0 $padSpace 0;
   text-transform: uppercase;
   font-weight: normal;
   font-size: 80%;
