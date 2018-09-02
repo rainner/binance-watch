@@ -40,6 +40,21 @@ module.exports = {
     return loc.protocol +'//'+ loc.host + path +'/'+ rel;
   },
 
+  // play audio file
+  playAudio( file, vol ) {
+    if ( !file || typeof file !== 'string' ) return;
+    // normalize volume
+    vol = parseFloat( vol ) || 1;
+    vol = ( vol > 1 ) ? vol / 100 : vol;
+    vol = ( vol > 1 || vol < 0 ) ? 1 : vol;
+    // load and play audio
+    let audio = new Audio();
+    audio.addEventListener( 'canplaythrough', e => audio.play() );
+    audio.currentTime = 0;
+    audio.volume = vol;
+    audio.src = this.fullUrl( file );
+  },
+
   // to trimmed string
   toStr( input, deft ) {
     return String( String( input ) || deft ).trim();

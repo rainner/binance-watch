@@ -10,7 +10,6 @@ export default class Notify {
   constructor( options ) {
     this._alarms   = {};
     this._queue    = [];
-    this._audio    = new Audio();
     this._callback = null;
     this._options  = {
       // key used for storege data
@@ -46,14 +45,6 @@ export default class Notify {
   // merge new options
   setOptions( options ) {
     this._options = Object.assign( {}, this._options, options );
-    // set audio file
-    this._audio.src = this._options.soundFile;
-    // check and set audio volume
-    let vol = parseFloat( this._options.soundVolume ) || 1;
-    vol = ( vol > 1 ) ? vol / 100 : vol;
-    vol = ( vol > 1 ) ? 1 : vol;
-    vol = ( vol < 0 ) ? 0 : vol;
-    this._audio.volume = vol;
   }
 
   // load saved alarms data from local store
@@ -172,7 +163,7 @@ export default class Notify {
       a.addEventListener( 'click', link );
     }
     if ( this._options.soundEnabled ) {
-      this._audio.play();
+      utils.playAudio( this._options.soundFile, this._options.soundVolume );
     }
   }
 
