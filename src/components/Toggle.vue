@@ -36,6 +36,7 @@ export default {
   align-items: center;
   justify-content: stretch;
   width: 100%;
+  padding: .2em 0;
   cursor: pointer;
 
   .toggle-input {
