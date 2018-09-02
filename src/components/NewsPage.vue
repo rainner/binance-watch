@@ -27,9 +27,24 @@
               <button slot="trigger" class="form-btn bg-primary-hover icon-down-open iconLeft" title="Filter Source" v-tooltip>{{ filterLabel }}</button>
               <div slot="list">
 
-                <div class="flex-row flex-top flex-space pad-h">
-                  <div class="flex-1 push-right form-label">Twitter News Sources</div>
-                  <button v-if="filterHandle" class="icon-list iconLeft" @click="filterHandle = ''">Show all</button>
+                <div class="flex-row flex-top flex-space pad-h push-bottom">
+                  <div class="flex-1 push-right form-label">Twitter News Sources ({{ accountsList.length }})</div>
+                  <button v-if="filterHandle" class="text-bright-hover icon-list iconLeft" @click="filterHandle = ''">Show all</button>
+                </div>
+
+                <div class="twitter-accounts-list push-bottom border-top border-bottom">
+                  <div class="twitter-accounts-item flex-row flex-middle flex-stretch" v-for="a in accountsList" :key="a.handle">
+                    <div class="flex-1 text-clip clickable push-right" title="Show tweets" v-tooltip @click="applyFilters( '', a.handle )">
+                      <span class="icon-twtr iconLeft text-clip" :class="{ 'text-gain': a.active, 'text-danger text-striked': a.error !== '' }">{{ a.name }}</span>
+                    </div>
+                    <div class="push-right">
+                      <span class="clickable" title="Fetch" @click="fetchByHandle( a.handle )" v-tooltip>
+                        <span v-if="a.checking" class="text-badge text-primary">...</span>
+                        <span v-else class="text-badge">{{ a.count }}</span>
+                      </span>
+                    </div>
+                    <button class="icon-close text-danger-hover" title="Remove account" v-tooltip @click="removeTwitterHandler( a.handle )"></button>
+                  </div>
                 </div>
 
                 <form class="twitter-accounts-form pad-h push-bottom" action="#" autocomplete="off" @submit.prevent="accountFormHandler">
@@ -40,20 +55,7 @@
                   </div>
                 </form>
 
-                <div class="twitter-accounts-list push-bottom border-top border-bottom">
-                  <div class="twitter-accounts-item flex-row flex-middle flex-stretch" v-for="a in accountsList" :key="a.handle">
-                    <div class="flex-1 text-clip clickable push-right" title="Show tweets" v-tooltip @click="applyFilters( '', a.handle )">
-                      <span class="icon-twtr iconLeft text-clip" :class="{ 'text-gain': a.active, 'text-danger text-striked': a.error !== '' }">{{ a.name }}</span>
-                    </div>
-                    <div class="push-right">
-                      <span v-if="a.checking" class="text-badge text-primary">...</span>
-                      <span v-else class="text-badge">{{ a.count }}</span>
-                    </div>
-                    <button class="icon-close text-danger-hover" title="Remove account" v-tooltip @click="removeTwitterHandler( a.handle )"></button>
-                  </div>
-                </div>
-
-                <div class="form-label pad-h">Load or Save Accounts</div>
+                <div class="form-label pad-h push-bottom">Load or Save Accounts</div>
 
                 <div class="text-nowrap pad-h">
                   <button class="icon-add iconLeft text-bright-hover" @click="importAccounts()">Import List</button>
@@ -69,15 +71,39 @@
               <div slot="list" class="pad-h">
 
                 <div class="push-bottom">
-                  <div class="form-label">News &amp; Notifications Options</div>
-                  <Toggle class="push-top" :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
-                  <Toggle class="push-top" :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
-                  <Toggle class="push-top" :text="'E-mail news notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
-                  <Toggle class="push-top" :text="'Force case-sensitive search'" v-model="options.search.strict" @change="applyOptions"></Toggle>
+                  <div class="form-label push-bottom push-small">News &amp; Notifications Options</div>
+                  <Toggle :text="'Auto re-fetch latest news'" v-model="options.news.refetch" @change="applyOptions"></Toggle>
+                  <Toggle :text="'Notify when news is available'" v-model="options.news.notify" @change="applyOptions"></Toggle>
+                  <Toggle :text="'E-mail news notifications'" v-model="options.news.send" @change="applyOptions"></Toggle>
+                  <Toggle :text="'Force case-sensitive search'" v-model="options.search.strict" @change="applyOptions"></Toggle>
                 </div>
 
                 <div class="push-bottom">
-                  <div class="form-label">Limit Entries by Age</div>
+                  <div class="form-label push-bottom push-small">How often to send fetch requests</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="1" max="60" step="1" v-model="options.news.interval" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.interval | toNoun( 'sec', 'secs' ) }}</span>
+                  </div>
+                </div>
+
+                <div class="push-bottom">
+                  <div class="form-label push-bottom push-small">Delay re-fetching from same source</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="60" max="600" step="1" v-model="options.news.delay" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.delay | toNoun( 'sec', 'secs' ) }}</span>
+                  </div>
+                </div>
+
+                <div class="push-bottom">
+                  <div class="form-label push-bottom push-small">Tweets to fetch from each source</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="1" max="10" step="1" v-model="options.news.tweets" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.tweets | toNoun( 'tweet', 'tweets' ) }}</span>
+                  </div>
+                </div>
+
+                <div class="push-bottom">
+                  <div class="form-label push-bottom push-small">Limit tweets by days posted</div>
                   <div class="flex-row flex-middle flex-stretch">
                     <input class="flex-1 push-right" type="range" min="1" max="30" step="1" v-model="options.news.days" @change="applyOptions" />
                     <span class="text-bright">{{ options.news.days | toNoun( 'day', 'days' ) }}</span>
@@ -85,16 +111,19 @@
                 </div>
 
                 <div class="push-bottom">
-                  <div class="form-label">Limit Number of Entries</div>
+                  <div class="form-label push-bottom push-small">Total number fo tweets to store</div>
                   <div class="flex-row flex-middle flex-stretch">
-                    <input class="flex-1 push-right" type="range" min="10" :max="maxCount" step="1" v-model="options.news.max" @change="applyOptions" />
-                    <span class="text-bright">{{ options.news.max }}</span>
+                    <input class="flex-1 push-right" type="range" min="10" max="1000" step="1" v-model="options.news.total" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.total }}</span>
                   </div>
                 </div>
 
                 <div>
-                  <div class="form-label">Other Options</div>
-                  <button class="icon-close iconLeft text-bright-hover" @click="flushTweets()">Flush tweets cache</button> <br />
+                  <div class="form-label push-bottom push-small">Limit visible tweets on page</div>
+                  <div class="flex-row flex-middle flex-stretch">
+                    <input class="flex-1 push-right" type="range" min="10" max="100" step="1" v-model="options.news.max" @change="applyOptions" />
+                    <span class="text-bright">{{ options.news.max }}</span>
+                  </div>
                 </div>
 
               </div>
@@ -117,12 +146,12 @@
                   Name <i v-if="chartSort === 'name'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
                 </span>
               </div>
-              <div class="newspage-chart-sm text-clip">
+              <div class="newspage-chart-sm text-clip if-small">
                 <span class="clickable" @click="sortChart( 'token' )">
                   Token <i v-if="chartSort === 'token'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
                 </span>
               </div>
-              <div class="newspage-chart-sm text-nowrap text-right">
+              <div class="newspage-chart-sm text-nowrap text-right if-small">
                 <span class="clickable" @click="sortChart( 'count' )">
                   Tweets <i v-if="chartSort === 'count'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
                 </span>
@@ -130,7 +159,7 @@
               <div class="flex-5 text-nowrap text-grey if-medium">
                 <span>Mention %</span>
               </div>
-              <div class="newspage-chart-md text-nowrap if-small">
+              <div class="newspage-chart-md text-nowrap">
                 <span class="clickable" @click="sortChart( 'sentiment' )">
                   Sentiment <i v-if="chartSort === 'sentiment'" :class="{ 'icon-up': chartOrder === 'asc', 'icon-down': chartOrder === 'desc' }" class="text-primary"></i>
                 </span>
@@ -143,12 +172,12 @@
           <div class="newspage-chart-content">
             <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartList" :key="d.token" @click="applyFilters( d.search, '' )">
               <div class="newspage-chart-md text-clip text-bright"><i class="icon-search text-grey"></i> {{ d.name }}</div>
-              <div class="newspage-chart-sm text-clip text-default">{{ d.token }}</div>
-              <div class="newspage-chart-sm text-nowrap text-right">{{ d.count }}</div>
+              <div class="newspage-chart-sm text-clip text-default if-small">{{ d.token }}</div>
+              <div class="newspage-chart-sm text-nowrap text-right if-small">{{ d.count }}</div>
               <div class="flex-5 text-nowrap if-medium">
                 <span v-if="d.barPercent" class="newspage-chart-bar" :class="d.barColor" :style="{ 'width': d.barPercent +'%' }"></span>
               </div>
-              <div class="newspage-chart-md text-nowrap text-monospace if-small" :class="d.styles" v-html="d.sentiment"></div>
+              <div class="newspage-chart-md text-nowrap text-monospace" :class="d.styles" v-html="d.sentiment"></div>
               <div class="flex-1 text-nowrap text-right">
                 <button v-if="d.route" class="text-default-hover icon-chart-line" @click.stop="$bus.emit( 'setRoute', d.route )"></button>
               </div>
@@ -157,7 +186,10 @@
           <div class="newspage-chart-footer">
             <div class="newspage-chart-row flex-row flex-middle flex-stretch text-grey">
               <div class="flex-1 text-clip">Sentiment analysis for {{ chartData.length | toNoun( 'token', 'tokens' ) }} found in all available tweets.</div>
-              <div class="text-right"><button class="icon-reload iconLeft text-default-hover" @click="updateChart( true )">Reload</button></div>
+              <div class="text-right">
+                <button class="icon-reload iconLeft text-grey-hover" @click="updateChart( true )">Reload</button> &nbsp;
+                <button class="icon-close iconLeft text-danger-hover" @click="flushTweets()">Flush Data</button>
+              </div>
             </div>
           </div>
         </div>
@@ -201,7 +233,8 @@
                 <small class="text-smaller text-grey-hover">@{{ t.handle }}</small>
               </h3>
               <div class="text-clip if-small">
-                <a class="text-default-hover text-small icon-link iconLeft" :href="t.link" target="_blank" title="View tweet" v-tooltip>{{ t.time | toElapsed }} ago</a>
+                <a class="text-default-hover text-small icon-link iconLeft" :href="t.link" target="_blank" title="View tweet" v-tooltip>{{ t.time | toElapsed }} ago</a> &nbsp;
+                <button type="button" class="icon-close text-danger-hover" title="Delete" @click="deleteTweet( t.id )" v-tooltip></button>
               </div>
             </div>
             <div class="newspage-list-text text-bright text-wrap" v-html="t.text"></div>
@@ -243,8 +276,10 @@ export default {
       twitterHandlers: [],
       twitterEntries: [],
       twitterChecking: [],
+      twitterIgnore: [],
       twitterCounter: 0,
       twitterInterval: null,
+      twitterDelay: 1000,
       // filter options
       filterSearch: '',
       filterHandle: '',
@@ -255,7 +290,7 @@ export default {
       chartOrder: 'asc',
       // count data
       newCount: 0,
-      maxCount: 200,
+      maxCount: 50,
     }
   },
 
@@ -338,6 +373,8 @@ export default {
     // apply options
     applyOptions( options ) {
       this.$bus.emit( 'setOptions', options );
+      this.updateHandlerOptions();
+      this.setupTwitterInterval();
       this.sortCapTweets();
       this.saveTweets();
     },
@@ -364,7 +401,7 @@ export default {
 
     // add news to notification and msg queue
     setNotification( tweet ) {
-      let { name, text, avatar, link } = tweet;
+      let { time, handle, name, text, avatar, link } = tweet;
       let isaway = ( !this.active || !document.hasFocus() );
 
       // remove html and urls from tweet text
@@ -373,7 +410,10 @@ export default {
 
       // show tweet notification only if enabled and away
       if ( this.options.news.notify && isaway ) {
-        this.$notify.add( '💬  '+ name, text, avatar, e => { this.$bus.emit( 'setRoute', '/news' ) } );
+        let secs = ( Date.now() - time ) / 1000;
+        let elapsed = utils.elapsed( secs );
+        text = 'Tweeted '+ elapsed +' ago... \n\n' + text;
+        this.$notify.add( '@'+ handle, text, avatar, link );
         this.$bus.emit( 'mainMenuAlert' );
       }
       // always send notification via api if enabled
@@ -501,6 +541,11 @@ export default {
       });
     },
 
+    // check if tweets needs to be ignored
+    checkIgnore( tweet ) {
+      return this.twitterIgnore.filter( tid => tid === tweet.id ).length;
+    },
+
     // check if tweets exists
     hasTweet( tweet ) {
       return this.twitterEntries.filter( t => t.id === tweet.id ).length;
@@ -516,27 +561,44 @@ export default {
 
     // manage tweets list
     sortCapTweets( tweet ) {
-      let list = this.twitterEntries.slice(); // copy
+      let list  = this.twitterEntries.slice(); // copy
+      let total = parseInt( this.options.news.total ) || 10;
+      let istw  = ( typeof tweet === 'object' && 'id' in tweet );
 
       // add new tweet to list
-      if ( typeof tweet === 'object' && 'id' in tweet ) {
+      if ( istw ) {
         tweet.isNew = true;
         list.push( tweet );
       }
+
       // filter out old tweets
       list = list.filter( t => {
         return !this.oldTweet( t );
       });
+
       // sort tweets from new to old
       list = list.sort( ( a, b ) => {
         if ( a.time > b.time ) return -1;
         if ( a.time < b.time ) return 1;
         return 0;
       });
+
       // cap and update
-      list = list.slice( 0, this.maxCount );
+      list = list.slice( 0, total );
       this.newCount = list.filter( t => t.isNew ).length;
       this.twitterEntries = list;
+
+      // check if new tweet is still in the list after sorting and slicing
+      if ( istw ) return list.filter( t => t.id === tweet.id ).length ? true : false;
+      return true;
+    },
+
+    // remove single tweet from list by id
+    deleteTweet( id ) {
+      if ( !id ) return;
+      this.twitterEntries = this.twitterEntries.filter( t => t.id !== id );
+      this.twitterIgnore = this.twitterIgnore.filter( tid => tid !== id );
+      this.twitterIgnore.push( id ); // remember
     },
 
     // reset number of new entries
@@ -557,6 +619,7 @@ export default {
     flushTweets() {
       if ( !confirm( 'Delete cached tweets?' ) ) return;
       this.twitterEntries = [];
+      this.twitterIgnore = [];
       this.newCount = 0;
       this.$store.setData( this.storeKey, this.twitterEntries );
       this.$bus.emit( 'showNotice', 'Cached tweets have been deleted.', 'success' );
@@ -581,10 +644,11 @@ export default {
       // add new tweets to the list
       let count = 0;
       for ( let tweet of tweets ) {
-        if ( this.hasTweet( tweet ) ) continue; // exists
-        if ( this.oldTweet( tweet ) ) continue; // too old
-        this.sortCapTweets( tweet ); // add and sort
-        this.setNotification( tweet ); // notify
+        if ( this.checkIgnore( tweet ) ) continue;     // ignore
+        if ( this.oldTweet( tweet ) ) continue;        // too old
+        if ( this.hasTweet( tweet ) ) continue;        // already exists
+        if ( !this.sortCapTweets( tweet ) ) continue;  // was not added
+        this.setNotification( tweet );                 // added
         count++;
       }
       // update and save only if something was added
@@ -615,6 +679,14 @@ export default {
       e.target.reset();
     },
 
+    // update common options for twitter handler instances
+    updateHandlerOptions( handler ) {
+      const limitCount = parseInt( this.options.news.tweets ) || 1;
+      const fetchDelay = parseInt( this.options.news.delay ) || 300;
+      if ( handler ) return handler.setOptions( { fetchDelay, limitCount } ); // update one
+      this.twitterHandlers.forEach( h => h.setOptions( { fetchDelay, limitCount } ) ); // update all
+    },
+
     // create new instance of Twitter handler for a handle
     createTwitterHandler( handle, fetch, save ) {
       if ( !handle ) return false;
@@ -624,8 +696,9 @@ export default {
         return true;
       }
       try {
-        const handler = new Twitter( handle, { fetchDelay: 180, limitCount: 1 } );
-        this.twitterHandlers.push( handler ); // add
+        const handler = new Twitter( handle );
+        this.updateHandlerOptions( handler );
+        this.twitterHandlers.push( handler );
         if ( fetch ) this.fetchByHandle( handle );
         if ( save ) this.saveNewsSources( true );
         return true;
@@ -649,16 +722,16 @@ export default {
       this.saveTweets();
     },
 
-    // fetches tweets manually for a handle
+    // main method to fetch tweets for a handle
     fetchByHandle( handle ) {
       const tw = this.twitterHandlers.filter( t => t.handle === handle ).shift();
       if ( !tw ) return this.$bus.emit( 'showNotice', 'Could not find account @'+ handle +'.', 'warning' );
-      if ( this.twitterChecking.filter( h => h === handle ).length ) return; // fetching...
-      this.twitterChecking.push( tw.handle );
-      tw.fetchTweets( this.$ajax, this.onTweetsHandler );
+      if ( this.twitterChecking.filter( h => h === tw.handle ).length ) return; // already fetching
+      this.twitterChecking.push( tw.handle ); // fetching indicator
+      tw.fetchTweets( this.$ajax, this.onTweetsHandler ); // fetch
     },
 
-    // fetches tweets on an interval
+    // used to auto-fetch tweets from an interval goin down the list
     fetchByInterval() {
       if ( !this.options.news.refetch ) return;
       if ( !this.twitterHandlers.length ) return;
@@ -668,14 +741,18 @@ export default {
       this.twitterCounter = ( this.twitterCounter < last ) ? ( this.twitterCounter + 1 ) : 0;
     },
 
+    // start the tweets interval handler
+    setupTwitterInterval() {
+      const seconds = parseInt( this.options.news.interval ) || 5;
+      if ( this.twitterInterval ) clearInterval( this.twitterInterval );
+      this.twitterInterval = setInterval( this.fetchByInterval, 1000 * seconds );
+    },
+
     // load and start tracking twitter accounts for latest tweets
     setupTwitterTrackers() {
       this.twitterHandlers = [];
-      let accounts = utils.shuffle( this.options.news.sources || [] );
+      const accounts = utils.shuffle( this.options.news.sources || [] );
       for ( let handle of accounts ) this.createTwitterHandler( handle );
-      if ( this.twitterInterval ) clearInterval( this.twitterInterval );
-      this.twitterInterval = setInterval( this.fetchByInterval, 5000 );
-      this.fetchByInterval();
     },
   },
 
@@ -684,6 +761,8 @@ export default {
     this.loadTweets();
     this.sortCapTweets();
     this.setupTwitterTrackers();
+    this.setupTwitterInterval();
+    this.fetchByInterval();
     this.$bus.on( 'resetNews', this.resetTweets );
     // set new tweets as read when going away from page
     document.body.setAttribute( 'tabindex', '0' ); // chrome fix
@@ -736,7 +815,7 @@ export default {
     .twitter-accounts-list {
       overflow-y: auto;
       min-width: 300px;
-      max-height: 300px;
+      max-height: 302px;
 
       .twitter-accounts-item {
         padding: .5em 1em;
@@ -790,7 +869,7 @@ export default {
     .newspage-chart-content {
       overflow: hidden;
       overflow-y: auto;
-      max-height: 316px;
+      max-height: 325px;
 
       & > .newspage-chart-row:nth-child( odd ) {
         background-color: rgba( #000, 0.085 );
