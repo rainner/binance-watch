@@ -125,17 +125,15 @@ module.exports = {
     }
 
     // sentiment string params
-    let params                 = [ '',  'Neutral',  'e-confused eLeft text-info' ];
+    let params                 = [ '',  'Neutral',  'icon-help iconLeft text-info' ];
     // positive
-    if ( score ===  1 ) params = [ '+', 'Ok', 'e-confused eLeft text-warning' ];
-    if ( score >    1 ) params = [ '+', 'Good', 'e-happy eLeft text-success' ];
-    if ( score >    9 ) params = [ '+', 'Positive', 'e-love eLeft text-gain' ];
-    if ( score >   19 ) params = [ '+', 'Great', 'e-rocket eLeft text-gain' ];
+    if ( score ===  1 ) params = [ '+', 'Ok',       'icon-help iconLeft text-success' ];
+    if ( score >    1 ) params = [ '+', 'Positive', 'icon-like iconLeft text-success' ];
+    if ( score >   10 ) params = [ '+', 'Positive', 'icon-like iconLeft text-gain' ];
     // negative
-    if ( score === -1 ) params = [ '-', 'Ok', 'e-confused eLeft text-warning' ];
-    if ( score <   -1 ) params = [ '-', 'Bad', 'e-sad eLeft text-danger' ];
-    if ( score <   -9 ) params = [ '-', 'Negative', 'e-hate eLeft text-loss' ];
-    if ( score <  -19 ) params = [ '-', 'Rekt', 'e-siren eLeft text-loss' ];
+    if ( score === -1 ) params = [ '-', 'Ok',       'icon-help iconLeft text-danger' ];
+    if ( score <   -1 ) params = [ '-', 'Negative', 'icon-dislike iconLeft text-danger' ];
+    if ( score <  -10 ) params = [ '-', 'Negative', 'icon-dislike iconLeft text-loss' ];
 
     // build sentiment info
     let [ sign, word, styles ] = params;
