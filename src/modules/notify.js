@@ -10,18 +10,19 @@ export default class Notify {
   constructor( options ) {
     this._alarms   = {};
     this._queue    = [];
+    this._notices  = [];
     this._callback = null;
     this._options  = {
       // key used for storege data
       storeKey: 'price_alarms_data',
       // default notification image file
       imageFile: 'public/images/notification.png',
+      // toggle notification sound
+      soundEnabled: true,
       // audio file to play on with notifications
       soundFile: 'public/audio/audio_3.mp3',
       // volume of notification sound ( 0 - 1 )
       soundVolume: 1,
-      // toggle notification sound
-      soundEnabled: true,
     };
     this.setOptions( options );
     this._watchQueue();
@@ -119,8 +120,8 @@ export default class Notify {
       if ( curPrice > a.alarmPrice ) diff = 'more than';
       if ( curPrice < a.alarmPrice ) diff = 'less than';
 
-      let title = [ '⏰ ', a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
-      let info  = a.symbol +' is now '+ diff +' your alert price of '+ a.alarmPrice +' '+ a.asset +'.';
+      let title = [ a.symbol, 'price', a.arrow, curPrice, a.asset ].join( ' ' );
+      let info  = [ a.symbol, 'is now', diff, 'your alert price of', a.alarmPrice, a.asset +'.' ].join( ' ' );
 
       this.deleteAlarm( a.symbol, a.id );
       this.add( title, info, a.image );
@@ -148,23 +149,53 @@ export default class Notify {
     });
   }
 
-  // create notifications from the queue on a timer
-  _watchQueue() {
-    setTimeout( this._watchQueue.bind( this ), 500 );
-    if ( !this.canNotify() || !this._queue.length ) return;
-
-    let { id, time, title, body, icon, link } = this._queue.shift();
-    let a = new Notification( title, { body, icon } );
-
-    if ( link && typeof link === 'string' ) {
-      a.addEventListener( 'click', e => { e.preventDefault(); window.open( link, '_blank' ); } );
-    }
-    if ( link && typeof link === 'function' ) {
-      a.addEventListener( 'click', link );
-    }
+  // play notification sound if enabled
+  playSound() {
     if ( this._options.soundEnabled ) {
       utils.playAudio( this._options.soundFile, this._options.soundVolume );
     }
+  }
+
+  // limit visible notifications to a fixed number
+  _cleanupNotifications() {
+    let limit = 3;
+    if ( this._notices.length <= limit ) return;
+    for ( let i = 0; i < ( this._notices.length - limit ); ++i ) {
+      this._notices[ i ].close(); // trigger close event
+    }
+  }
+
+  // create notifications from the queue on a timer
+  _watchQueue() {
+    this._cleanupNotifications();
+    setTimeout( this._watchQueue.bind( this ), 500 );
+    if ( !this.canNotify() || !this._queue.length ) return;
+
+    // create new notification
+    let { id, time, title, body, icon, link } = this._queue.shift();
+    let a = new Notification( title, { body, icon, tag: id } );
+    setTimeout( () => a.close(), 5000 );
+
+    // keep track of visible notifications
+    a.addEventListener( 'show', e => {
+      if ( !e || !e.target || !e.target.tag ) return;
+      this.playSound();
+    });
+    // remove notification from local array when it closes
+    a.addEventListener( 'close', e => {
+      if ( !e || !e.target || !e.target.tag ) return;
+      this._notices = this._notices.filter( a => a.tag !== e.target.tag );
+    });
+    // convert url string to clickable link
+    if ( link && typeof link === 'string' ) {
+      a.addEventListener( 'click', e => { e.preventDefault(); window.open( link, '_blank' ); } );
+    }
+    // custom click handler
+    if ( link && typeof link === 'function' ) {
+      a.addEventListener( 'click', link );
+    }
+    // add to tracker
+    this._notices.push( a );
   }
 
 }
