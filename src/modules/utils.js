@@ -49,10 +49,11 @@ module.exports = {
     vol = ( vol > 1 || vol < 0 ) ? 1 : vol;
     // load and play audio
     let audio = new Audio();
-    audio.addEventListener( 'canplaythrough', e => audio.play() );
-    audio.currentTime = 0;
-    audio.volume = vol;
     audio.src = this.fullUrl( file );
+    audio.volume = vol;
+    audio.crossOrigin = 'anonymous';
+    audio.addEventListener( 'canplaythrough', e => audio.play() );
+    audio.load();
   },
 
   // to trimmed string
