@@ -83,7 +83,7 @@ module.exports = {
 }
 
 if ( isProd ) {
-  module.exports.devtool = '#source-map'
+  // module.exports.devtool = '#source-map'
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': {
