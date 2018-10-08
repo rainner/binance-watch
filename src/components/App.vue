@@ -303,7 +303,7 @@ export default {
     socketNotify( message ) {
       if ( document.hasFocus() ) return;
       let d = new Date();
-      this.$notify.add( '📡 Socket Status', message +' \nNow: '+ d.toLocaleString() );
+      this.$notify.add( 'Socket Status', message +' \nNow: '+ d.toLocaleString() );
     },
 
     // when socket connection opens

@@ -69,7 +69,7 @@ export default {
 
     // format info string
     formatInfo( info ) {
-      return String( info || '' ).replace( /\n+/g, ' | ' );
+      return String( info || '' ).replace( /[\r\n]+/g, ', ' ) + '.';
     }
   },
 }

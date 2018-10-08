@@ -111,7 +111,7 @@
                 </div>
 
                 <div class="push-bottom">
-                  <div class="form-label push-bottom push-small">Total number fo tweets to store</div>
+                  <div class="form-label push-bottom push-small">Total number of tweets to store</div>
                   <div class="flex-row flex-middle flex-stretch">
                     <input class="flex-1 push-right" type="range" min="10" max="1000" step="1" v-model="options.news.total" @change="applyOptions" />
                     <span class="text-bright">{{ options.news.total }}</span>
@@ -136,7 +136,7 @@
     </section>
 
     <!-- chart section -->
-    <section class="push-bottom" v-if="chartData.length">
+    <section class="push-bottom">
       <div class="container">
         <div class="card newspage-chart">
           <div class="newspage-chart-header">
@@ -169,7 +169,14 @@
               </div>
             </div>
           </div>
-          <div class="newspage-chart-content">
+
+          <div class="newspage-chart-content pad-top pad-bottom text-center text-info fx-on fx-fade-in" v-if="!chartData.length">
+            <i class="icon-chart-line text-huge "></i> <br />
+            <span>Sentiment analysis data for each Binance token based on loaded tweets.</span> <br />
+            <span v-html="sentimentInfoText"></span>
+          </div>
+
+          <div class="newspage-chart-content fx-on fx-fade-in" v-if="chartData.length">
             <div class="newspage-chart-row flex-row flex-middle flex-stretch clickable" v-for="d in chartList" :key="d.token" @click="applyFilters( d.search, '' )">
               <div class="newspage-chart-md text-clip text-bright"><i class="icon-search text-grey"></i> {{ d.name }}</div>
               <div class="newspage-chart-sm text-clip text-default if-small">{{ d.token }}</div>
@@ -360,6 +367,26 @@ export default {
       if ( t && t.handle ) return '@'+ t.handle;
       return 'All Sources ('+ l +')';
     },
+
+    // calculate default message for sentiment chart
+    sentimentInfoText() {
+      // no twitter handles to fetch from
+      if ( !this.twitterHandlers.length ) {
+        return 'Not tracking any Twitter accounts, use the Sources menu above to track accounts...';
+      }
+      // option enabled, but no token data loaded yet
+      if ( this.options.news.refetch && !this.priceData.length ) {
+        return 'Currently waiting for tokens to load from the Binance socket API...';
+      }
+      // option enabled, but no tweets data loaded yet
+      if ( this.options.news.refetch && !this.twitterEntries.length ) {
+        return 'Currently waiting for tweets data to load for tracked Twitter accounts...';
+      }
+      // option to fetch disabled and there are no tweets to scan
+      if ( !this.options.news.refetch && !this.twitterEntries.length ) {
+        return 'No tweets loaded, use the <i class="icon-config"></i> Gear icon to enable fetching.';
+      }
+    },
   },
 
   // custom methods
@@ -451,8 +478,10 @@ export default {
       });
 
       // add other things to the list
-      tokens.push( { token: 'Crypto', name: 'Cryptocurrency', route: '/symbol/BTCUSDT' } );
-      tokens.push( { token: 'XBT', name: 'BTC Contract', route: '/symbol/BTCUSDT' } );
+      if ( this.priceData.length ) {
+        tokens.push( { token: 'Crypto', name: 'Cryptocurrency', route: '/symbol/BTCUSDT' } );
+        tokens.push( { token: 'XBT', name: 'BTC Contract', route: '/symbol/BTCUSDT' } );
+      }
 
       // build sentiment
       tokens.forEach( p => {
@@ -756,10 +785,14 @@ export default {
     },
   },
 
-  // component mounted
-  mounted() {
+  // component before mount
+  beforeMount() {
     this.loadTweets();
     this.sortCapTweets();
+  },
+
+  // component mounted
+  mounted() {
     this.setupTwitterTrackers();
     this.setupTwitterInterval();
     this.fetchByInterval();

@@ -13,15 +13,15 @@
 
       <div class="flex-row flex-middle flex-stretch">
         <div class="form-input push-right">
-          <span class="text-grey push-right">Sound</span>
-          <span class="text-grey icon-down-open"></span>
-          <select v-model="options.audio.file" @change="playAudio( options.audio.file )">
+          <div class="text-grey text-nowrap">Sound:&nbsp;<i class="icon-down-open">&nbsp;</i></div>
+          <select class="flex-1 push-right" v-model="options.audio.file" @change="applyOptions( true )">
             <option v-for="a of audioList" :key="a.name" :value="a.file">{{ a.name }}</option>
           </select>
+          <button class="text-bright icon-play" @click="playSound()"></button>
         </div>
         <div class="form-input">
-          <span class="text-grey push-right">Volume</span>
-          <input type="range" min="0" max="1" step="0.1" v-model="options.audio.volume" @change="applyOptions" />
+          <span class="text-grey push-right">Volume:</span>
+          <input type="range" min="0.1" max="1.0" step="0.1" v-model="options.audio.volume" @change="applyOptions( true )" />
           <span class="push-left">{{ options.audio.volume }}</span>
         </div>
       </div>
@@ -180,16 +180,17 @@ export default {
   // custom methods
   methods: {
 
-    // apply options
-    applyOptions() {
-      let options = Object.assign( {}, this.options, { proxy: this.corsProxy } );
-      this.$bus.emit( 'setOptions', options );
+    // play selected notification sound
+    playSound() {
+      let { file, volume } = this.options.audio;
+      utils.playAudio( file, volume );
     },
 
-    // play audio file
-    playAudio( file ) {
-      utils.playAudio( file, this.options.audio.volume );
-      this.applyOptions();
+    // apply options
+    applyOptions( audio ) {
+      let options = Object.assign( {}, this.options, { proxy: this.corsProxy } );
+      this.$bus.emit( 'setOptions', options );
+      if ( audio ) this.playSound();
     },
 
     // add proxy to options list

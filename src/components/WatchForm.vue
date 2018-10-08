@@ -24,10 +24,18 @@
           <hr />
 
           <!-- form inputs -->
-          <form class="watchform-controls flex-row flex-middle flex-space flex-wrap" @submit.prevent @change="formChange">
+          <form class="watchform-controls flex-row flex-middle flex-stretch flex-wrap" @submit.prevent @change="formChange">
+
+            <button
+              type="button"
+              class="form-btn iconLeft"
+              :class="{ 'bg-danger-hover icon-stop': active, 'bg-success-hover icon-play': !active }"
+              @click.prevent="toggleWatch">
+                {{ active ? 'Watching '+ elapsed +' ...' : 'Start watching ...' }}
+            </button>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="icon-down-open iconFaded">
+              <div class="icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.asset">
                   <option v-for="asset in assetsList" :key="asset" :value="asset">{{ asset }} Pairs</option>
                 </select>
@@ -35,7 +43,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.priceType">
                   <option value="change">Price Change</option>
                   <option value="gain">Price Gain</option>
@@ -47,7 +55,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.volumeType">
                   <option value="change">Vol Change</option>
                   <option value="gain">Vol Gain</option>
@@ -59,7 +67,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.timeCheck">
                   <option value="less">Within last</option>
                   <option value="more">Wait past</option>
@@ -70,7 +78,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.priceCheck">
                   <option value="above">Price Above</option>
                   <option value="below">Price Below</option>
@@ -81,7 +89,7 @@
             </div>
 
             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.volumeCheck">
                   <option value="above">Vol Above</option>
                   <option value="below">Vol Below</option>
@@ -91,8 +99,8 @@
               <div class="text-grey">{{ watchOptions.asset }}</div>
             </div>
 
-             <div class="form-input text-nowrap push-bottom">
-              <div class="push-right icon-down-open iconFaded">
+             <div class="form-input text-nowrap push-bottom flex-1">
+              <div class="push-right icon-down-open iconFaded iconLeft">
                 <select v-model="watchOptions.filterType">
                   <option value="allow">Allow Tokens</option>
                   <option value="deny">Deny Tokens</option>
@@ -100,14 +108,6 @@
               </div>
               <input class="push-right" type="text" placeholder="TOKEN1, TOKEN2, ..." v-model="watchOptions.filterText"  />
             </div>
-
-            <button
-              type="button"
-              class="form-btn iconLeft"
-              :class="{ 'bg-danger-hover icon-stop': active, 'bg-success-hover icon-play': !active }"
-              @click.prevent="toggleWatch">
-                {{ active ? 'Watching '+ elapsed +' ...' : 'Start watching ...' }}
-            </button>
 
           </form>
 
@@ -378,19 +378,14 @@ export default {
           if ( timeCheck === 'more' && t < timeLimit ) return;
         }
 
-        // resolve emoji title icons
-        let emoji = '⚠️ ';
-        if ( p.percent >= 5 ) emoji = '🚀 ';
-        if ( p.percent <= -5 ) emoji = '🆘 ';
-
         // we have a hit, prep notification info
         let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
         let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
-        let elapsed   = 'Change ⌚ '+ utils.elapsed( t );
+        let elapsed   = 'Last '+ utils.elapsed( t );
         let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
         let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
-        let title     = [ emoji, p.name, '('+ p.pair +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
-        let info      = [ elapsed, curPrice, curVol ].join( '\n' );
+        let title     = [ p.name, '('+ p.pair +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );
+        let info      = [ curPrice, curVol, elapsed ].join( '\n' );
         let icon      = utils.fullUrl( p.image );
 
         // norify, add to history and mail queue
