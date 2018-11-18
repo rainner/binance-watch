@@ -13,7 +13,6 @@ textarea {
   color: inherit;
   outline: none;
   background: transparent;
-  width: auto;
 }
 
 // inputs
@@ -21,32 +20,31 @@ input,
 textarea {
   display: block;
   width: 100%;
-  flex: 1;
+  min-width: 0;
 }
 
-// buttons
-button,
-input[type="button"],
-input[type="reset"],
-input[type="submit"] {
-  cursor: pointer;
+// select options
+select {
+  & > option {
+    color: $colorDocument !important;
+  }
 }
 
 // clickable controls
 select,
 option,
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"],
 input[type="range"],
 input[type="date"] {
   cursor: pointer;
 }
 
-// select options
-select > option {
-  color: $colorDocument !important;
-}
-
 // range sliders
 @mixin sliderTrack {
+  display: block;
   width: 100%;
   height: 3px;
   background: $colorDocument;
@@ -56,6 +54,7 @@ select > option {
   border: 0 !important;
 }
 @mixin sliderThumb {
+  display: block;
   width: 1.2em;
   height: 1.2em;
   margin: -.55em 0 0 0;
@@ -67,6 +66,7 @@ select > option {
   border: 0 !important;
 }
 input[type="range"] {
+  width: 100%;
   // track
   &::-webkit-slider-runnable-track { @include sliderTrack; }
   &::-moz-range-track { @include sliderTrack; }
@@ -103,13 +103,13 @@ input[type="range"] {
   padding: ( $padSpace / 2 ) $padSpace;
   line-height: inherit;
   border-radius: 100px;
-  background-color: $colorDefault;
-  color: $colorDefaultText;
+  background-color: $colorInfo;
+  color: $colorInfoText;
   box-shadow: $shadowPaper;
   @include textNoWrap;
 
   &:hover {
-    background-color: darken( $colorDefault, 5% );
+    background-color: darken( $colorInfo, 5% );
   }
 }
 
@@ -117,26 +117,25 @@ input[type="range"] {
 .form-input {
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: stretch;
-  overflow: hidden;
-  position: relative;
   padding: ( $padSpace / 2 ) $padSpace;
   line-height: inherit;
   color: $colorBright;
   background-color: darken( $colorDocument, 2% );
   border-radius: 100px;
   box-shadow: $shadowHollow;
-  flex: auto;
-  @include textClip;
 
   &:hover, &:active, &:focus {
     background-color: darken( $colorDocument, 4% );
   }
+  &.light {
+    background-color: lighten( $colorDocument, 4% );
 
-  & > select > option {
-    color: $colorDocument;
-    padding: 0 1em 0 0;
+    &:hover {
+      background-color: lighten( $colorDocument, 6% );
+    }
   }
 }
 textarea.form-input {

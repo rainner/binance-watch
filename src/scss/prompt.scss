@@ -3,46 +3,33 @@
  */
 .prompt-overlay {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   position: fixed;
   overflow: hidden;
-  pointer-events: none;
-  cursor: auto;
-  background-color: $colorOverlay;
-  padding: $padSpace;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
+  background-color: $colorOverlay;
+  z-index: ( $zindexAlerts + 100 );
+  pointer-events: none;
   opacity: 0;
-  z-index: $zindexModals;
 
   .prompt-container {
-    display: block;
-    overflow: hidden;
-    position: relative;
-    cursor: auto;
-    width: 100%;
-    max-width: 400px;
-    background-color: lighten( $colorDocument, 20% );
+    margin: 0 auto;
+    width: calc( 100% - ( #{$padSpace} * 2 ) );
+    max-width: calc( #{$sizeSmall} + ( #{$padSpace} * 2 ) );
+    background-color: lighten( $colorDocumentLight, 4% );
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
     transform: scale( 0.5 );
 
     .prompt-title {
-      line-height: 1em;
+      color: $colorBright;
       padding: $padSpace;
       border-bottom: $lineWidth $lineStyle $lineColor;
-
-      &:before {
-        display: inline-block;
-        width: 1em;
-        margin: 0 0.5em 0 0;
-        font-family: "fontello";
-        content: "\e811";
-      }
     }
 
     .prompt-message {
@@ -57,12 +44,12 @@
       min-width: 100%;
       margin: 0;
       padding: $padSpace;
-      color: $colorGrey;
+      color: darken( $colorPrimary, 6% );
       background-color: transparent;
       box-shadow: none;
 
       &:active, &:focus {
-        color: $colorText;
+        color: $colorPrimary;
       }
     }
 
@@ -71,7 +58,7 @@
       flex-direction: row;
       align-items: center;
       justify-content: stretch;
-      border-top: $lineWidth $lineStyle $colorPrimary;
+      border-top: $lineWidth $lineStyle $lineColor;
 
       button {
         display: block;
@@ -88,7 +75,7 @@
       }
       .prompt-accept-btn {
         background-color: rgba( 0, 0, 0, 0.05 );
-        color: darken( $colorSuccess, 10% );
+        color: $colorGain;
 
         &:hover, &:active, &:focus {
           background-color: rgba( 0, 0, 0, 0 );
@@ -96,7 +83,7 @@
       }
       .prompt-cancel-btn {
         background-color: rgba( 0, 0, 0, 0.15 );
-        color: $colorDanger;
+        color: $colorLoss;
 
         &:hover, &:active, &:focus {
           background-color: rgba( 0, 0, 0, 0.1 );

@@ -21,6 +21,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+// placeholder width
+.iconWidth {
+  width: $iconSize;
+}
+
 // spin animation
 .iconSpin:before {
   transition: none;
@@ -46,13 +51,13 @@
 
 // large icon
 .iconLarge:before {
-  font-size: 400%;
+  font-size: 300%;
   line-height: 1em;
 }
 
 // huge icon
 .iconHuge:before {
-  font-size: 600%;
+  font-size: 500%;
   line-height: 1em;
 }
 

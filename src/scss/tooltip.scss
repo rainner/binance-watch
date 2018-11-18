@@ -40,7 +40,7 @@ $tipTextColor: lighten( $colorDocument, 60% );
   box-shadow: $shadowBold;
   left: 0;
   top: 0;
-  z-index: ( $zindexModals + 10 );
+  z-index: ( $zindexAlerts + 10 );
 
   &.tooltip-left { animation: tooltipShowLeft $fxSpeed $fxEaseBounce forwards; }
   &.tooltip-right { animation: tooltipShowRight $fxSpeed $fxEaseBounce forwards; }

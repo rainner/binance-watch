@@ -21,9 +21,43 @@
   opacity: 0.0000000000001;
 }
 
+// faded transparent
+.transparent {
+  opacity: 0;
+}
+
 // background color for testing elements
 .bgtest {
   background-color: rgba( pink, .1 ) !important;
+}
+
+// neutral color for price change
+.app-wrap {
+  .color { color: $colorGrey; }
+  polyline { stroke: $colorGrey; }
+  circle { fill: $colorGrey; }
+
+  // gain color for price chage
+  .gain .color { color: $colorGain; }
+  .gain polyline { stroke: $colorGain; }
+  .gain circle { fill: $colorGain; }
+
+  // loss color for price change
+  .loss .color { color: $colorLoss; }
+  .loss polyline { stroke: $colorLoss; }
+  .loss circle { fill: $colorLoss; }
+
+  // position helpers
+  .pos-abs { position: absolute; }
+  .pos-rel { position: relative; }
+}
+
+// common dark faded content wells
+.well {
+  position: relative;
+  padding: ( $padSpace * .4 ) ( $padSpace * .8 );
+  background-image: radial-gradient( ellipse at top left, rgba( black, 0.2 ) 0%, rgba( black, 0.01 ) 100% );
+  border-radius: $lineJoin;
 }
 
 // common inner container
@@ -38,10 +72,8 @@
 
 // common card style
 .card {
-  padding: $padSpace;
   background-color: $colorDocumentLight;
   border-radius: $lineJoin;
-  box-shadow: $shadowPaper;
 }
 
 // horizontail container for inline nav links
@@ -52,6 +84,112 @@
   margin: 0 0 $padSpace 0;
   padding: $padSpaceSmall $padSpace;
   line-height: 2em;
+}
+
+// common page wrapper to clear fixed topbar
+.page-wrap {
+  position: relative;
+  padding-top: calc( #{$topbarHeight} + 4.4em );
+  padding-bottom: $topbarHeight;
+  min-height: 100vh;
+
+  .page-topbar {
+    position: fixed;
+    padding: calc( #{$topbarHeight} + 1em ) 0 1em 0;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background-color: rgba( $colorDocument, 0 );
+    z-index: ( $zindexElements - 1 );
+  }
+  // collapsed mode
+  &.collapsed {
+    .page-topbar {
+      transform: translateY( -#{$topbarHeight} );
+    }
+  }
+  // opaque mode
+  &.opaque {
+    .page-topbar {
+      background-color: rgba( 0, 0, 0, 0.85 );
+      box-shadow: $shadowBold;
+    }
+  }
+}
+
+// common lists used in pages
+.pagelist-wrap {
+  position: relative;
+
+  .pagelist-item {
+    margin: 0 0 ( $padSpace * .4 ) 0;
+    padding: ( $padSpace * .6 ) $padSpace;
+    background-color: $colorDocumentLight;
+    border-radius: $lineJoin;
+
+    &:hover {
+      background-color: lighten( $colorDocumentLight, 2% );
+    }
+  }
+}
+
+// common table-like lists
+.tablelist-wrap {
+  position: relative;
+  min-width: 320px;
+
+  .tablelist-header {
+    padding: 1em;
+  }
+  .tablelist-content {
+    overflow: hidden;
+    overflow-y: auto;
+    max-height: 300px;
+    border-top: $lineWidth $lineStyle $lineColor;
+    border-bottom: $lineWidth $lineStyle $lineColor;
+
+    & > .tablelist-row {
+      padding: ( $padSpace * .2 ) 1em;
+      background-color: rgba( black, 0.11 );
+    }
+    & > .tablelist-row:nth-child( odd ) {
+      background-color: rgba( black, 0.15 );
+    }
+    & > .tablelist-row:hover {
+      background-color: rgba( black, 0.25 );
+    }
+  }
+  @for $i from 1 through 10 {
+    $s: ( 10 * $i );
+    $p: ( 10% * $i );
+    .tablelist-#{$s} { flex: $p; width: $p; }
+  }
+}
+
+// percent bars
+.percent-bar {
+  display: block;
+  overflow: hidden;
+  height: 5px;
+  background-color: rgba( $colorInfo, 0.25 );
+  border-radius: $lineJoin;
+
+  & > :first-child {
+    display: block;
+    height: 5px;
+    border-radius: $lineJoin;
+  }
+}
+
+// rounded images
+.img-round {
+  display: block;
+  overflow: hidden;
+  background-color: $colorGrey;
+  text-align: center;
+  line-height: 100%;
+  border-radius: 100px;
+  color: $colorDocument;
 }
 
 // alert circle within elements
@@ -79,10 +217,12 @@
   position: relative;
 
   &:before {
-    content: '⏳';
+    content: '\e825';
     display: block;
     position: absolute;
     pointer-events: none;
+    color: $colorPrimary;
+    font-family: 'fontello';
     font-size: 120%;
     right: -0.2em;
     top: -0.2em;

@@ -50,6 +50,9 @@
 /**
  * Flex items sizing
  */
+.flex-a {
+  flex: auto;
+}
 .flex-1 {
   flex: 1;
 }
@@ -64,6 +67,11 @@
 }
 .flex-5 {
   flex: 5;
+}
+@for $i from 1 through 10 {
+  $s: ( 10 * $i );
+  $p: ( 10% * $i );
+  .flex-#{$s} { flex: $p; width: $p; }
 }
 
 /**
@@ -83,6 +91,7 @@
   display: block;
   position: relative;
 
+  & > .flex-header,
   & > .flex-item {
     display: flex;
     flex-direction: row;
@@ -93,10 +102,9 @@
     padding: ( $padSpace / 2 );
     border-radius: $lineJoin;
     background-color: rgba( 0, 0, 0, 0.1 );
-
-    &:hover {
-      background-color: rgba( 0, 0, 0, 0.3 );
-    }
+  }
+  & > .flex-item:hover {
+    background-color: rgba( 0, 0, 0, 0.3 );
   }
 }
 
@@ -104,23 +112,17 @@
  * Basic grid
  */
 .flex-grid {
-  display: flex;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  justify-content: stretch;
-  width: 100%;
+  display: grid;
+  grid-gap: $padSpace;
+  grid-template-columns: repeat( auto-fill, minmax( 140px, 1fr ) );
 
-  .flex-grid-item {
-    margin: 0 0 $padSpace 0;
+  &.flex-grid-sm {
+    grid-template-columns: repeat( auto-fill, minmax( 200px, 1fr ) );
   }
-
-  @media #{$screenMedium} {
-    flex-direction: row;
-
-    .flex-grid-item {
-      margin: 0 $padSpace 0 0;
-    }
+  &.flex-grid-md {
+    grid-template-columns: repeat( auto-fill, minmax( 300px, 1fr ) );
+  }
+  &.flex-grid-lg {
+    grid-template-columns: repeat( auto-fill, minmax( 400px, 1fr ) );
   }
 }
-

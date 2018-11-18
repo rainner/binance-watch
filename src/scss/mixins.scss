@@ -38,66 +38,49 @@
   border-bottom: $lineWidth solid rgba( 0, 0, 0, 0.1 );
 }
 
-// add light border to sides of containers
-@mixin borderEffect {
-  border-left: $lineWidth $lineStyle $lineColor;
-  border-right: $lineWidth $lineStyle $lineColor;
-}
-
-// common top header bar styles
-@mixin headerBar {
-  position: relative;
-  vertical-align: middle;
-  padding: 0 $padSpace;
-  height: $topbarHeight;
-  background-color: $colorPrimary;
-  border-bottom: $lineWidth $lineStyle rgba( 0, 0, 0, 0.1 );
-  color: $colorBright;
-  box-shadow: $shadowPaper;
-  z-index: 100;
-
-  .clickable:hover {
-    color: lighten( $colorPrimary, 50% );
-  }
-}
-
-// common outer page wrapper
-@mixin contentWrapper {
-  display: block;
-  position: relative;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-  height: calc( 100vh - #{$topbarHeight} );
-}
-
 // common scrollable page wrapper
 @mixin contentScroller {
   @include contentWrapper;
   overflow-y: auto;
 }
 
-// common container box
-@mixin containerBox {
-  padding: $padSpace;
-  background-color: lighten( $colorDocument, 10% );
-  box-shadow: $shadowPaper;
-  border-radius: $lineJoin;
-  // @include borderAccent;
-}
-
-// common small headings
-@mixin smallHeading {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 $padSpace 0;
+// common dropdown/select style containers
+@mixin commonDropdown {
+  display: none;
+  position: absolute;
+  transition: none;
+  left: 0;
+  top: 0;
+  min-width: 100px;
+  opacity: 0;
+  margin: 0;
   padding: 0;
-  height: ( $padSpace * 2 );
-  font-size: 75%;
-  font-weight: normal;
-  line-height: 1.4em;
+  background-color: lighten( $colorDocument, 8% );
+  border-radius: $lineJoin;
+  box-shadow: $shadowBold;
+  z-index: ( $zindexAlerts + 10 );
+
+  &.left { // show from left
+    left: 0;
+    right: auto;
+  }
+  &.right { // show from right
+    left: auto;
+    right: 0;
+  }
+  &.top { // show from top
+    top: 40%;
+    bottom: auto;
+    animation: slideUp ( $fxSpeed / 2 ) $fxEase forwards;
+  }
+  &.bottom { // show from bottom
+    top: auto;
+    bottom: 40%;
+    animation: slideDown ( $fxSpeed / 2 ) $fxEase forwards;
+  }
+  &.visible {
+    display: block;
+  }
 }
 
 // fullscreen modifiers

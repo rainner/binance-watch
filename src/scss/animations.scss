@@ -1,12 +1,6 @@
-// props
-$fxSpeedOffset: calc( #{$fxSpeed} / 4 );
-$fxSlideDist: 100px;
-$fxShrinkScale: .5;
-$fxGrowScale: 1.5;
-$fxRotateAmount: 8deg;
-
 // animations on
-.fx-on {
+.fx {
+  position: relative;
   animation-direction: normal;
   animation-duration: $fxSpeed;
   animation-timing-function: $fxEase;
@@ -14,8 +8,18 @@ $fxRotateAmount: 8deg;
   animation-fill-mode: forwards;
 }
 
+// disable transitions on element
+.fx-notx {
+  transition: none !important;
+}
+
+// convert inline elements into inline-block
+.fx-ibk {
+  display: inline-block !important;
+}
+
 // effect delays
-@for $i from 1 through 5 {
+@for $i from 1 through 8 {
   .fx-delay-#{$i} {
     animation-delay: calc( #{$fxSpeedOffset} * #{$i} );
   }
@@ -71,6 +75,8 @@ $fxRotateAmount: 8deg;
   100% { opacity: 1; transform: scale( 1 ); }
 }
 .fx-drop-in {
+  opacity: 0;
+  transform: scale( $fxGrowScale );
   animation-name: dropIn;
 }
 
@@ -80,15 +86,19 @@ $fxRotateAmount: 8deg;
   100% { opacity: 1; transform: scale( 1 ); }
 }
 .fx-zoom-in {
+  opacity: 0;
+  transform: scale( $fxShrinkScale );
   animation-name: zoomIn;
 }
 
-// fade-out animation (modal, alert, etc)
+// zoom-out animation (modal, alert, etc)
 @keyframes zoomOut {
     0% { opacity: 1; transform: scale( 1 ); }
   100% { opacity: 0; transform: scale( $fxShrinkScale ); }
 }
 .fx-zoom-out {
+  opacity: 1;
+  transform: scale( 1 );
   animation-name: zoomOut;
 }
 
@@ -98,15 +108,19 @@ $fxRotateAmount: 8deg;
   100% { opacity: 1; transform: translateX( 0 ); }
 }
 .fx-slide-left {
+  opacity: 0;
+  transform: translateX( $fxSlideDist );
   animation-name: slideLeft;
 }
 
 // slide in to the right
 @keyframes slideRight {
-    0% { opacity: 0; transform: translateX( calc( 0 - #{$fxSlideDist} ) ); }
+    0% { opacity: 0; transform: translateX( calc( -#{$fxSlideDist} ) ); }
   100% { opacity: 1; transform: translateX( 0 ); }
 }
 .fx-slide-right {
+  opacity: 0;
+  transform: translateX( calc( -#{$fxSlideDist} ) );
   animation-name: slideRight;
 }
 
@@ -116,15 +130,19 @@ $fxRotateAmount: 8deg;
   100% { opacity: 1; transform: translateY( 0 ); }
 }
 .fx-slide-up {
+  opacity: 0;
+  transform: translateY( $fxSlideDist );
   animation-name: slideUp;
 }
 
 // slide in to the bottom
 @keyframes slideDown {
-    0% { opacity: 0; transform: translateY( calc( 0 - #{$fxSlideDist} ) ); }
+    0% { opacity: 0; transform: translateY( calc( -#{$fxSlideDist} ) ); }
   100% { opacity: 1; transform: translateY( 0 ); }
 }
 .fx-slide-down {
+  opacity: 0;
+  transform: translateY( calc( -#{$fxSlideDist} ) );
   animation-name: slideDown;
 }
 
@@ -135,6 +153,7 @@ $fxRotateAmount: 8deg;
   100% { opacity: 0.7; }
 }
 .fx-pulse {
+  opacity: 0.7;
   animation-name: pulseFade;
   animation-duration: 1s;
   animation-timing-function: linear;

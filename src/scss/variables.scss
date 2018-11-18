@@ -14,7 +14,7 @@ $listSpace: 0.4em;
 // borders and lines
 $lineWidth: 2px;
 $lineStyle: solid;
-$lineColor: rgba( 255, 255, 255, 0.04 );
+$lineColor: rgba( white, 0.02 );
 $lineJoin: 6px;
 
 // common z-index values
@@ -37,51 +37,51 @@ $colorDocumentLight: lighten( $colorDocument, 3% );
 $colorDocumentDark: darken( $colorDocument, 6% );
 
 // default colors
-$colorDefault: #828a98;
-$colorDefaultText: #dae5ed;
+$colorDefault: lightgray;
+$colorDefaultText: darken( $colorDefault, 40% );
 
 // primary colors
-$colorGain: #74a700;
-$colorGainText: #f0fada;
+$colorGain: darken( yellowgreen, 10% );
+$colorGainText: darken( $colorGain, 40% );
 
 // primary colors
-$colorLoss: #d60360;
-$colorLossText: #ffe3f1;
+$colorLoss: desaturate( red, 30% );
+$colorLossText: darken( $colorLoss, 40% );
 
 // primary colors
-$colorPrimary: #f0b90b;
+$colorPrimary: desaturate( orange, 10% );
 $colorPrimaryText: darken( $colorPrimary, 40% );
 
 // secondary colors
-$colorSecondary: #20acea;
+$colorSecondary: steelblue;
 $colorSecondaryText: darken( $colorSecondary, 40% );
 
 // success colors
-$colorSuccess: #456730;
-$colorSuccessText: lighten( $colorSuccess, 40% );
+$colorSuccess: desaturate( olivedrab, 10% );
+$colorSuccessText: lighten( $colorSuccess, 45% );
 
 // warning colors
-$colorWarning: #826d2b;
+$colorWarning: desaturate( orange, 30% );
 $colorWarningText: lighten( $colorWarning, 40% );
 
 // danger colors
-$colorDanger: #8c3333;
+$colorDanger: desaturate( firebrick, 10% );
 $colorDangerText: lighten( $colorDanger, 40% );
 
 // info colors
-$colorInfo: #425470;
-$colorInfoText: lighten( $colorInfo, 40% );
+$colorInfo: darken( slategray, 15% );
+$colorInfoText: lighten( $colorInfo, 45% );
 
 // grey colors
-$colorGrey: #4c5766;
+$colorGrey: lightslategray;
 $colorGreyText: lighten( $colorGrey, 40% );
 
 // bright colors
-$colorBright: #f0f0f0;
-$colorBrightText: #1f2833;
+$colorBright: aliceblue;
+$colorBrightText: darken( $colorBright, 40% );
 
 // other colors
-$colorText: #f0f0f0;
+$colorText: lightgray;
 $colorOverlay: rgba( 0, 0, 0, 0.5 );
 
 // common shadow styles
@@ -93,10 +93,15 @@ $shadowGlow: 0 0 10px rgba( 0, 0, 0, 0.2 );
 $shadowBold: 0 2px 12px rgba( 0, 0, 0, 0.4 );
 $shadowText: 1px 1px 0 rgba( 0, 0, 0, 0.3 );
 
-// common speed for most small ui transition animations
+// transition props
 $fxSpeed: 300ms;
 $fxEase: cubic-bezier( 0.215, 0.610, 0.355, 1.000 );
 $fxEaseBounce: cubic-bezier( 0.640, -0.280, 0.050, 1.405 );
+$fxSpeedOffset: calc( #{$fxSpeed} / 3 );
+$fxSlideDist: 20px;
+$fxShrinkScale: .4;
+$fxGrowScale: 1.4;
+$fxRotateAmount: 8deg;
 
 // screen sizes
 $sizeSmall: 420px;

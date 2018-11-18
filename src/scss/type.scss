@@ -92,6 +92,22 @@ ul {
   box-shadow: $shadowPaper;
 }
 
+// button style text wrappers
+.text-btn {
+  display: inline-block;
+  overflow: hidden;
+  position: relative;
+  font-size: 70%;
+  text-transform: uppercase;
+  vertical-align: top;
+  line-height: 2em;
+  padding: 0 .8em;
+  background: $colorDefault linear-gradient( 180deg, transparent, rgba( #000, 0.2 ) );
+  color: $colorDefaultText;
+  border-radius: 3px;
+  box-shadow: $shadowPaper;
+}
+
 // text display styles
 .text-reset {
   font-family: $fontFamily;
