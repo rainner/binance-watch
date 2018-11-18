@@ -2,13 +2,18 @@
  * Basic XHR ajax request module
  */
 import store from './store';
-import md5 from './md5';
+import logger from './logger';
+import utils from './utils';
 
 // ajax class
 export default class Ajax {
 
-  // constructor
+  /**
+   * Constructor
+   * @param {object}  options  Initial options
+   */
   constructor( options ) {
+    this._url = null;
     this._options = {
       // save response data to local store cache
       cache: false,
@@ -17,36 +22,65 @@ export default class Ajax {
       // proxy url to preppend to outgoing requests
       proxy: '',
     };
-    this._url = null;
     this.setOptions( options );
   }
 
-  // merge news options
+  /**
+   * Merge options
+   * @param {object}  options  Options object
+   */
   setOptions( options ) {
-    this._options = Object.assign( this._options, options );
+    Object.assign( this._options, options );
   }
 
-  // alias for get request
+  /**
+   * Convert object into a query string
+   * @param {object}  data  Key/Val data pairs
+   */
+  serializeData( data ) {
+    let q = [];
+    if ( typeof data === 'object' ) {
+      Object.keys( data ).forEach( k => {
+        q.push( encodeURIComponent( k ) +'='+ encodeURIComponent( data[ k ] ) );
+      });
+    }
+    return q.join( '&' );
+  }
+
+  /**
+   * GET request alias
+   */
   get( address, options ) {
     this.request( 'GET', address, options );
   }
 
-  // alias for post request
+  /**
+   * POST request alias
+   */
   post( address, options ) {
     this.request( 'POST', address, options );
   }
 
-  // alias for put request
+  /**
+   * PUT request alias
+   */
   put( address, options ) {
     this.request( 'PUT', address, options );
   }
 
-  // alias for delete request
+  /**
+   * DELETE request alias
+   */
   delete( address, options ) {
     this.request( 'DELETE', address, options );
   }
 
-  // main request method
+  /**
+   * AJAX request method
+   * @param {string}  method   Request method verb
+   * @param {string}  address  Endpoint URL
+   * @param {object}  options  Request options
+   */
   request( method, address, options ) {
     method  = String( method || '' ).toUpperCase();
     address = String( address || '' ).trim();
@@ -55,10 +89,11 @@ export default class Ajax {
     // setup options
     let isDone    = false;
     let type      = String( options.type || 'text' );
+    let proxy     = String( options.proxy || '' ).trim();
     let timeout   = parseInt( options.timeout ) || 0;
     let headers   = Object.assign( {}, options.headers );
     let cacheTime = parseInt( options.cache ) || 0; // seconds to be cached
-    let cacheKey  = options.prefix + md5( method +'|'+ address );
+    let cacheKey  = options.prefix + utils.unique( method +'|'+ address );
     let xhr       = new XMLHttpRequest();
 
     // setup callbacks
@@ -73,27 +108,28 @@ export default class Ajax {
     // check cache
     if ( cacheTime ) {
       const cacheData = store.getData( cacheKey );
-      if ( cacheData ) return onSuccess( xhr, 200, cacheData );
+      if ( cacheData ) {
+        onSuccess( xhr, 200, cacheData );
+        onDone( xhr, 200, cacheData );
+        isDone = true;
+        return;
+      }
     }
+
+    // resolve full request url
+    let fullUrl = utils.fullUrl( address );
+    try { this._url = new URL( fullUrl ); }
+    catch ( err ) {}
 
     // encode data for get requests
     if ( method === 'GET' && typeof options.data === 'object' ) {
       headers[ 'Content-type' ] = 'application/x-www-form-urlencoded';
-      address += '?' + this._encode( options.data );
+      fullUrl += '?' + this.serializeData( options.data );
       options.data = null;
     }
 
-    // add proxy to url if needed
-    if ( options.proxy && typeof options.proxy === 'string' ) {
-      address = options.proxy.trim() + address;
-    }
-
-    // build info about url
-    try { this._url = new URL( address ); }
-    catch ( err ) { this._url = null; }
-
     // init request handler
-    xhr.open( method, address, true );
+    xhr.open( method, proxy + fullUrl, true );
     xhr.responseType = type;
 
     // set timeout
@@ -119,7 +155,10 @@ export default class Ajax {
 
     // data load handler
     xhr.addEventListener( 'load', e => {
-      let { status, response, error, host } = this._responseParams( xhr, type );
+      let { status, response, error } = this._responseParams( 'load', xhr, type );
+
+      logger( status, method, fullUrl );
+      logger( response );
 
       if ( status && status < 400 ) {
         if ( cacheTime ) store.setData( cacheKey, response, cacheTime );
@@ -133,7 +172,7 @@ export default class Ajax {
 
     // request error handler
     xhr.addEventListener( 'error', e => {
-      let { status, response, error, host } = this._responseParams( xhr, type );
+      let { status, response, error } = this._responseParams( 'error', xhr, type );
       onError( xhr, status, error );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
@@ -141,16 +180,16 @@ export default class Ajax {
 
     // request abort handler
     xhr.addEventListener( 'abort', e => {
-      let { status, response, error, host } = this._responseParams( xhr, type );
-      onError( xhr, status, 'The HTTP request has been aborted by the client ('+ host +').' );
+      let { status, response, error } = this._responseParams( 'abort', xhr, type );
+      onError( xhr, status, error );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
     });
 
     // request timeout handler
     xhr.addEventListener( 'timeout', e => {
-      let { status, response, error, host } = this._responseParams( xhr, type );
-      onError( xhr, status, 'The HTTP request has been aborted due to the server not responding in time ('+ host +').' );
+      let { status, response, error } = this._responseParams( 'timeout', xhr, type );
+      onError( xhr, status, error );
       if ( !isDone ) onDone( xhr, status, response );
       isDone = true;
     });
@@ -159,44 +198,53 @@ export default class Ajax {
     xhr.send( options.data || null );
   }
 
-  // get response status and data from xhr
-  _responseParams( xhr, type ) {
-    let host     = this._getHost();
+  /**
+   * Parse information about the response
+   * @param {string}  evt   Event type
+   * @param {object}  xhr   XMLHttpRequest object
+   * @param {string}  type  Expected response type
+   */
+  _responseParams( evt, xhr, type ) {
+    let hostname = this._url.hostname || 'nohost';
     let status   = xhr.status | 0;
     let response = ( type === 'text' ) ? xhr.responseText : xhr.response;
     let error    = '';
-    // error based on status codes
-    if ( status === 400 ) error = status +': The request could not be understood by the server due to malformed syntax ('+ host +').';
-    if ( status === 401 ) error = status +': You are not authorized to view the response of this request without authentication ('+ host +').';
-    if ( status === 403 ) error = status +': The server understood the request, but is refusing to fulfill it ('+ host +').';
-    if ( status === 404 ) error = status +': The server did not find anything matching the requested route ('+ host +').';
-    if ( status === 405 ) error = status +': The method specified for this request is not allowed for the requested route ('+ host +').';
-    if ( status === 407 ) error = status +': The client must first authenticate itself with the proxy server to make requests ('+ host +').';
-    if ( status === 408 ) error = status +': The server did not produce a response in time for the requested route ('+ host +').';
-    if ( status === 500 ) error = status +': The server encountered an unexpected condition which prevented it from fulfilling the request ('+ host +').';
-    if ( status === 503 ) error = status +': The server is unable to handle the request due to temporary overloading or maintenance ('+ host +').';
-    // fallback error messages
-    if ( !error && status ) error = status +': There has been a problem with the response from the server ('+ host +').';
-    if ( !error ) error = 'There has been a problem sending the request to the server ('+ host +').';
-    // response params
-    return { status, response, error, host };
+
+    if ( evt === 'load' && status >= 400 && response ) {
+      error = `${hostname}(${status}): `+ this._dataReduce( response );
+    }
+    if ( evt === 'error' ) {
+      error = `${hostname}(${status}): The request has been aborted due to a network related problem.`;
+    }
+    if ( evt === 'abort' ) {
+      error = `${hostname}(${status}): The request has been aborted by the client before completing.`;
+    }
+    if ( evt === 'timeout' ) {
+      error = `${hostname}(${status}): The request has been aborted due to the server not responding.`;
+    }
+    if ( ( status <= 0 || status >= 400 ) && !error ) {
+      error = `${hostname}(${status}): The request was rejected by the server and no error message was given.`;
+    }
+    return { status, response, error };
   }
 
-  // get host name for current request
-  _getHost() {
-    if ( !this._url ) return '';
-    let proto = this._url.protocol || 'http:';
-    let host  = this._url.host     || 'localhost';
-    return proto +'//'+ host +'/...';
-  }
+  /**
+   * Reduce data object into a single string line.
+   * @param {object}  data     Object or string to be scanned
+   * @param {array}   output   Output array
+   */
+  _dataReduce( data, output ) {
+    output = output || [];
 
-  // url encode object data
-  _encode( data ) {
-    let output = [];
-    Object.keys( data ).forEach( key => {
-      output.push( encodeURIComponent( key ) +'='+ encodeURIComponent( data[ key ] ) );
-    });
-    return output.join( '&' );
+    if ( data && typeof data === 'string' ) {
+      output.push( data );
+    }
+    else if ( data && typeof data === 'object' ) {
+      Object.keys( data ).forEach( key => {
+        this._dataReduce( data[ key ], output );
+      });
+    }
+    return output.join( ' | ' ).replace( /[\t\r\n\s]+/g, ' ' ).trim();
   }
 
 }

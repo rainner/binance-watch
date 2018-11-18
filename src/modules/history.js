@@ -1,65 +1,100 @@
 /**
  * Handles saving data to a history list
  */
+import Bus from './bus';
 import store from './store';
 import utils from './utils';
 
-export default {
+export default class History extends Bus {
 
-  // local data
-  _key: 'history_data', // store key
-  _maxage: 3600, // max age for entries (seconds)
-  _data: [], // history data
-  _callback: null, // data change handler
+  /**
+   * Constructor
+   */
+  constructor( options ) {
+    super();
+    this._alarms = [];
+    this._sto = null;
+    this._options = Object.assign( {
+      // key used for storage
+      key: 'history_data',
+      // auto remove entries past this value (secs)
+      expire: 1800,
+      // total number of entries to keep in list
+      total: 20,
+      // ...
+    }, options );
+  }
 
-  // load data from store
+  /**
+   * Save current history data to store and emit list
+   */
+  saveData() {
+    this._autoClean();
+    this.emit( 'update', this._alarms );
+    store.setData( this._options.key, this._alarms );
+    if ( this._sto ) clearTimeout( this._sto );
+    this._sto = setTimeout( this.saveData.bind( this ), 30000 );
+  }
+
+  /**
+   * Load saved history data from store
+   */
   loadData() {
-    let data = store.getData( this._key );
-    if ( !Array.isArray( data ) ) return;
-    this._data = data;
-  },
+    let data = store.getData( this._options.key );
+    if ( !data || !Array.isArray( data ) ) return;
+    this._alarms = data;
+    this.saveData();
+  }
 
-  // get history data
-  getData() {
-    return this._data.slice();
-  },
-
-  // set handler for history data change
-  onChange( callback ) {
-    this._callback = callback;
-  },
-
-  // check and call custom history data handler
-  callHandler() {
-    if ( typeof this._callback === 'function' ) {
-      let data = this.getData();
-      this._callback( data );
-    }
-  },
-
-  // add data to history
+  /**
+   * Add data to history
+   * @param {string}  title  Title string
+   * @param {string}  info   Info string
+   * @param {string}  icon   Icon image URL
+   */
   add( title, info, icon ) {
     if ( !title || !info ) return;
-    let id     = utils.randString( 20 );
-    let time   = Date.now();
-    this._data = this._data.filter( e => ( ( time - e.time ) / 1000 ) < this._maxage );
-    this._data.unshift( { id, time, title, info, icon } ); // new entries show first
-    this.callHandler();
-    return store.setData( this._key, this._data );
-  },
+    let id    = utils.randString( 20 );
+    let time  = Date.now();
+    let isNew = true;
+    this._alarms.unshift( { id, time, isNew, title, info, icon } );
+    this.saveData();
+  }
 
-  // delete data from history
-  delete( id ) {
-    if ( !id ) return;
-    this._data = this._data.filter( e => e.id !== id );
-    this.callHandler();
-    return store.setData( this._key, this._data );
-  },
+  /**
+   * Remove an entry from the list by ID
+   * @param {string}  id  Unique entry ID
+   */
+  remove( id ) {
+    if ( !id || typeof id !== 'string' ) return;
+    this._alarms = this._alarms.filter( e => e.id !== id );
+    this.saveData();
+  }
 
-  // flush all data from history
+  /**
+   * Reset new entry indicators
+   */
+  reset() {
+    this._alarms.forEach( e => { e.isNew = false; } );
+    this.saveData();
+  }
+
+  /**
+   * Remove all entries from the list
+   */
   flush() {
-    this._data = [];
-    this.callHandler();
-    return store.setData( this._key, this._data );
-  },
+    this._alarms = [];
+    this.saveData();
+  }
+
+  /**
+   * Cleanup the list and emit changes
+   */
+  _autoClean() {
+    let time = Date.now();
+    let expire = parseInt( this._options.expire ) | 0;
+    let total = parseInt( this._options.total ) | 0;
+    if ( expire ) this._alarms = this._alarms.filter( e => ( ( time - e.time ) / 1000 ) < expire );
+    if ( total ) this._alarms = this._alarms.slice( 0, total );
+  }
 }

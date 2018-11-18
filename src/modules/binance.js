@@ -1,212 +1,547 @@
 /**
  * Binance socket api wrapper class
  */
-module.exports = class Binance {
+import Bus from './bus';
+import Symbol from './symbol';
+import utils from './utils';
+
+export default class Binance extends Bus {
 
   /**
    * Constructor
    */
   constructor() {
-    this._baseurl   = 'wss://stream.binance.com:9443';
+    super();
+    this._ajax      = null;
+    this._apiurl    = 'https://api.binance.com/api';
+    this._wssurl    = 'wss://stream.binance.com:9443';
+    this._apikey    = '';    // binance API key
+    this._apisecret = '';    // binance API secret
+    this._listenkey = '';    // user stream listen key
+    this._wait      = 10000; // reconnect wait (mils)
+    this._names     = {};    // map of token names passed in
+    this._symbols   = {};    // unique symbols data cache
+    this._assets    = [];    // unique list of base assets
+    this._reconnect = {};
+    this._timers    = {};
     this._socks     = {};
-    this._callbacks = {};
-    this._names     = {};
-    this._symbols   = {};
-    this._assets    = [];
-    this._list      = [];
   }
 
   /**
-   * Register a custom event handler
-   * @param {string}    name      Event name
-   * @param {function}  callback  Custom handler function
+   * Set ajax module reference to use for requests
+   * @param {object}  ajax  Ajax class instance
    */
-  on( name, callback ) {
-    if ( name && typeof callback === 'function' ) {
-      this._callbacks[ name ] = callback;
-    }
+  useAjax( ajax ) {
+    this._ajax = ajax;
   }
 
   /**
-   * Trigger a custom event handler
-   * @param {string}  name  Event name
+   * Set API key
+   * @param {string} key
    */
-  trigger() {
-    let args = Array.from( arguments );
-    let name = args.length ? args.shift() : '';
-
-    if ( this._callbacks.hasOwnProperty( name ) ) {
-      let cb = this._callbacks[ name ];
-      cb.apply( cb, args );
-    }
+  setApiKey( key ) {
+    this._apikey = String( key || '' ).trim();
   }
 
   /**
-   * Come up with some fake history prices to fill in the initial line chart
-   * @param {Number}  close  Current price
+   * Set API secret
+   * @param {string} secret
    */
-  fakeHistory( close ) {
-    let num = close * 0.0001; // faction of current price
-    let min = -Math.abs( num );
-    let max = Math.abs( num );
-    let out = [];
-
-    for ( let i = 0; i < 10; ++i ) {
-      let rand = Math.random() * ( max - min ) + min;
-      out.push( close + rand );
-    }
-    return out;
-  }
-
-  /**
-   * Calculate volatility for recent price
-   * @param {Array}  history  List of recent close prices
-   */
-  calcVolatility( history ) {
-    let min     = history.reduce( ( min, val ) => val < min ? val : min, history[ 0 ] );
-    let max     = history.reduce( ( max, val ) => val > max ? val : max, history[ 0 ] );
-    let change  = max - min;
-    let percent = max ? ( change / max * 100.0 ) : 0.0;
-    return percent;
+  setApiSecret( secret ) {
+    this._apisecret = String( secret || '' ).trim();
   }
 
   /**
    * Set object map of token -> name
-   * @param {Object}  namesMap  Tokens names map
+   * @param {object}  namesMap  Tokens names map
    */
   setNames( namesMap ) {
     this._names = Object.assign( this._names, namesMap );
   }
 
   /**
-   * Get loaded symbols data
+   * Set socket reconnect boolean for an id
+   * @param {string}   id      Sock id ref
+   * @param {boolean}  toggle  Toggle
    */
-  getSymbols() {
-    return this._symbols;
+  setReconnect( id, toggle ) {
+    this._reconnect[ id ] = toggle ? true : false;
   }
 
   /**
-   * Get loaded base assets list
+   * Check reconnect toggle for an id and call a handler function
+   * @param {string}    id        Sock id ref
+   * @param {function}  callback  Handler function
    */
-  getAssets() {
-    return this._assets;
+  checkReconnect( id, callback ) {
+    if ( !this._reconnect[ id ] ) return;
+    setTimeout( callback, this._wait );
   }
 
   /**
-   * Connect to live ticker prices socket endpoint
-   * @param {Function}  callback  Handler for price list
+   * Add base asset symbol to the list
+   * @param {string}  asset  Asset symbol
    */
-  getPrices( callback ) {
-    if ( typeof callback !== 'function' ) return;
+  addAsset( asset ) {
+    if ( asset && this._assets.indexOf( asset ) < 0 ) {
+      this._assets.push( asset );
+      this.emit( 'assets', this._assets );
+    }
+  }
 
-    const ws = this.connect( 'ticker', this._baseurl +'/ws/!ticker@arr' );
-    ws.addEventListener( 'error',   e => { this.trigger( 'error', ws, e ) } );
-    ws.addEventListener( 'open',    e => { this.trigger( 'open', ws, e ) } );
-    ws.addEventListener( 'close',   e => { this.trigger( 'close', ws, e ) } );
-    ws.addEventListener( 'message', e => {
+  // get public api endpoint url
+  getPublicUrl( endpoint, params ) {
+    let qstr = this._ajax.serializeData( Object.assign( {}, params ) );
+    return this._apiurl + endpoint + '?' + qstr;
+  }
 
-      // parse ticker list data
-      let ticker = JSON.parse( e.data || '[]' ) || [];
-      for ( let item of ticker ) {
+  // get user signed api endpoint url
+  getSignedUrl( endpoint, params ) {
+    let crypto     = window.CryptoJS || null;
+    let recvWindow = 100000;
+    let timestamp  = Date.now() - ( recvWindow / 2 );
+    let qstr       = this._ajax.serializeData( Object.assign( { recvWindow, timestamp }, params ) );
+    let signature  = crypto ? crypto.HmacSHA256( qstr, this._apisecret ).toString( crypto.enc.Hex ) : '';
+    return this._apiurl + endpoint + '?' + qstr + '&signature=' + signature;
+  }
 
-        // parse ticker data for each symbol
-        let symbol      = String( item.s );
-        let open        = parseFloat( item.o );
-        let high        = parseFloat( item.h );
-        let low         = parseFloat( item.l );
-        let close       = parseFloat( item.c );
-        let change      = parseFloat( item.p );
-        let percent     = parseFloat( item.P );
-        let trades      = parseInt( item.n );
-        let tokenVolume = Math.round( item.v );
-        let assetVolume = Math.round( item.q );
-        let sign        = ( percent >= 0 ) ? '+' : '';
-        let arrow       = ( percent >= 0 ) ? '▲' : '▼';
+  /**
+   * Parse user balances data
+   * @param {object}  data  Data payload from websocket, or http response
+   */
+  parseUserBalances( data ) {
+    let balances = [];
+    if ( Array.isArray( data ) ) balances = data; // as-is
+    if ( Array.isArray( data.balances ) ) balances = data.balances; // http
+    if ( Array.isArray( data.B ) ) balances = data.B; // websocket
 
-        // look for existing token data, or build new object
-        let data = this._symbols.hasOwnProperty( symbol ) ? this._symbols[ symbol ] : this._symbolData( symbol );
+    balances = balances.map( t => {
+      let asset  = String( t.a || t.asset || '' );
+      let pair   = ( asset === 'BTC' ) ? 'USDT' : 'BTC';
+      let route  = '/symbol/'+ asset + pair;
+      let name   = this._names[ asset ] || asset;
+      let free   = parseFloat( t.f || t.free ) || 0;
+      let locked = parseFloat( t.l || t.locked ) || 0;
+      let total  = ( free + locked );
+      return { asset, name, route, free, locked, total };
+    });
+    return balances.filter( t => ( t.total > 0 ) );
+  }
 
-        // update and trim history data
-        data.history = data.history || this.fakeHistory( close );
-        data.history.splice( 0, data.history.length - 120 );
-        data.history.push( close );
-        data.volatility = this.calcVolatility( data.history );
+  /**
+   * Parse order data from an API/Socket response and combine it with symbol data
+   * @param {object}  data  Order data response
+   */
+  parseOrderData( data ) {
+    let now       = Date.now();
+    let time      = Number( data.T || data.transactTime || now );      // transaction time
+    let id        = String( data.i || data.orderId || '' );            // order id
+    let symbol    = String( data.s || data.symbol || '' );             // trade pair symbol
+    let side      = String( data.S || data.side || '' );               // book side (BUY, SELL)
+    let type      = String( data.o || data.type || '' );               // order type (LIMIT, MARKET, etc)
+    let status    = String( data.X || data.status || '' );             // order status (NEW, CANCELED, FILLED, etc)
+    let price     = Number( data.p || data.price || 0 );               // order book price
+    let quantity  = Number( data.q || data.origQty || 0 );             // original trade quantity
+    let filled    = Number( data.z || data.executedQty || 0 );         // filled trade quantity
+    let total     = Number( data.Z || data.cummulativeQuoteQty || 0 ); // total trade asset cost
+    let feeAsset  = String( data.N || '' );                            // fee asset used for commission (BNB, etc)
+    let feeAmount = Number( data.n || 0 );                             // fee commission amount
+    let percent   = Number( filled / quantity * 100 );                 // filled percent
 
-        // resolve token icon image
-        if ( !data.image ) {
-          data.image = data.defaultIcon;
-          let img = new Image();
-          img.addEventListener( 'load', e => { data.image = img.src; } );
-          img.src = data.tokenIcon;
-        }
+    // resolve available amount after token fee has been deducted
+    let smb    = this._symbols[ symbol ] || new Symbol( symbol );
+    let amount = ( feeAsset === smb.token ) ? ( quantity - feeAmount ) : quantity;
+    let unique = utils.unique( symbol +'|'+ Math.floor( amount ) );
 
-        // resolve token name
-        if ( this._names.hasOwnProperty( data.token ) ) {
-          data.name = this._names[ data.token ];
-        }
+    status = ( status === 'NEW' ) ? 'OPEN' : status;
+    if ( !price && total ) { price = ( total / quantity ); }
+    if ( !total && price ) { total = ( price * quantity ); }
 
-        // save asset
-        if ( this._assets.indexOf( data.asset ) < 0 ) {
-          this._assets.push( data.asset );
-        }
+    return smb.getData( { id, unique, side, time, type, status, price, quantity, filled, amount, total, feeAsset, feeAmount, percent } );
+  }
 
-        // update token data
-        this._symbols[ symbol ] = Object.assign( data, {
-          open, high, low, close, change, percent, trades, tokenVolume, assetVolume, sign, arrow
-        });
-      }
-
-      // build and emit final ticker list
-      let prices = Object.keys( this._symbols ).map( s => this._symbols[ s ] );
-      callback( prices );
+  /**
+   * Build fake order data
+   * @param {string}  symbol    Full trading symbol
+   * @param {string}  type      Order type (LIMIT, MARKET)
+   * @param {string}  side      Book side (BUY, SELL)
+   * @param {number}  price     Book price
+   * @param {number}  quantity  Order quantity
+   */
+  fakeOrderData( symbol, type, side, price, quantity, status ) {
+    let time = Date.now();
+    let id = utils.randString( 20 );
+    let priceStr = Number( price ).toFixed( 8 );
+    let quantityStr = Number( quantity ).toFixed( 0 );
+    let totalStr = Number( price * quantity ).toFixed( 8 );
+    return this.parseOrderData( {
+      symbol: symbol,
+      orderId: id,
+      transactTime: time,
+      price: priceStr,
+      origQty: quantityStr,
+      executedQty: quantityStr,
+      cummulativeQuoteQty: totalStr,
+      status: status,
+      type: type,
+      side: side
     });
   }
 
   /**
-   * Create a WebSocket connection
-   * @param {String}  name      Ref name
-   * @param {String}  endpoint  Socket endpoint url
+   * Simulate an order with fake API request
+   * @param {string}  symbol    Full trading symbol
+   * @param {string}  type      Order type (LIMIT, MARKET)
+   * @param {string}  side      Book side (BUY, SELL)
+   * @param {number}  price     Book price
+   * @param {number}  quantity  Order quantity
    */
-  connect( name, endpoint ) {
+  placeFakeOrder( symbol, type, side, price, quantity ) {
+    let secs = Math.floor( 1000 + Math.random() * 4000 ); // 1-5 secs
+    let orderOpen = this.fakeOrderData( symbol, type, side, price, quantity, 'OPEN' );
+    let orderFilled = this.fakeOrderData( symbol, type, side, price, quantity, 'FILLED' );
+    let orderCanceled = this.fakeOrderData( symbol, type, side, price, quantity, 'CANCELED' );
+    let orderResult = ( secs < 4900 ) ? orderFilled : orderCanceled;
+    setTimeout( () => { this.emit( 'book_create', orderOpen ) }, 300 ); // added to book
+    setTimeout( () => { this.emit( 'user_order', orderResult ) }, secs ); // filled or canceled
+  }
+
+  /**
+   * Place new order in book
+   * @param {string}  symbol    Full trading symbol
+   * @param {string}  type      Order type (LIMIT, MARKET)
+   * @param {string}  side      Book side (BUY, SELL)
+   * @param {number}  price     Book price
+   * @param {number}  quantity  Order quantity
+   * @param {string}  inforce   Time inforce type (GTC, IOC, FOK)
+   */
+  placeOrder( symbol, type, side, price, quantity, inforce ) {
+    if ( !this._apikey || !this._ajax ) return;
+    if ( !symbol || !type || !side || !quantity || quantity <= 0 ) return;
+
+    price = Number( price ).toFixed( 8 );
+    quantity = Number( quantity ).toFixed( 0 );
+    inforce = String( inforce || 'FOK' );
+
+    let params = { symbol, side, type, quantity };
+    if ( type === 'LIMIT' ) Object.assign( params, { price, timeInForce: inforce } );
+    Object.assign( params, { newOrderRespType: 'RESULT' } );
+
+    this._ajax.post( this.getSignedUrl( '/v3/order', params ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        let order = this.parseOrderData( response );
+        this.emit( 'book_create', order );
+      },
+      error: ( xhr, status, error ) => {
+        let order = this.fakeOrderData( symbol, type, side, price, quantity, 'REJECTED' );
+        this.emit( 'book_fail', order, error );
+      }
+    });
+  }
+
+  /**
+   * Cancel order from book
+   * @param {string}  symbol    Full trading symbol
+   * @param {number}  orderId   Order ID number
+   * @param {number}  quantity  Order quantity
+   */
+  cancelOrder( symbol, orderId, quantity ) {
+    if ( !this._apikey || !this._ajax ) return;
+    if ( !symbol || !orderId ) return;
+
+    this._ajax.delete( this.getSignedUrl( '/v3/order', { symbol, orderId } ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        let order = this.fakeOrderData( symbol, 'MARKET', 'CANCEL', 1, quantity, 'COMPLETE' );
+        this.emit( 'book_cancel', order );
+      },
+      error: ( xhr, status, error ) => {
+        let order = this.fakeOrderData( symbol, 'MARKET', 'CANCEL', 1, quantity, 'FAILED' );
+        this.emit( 'book_fail', order, error );
+      }
+    });
+  }
+
+  /**
+   * Get user account data over ajax
+   */
+  fetchUserAccount() {
+    if ( !this._apikey || !this._ajax ) return;
+
+    this._ajax.get( this.getSignedUrl( '/v3/account' ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        let balances = this.parseUserBalances( response );
+        this.emit( 'user_balances', balances );
+        this.emit( 'user_data', true );
+      },
+      error: ( xhr, status, error ) => {
+        this.emit( 'user_fail', error );
+        this.stopUserStream();
+      }
+    });
+  }
+
+  /**
+   * Fetch current open orders
+   */
+  fetchOpenOrders() {
+    if ( !this._apikey || !this._ajax ) return;
+
+    this._ajax.get( this.getSignedUrl( '/v3/openOrders' ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        response.forEach( o => this.emit( 'user_order', this.parseOrderData( o ) ) );
+        this.emit( 'user_data', true );
+      },
+      error: ( xhr, status, error ) => {
+        this.emit( 'user_fail', error );
+      }
+    });
+  }
+
+  /**
+   * Attempt to start a new user stream
+   * @param {boolean}  reconnect  Auto reconnect on close
+   */
+  initUserStream( reconnect ) {
+    if ( !this._apikey || !this._ajax ) return;
+
+    this.emit( 'user_init', Date.now() );
+    this.stopUserStream();
+
+    this._ajax.post( this.getPublicUrl( '/v1/userDataStream' ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        const time = ( 1000 * 60 * 20 ); // 20 mins
+        const func = this.extendStreamKey.bind( this );
+        this._listenkey = String( response.listenKey || '' ).trim();
+        this.emit( 'user_listenkey', this._listenkey );
+        this.startUserStream( this._listenkey, reconnect );
+        this.startTimer( 'user', time, func, false );
+      },
+      error: ( xhr, status, error ) => {
+        this.emit( 'user_fail', error );
+      }
+    });
+  }
+
+  /**
+   * Extend user stream listen key
+   */
+  extendStreamKey() {
+    if ( !this._apikey || !this._ajax ) return;
+    if ( !this._listenkey ) return;
+
+    this._ajax.put( this.getPublicUrl( '/v1/userDataStream', { listenKey: this._listenkey } ), {
+      type: 'json',
+      headers: { 'X-MBX-APIKEY': this._apikey },
+
+      success: ( xhr, status, response ) => {
+        this.emit( 'user_listenkey', this._listenkey );
+      },
+    });
+  }
+
+  /**
+   * Connect to a live user account data stream
+   * @param {string}   listenKey  Binance user stream listenKey
+   * @param {boolean}  reconnect  Auto reconnect on close
+   */
+  startUserStream( listenKey, reconnect ) {
+    this.setReconnect( 'user', reconnect || false );
+    this.emit( 'user_init', Date.now() );
+
+    const ws = this.sockConnect( 'user', this._wssurl +'/ws/'+ listenKey );
+    if ( !ws ) return this.emit( 'user_fail', 'Could not connect to user stream API endpoint.' );
+
+    ws.addEventListener( 'open', e => {
+      this.emit( 'user_open', e );
+      this.fetchUserAccount();
+      this.fetchOpenOrders();
+    });
+
+    ws.addEventListener( 'error', e => {
+      this.emit( 'user_error', e );
+      this.stopTimer( 'user' );
+    });
+
+    ws.addEventListener( 'close', e => {
+      this.emit( 'user_close', e );
+      this.stopTimer( 'user' );
+      this.checkReconnect( 'user', () => this.startUserStream( listenKey, reconnect ) );
+    });
+
+    ws.addEventListener( 'message', e => {
+      this.emit( 'user_data', true );
+      let data = JSON.parse( e.data || '{}' ) || {};
+
+      if ( data.e === 'outboundAccountInfo' ) {
+        let balances = this.parseUserBalances( data );
+        return this.emit( 'user_balances', balances );
+      }
+      if ( data.e === 'executionReport' ) {
+        let order = this.parseOrderData( data );
+        return this.emit( 'user_order', order );
+      }
+    });
+  }
+
+  /**
+   * Stop user stream
+   */
+  stopUserStream() {
+    this.setReconnect( 'user', false );
+    this.stopTimer( 'user' );
+    this.sockClose( 'user' );
+  }
+
+  /**
+   * Connect to live ticker prices socket endpoint
+   * @param {boolean}  reconnect  Auto reconnect on close
+   */
+  startTickerStream( reconnect ) {
+    this.setReconnect( 'ticker', reconnect || false );
+    this.emit( 'ticker_init', Date.now() );
+
+    const ws = this.sockConnect( 'ticker', this._wssurl +'/ws/!ticker@arr' );
+    if ( !ws ) return this.emit( 'ticker_fail', 'Could not connect to live ticker stream API endpoint.' );
+
+    ws.addEventListener( 'open', e => {
+      this.emit( 'ticker_open', e );
+      this.startTickerTimer();
+    });
+
+    ws.addEventListener( 'error', e => {
+      this.emit( 'ticker_error', e );
+      this.stopTimer( 'ticker' );
+    });
+
+    ws.addEventListener( 'close', e => {
+      this.emit( 'ticker_close', e );
+      this.stopTimer( 'ticker' );
+      this.checkReconnect( 'ticker', () => this.startTickerStream( reconnect ) );
+    });
+
+    ws.addEventListener( 'message', e => {
+      this.emit( 'ticker_data', true );
+
+      let list  = JSON.parse( e.data || '[]' ) || [];
+      let count = list.length;
+
+      while ( count-- ) {
+        let tkr = list[ count ];
+        let smb = this._symbols[ tkr.s ] || new Symbol( tkr.s );
+
+        smb.setName( this._names[ smb.token ] );
+        smb.setTickerData( tkr );
+
+        this.addAsset( smb.asset );
+        this._symbols[ tkr.s ] = smb;
+      }
+    });
+  }
+
+  /**
+   * Start ticker data timer
+   */
+  startTickerTimer() {
+    this.stopTimer( 'ticker' );
+    this.startTimer( 'ticker', 1000, () => {
+      let keys   = Object.keys( this._symbols );
+      let count  = keys.length;
+      let prices = [];
+
+      while ( count-- ) prices.push( this._symbols[ keys[ count ] ] );
+      this.emit( 'ticker_prices', prices );
+    }, true );
+  }
+
+  /**
+   * Stop price ticker
+   */
+  stopTickerStream() {
+    this.setReconnect( 'ticker', false );
+    this.stopTimer( 'ticker' );
+    this.sockClose( 'ticker' );
+  }
+
+  /**
+   * Start custom timer
+   * @param {string}    id        Timer id name
+   * @param {number}    time      Interval mils
+   * @param {function}  callback  Callback function
+   * @param {boolean}   init      Init callback
+   */
+  startTimer( id, time, callback, init ) {
+    this.stopTimer( id );
+    this._timers[ id ] = setInterval( callback, time );
+    if ( init ) callback();
+  }
+
+  /**
+   * Stop custom timer
+   * @param {string}  id  Timer id name
+   */
+  stopTimer( id ) {
+    if ( !id || !this._timers.hasOwnProperty( id ) ) return;
+    clearInterval( this._timers[ id ] );
+    delete this._timers[ id ];
+  }
+
+  /**
+   * Create a WebSocket connection
+   * @param {string}  id      Ref id name
+   * @param {string}  endpoint  Socket endpoint url
+   */
+  sockConnect( id, endpoint ) {
+    if ( !id || !endpoint ) return;
+    this.emit( 'sock_init', endpoint );
+    this.sockClose( id );
+
+    if ( !( 'WebSocket' in window ) ) {
+      this.emit( 'sock_fail', 'This web browser does not have WebSocket support.' );
+      return false;
+    }
     try {
       let ws = new WebSocket( endpoint );
-      this._socks[ name ] = ws;
-      this.trigger( 'init', ws, 'Socket connection created.' );
+      this._socks[ id ] = ws;
       return ws;
     }
     catch ( err ) {
-      this.trigger( 'error', null, err );
+      let message = String( err.message || 'WebSocket endpoint connection failed for ('+ endpoint +').' );
+      this.emit( 'sock_fail', message );
       return false;
     }
   }
 
   /**
-   * Close all active socket connections
+   * Close socket connection and remove it from the list
+   * @param {string}  id  Socket id name
    */
-  close() {
-    Object.keys( this._socks ).map( name => {
-      this._socks[ name ].close();
-      delete this._socks[ name ];
-    });
+  sockClose( id ) {
+    if ( !id || !this._socks.hasOwnProperty( id ) ) return;
+    this.emit( 'sock_close', id );
+    this._socks[ id ].close();
+    delete this._socks[ id ];
   }
 
   /**
-   * Create static token data from a symbol
-   * @param {String}  symbol  Token symbol from ticker list
+   * Close all active socket connections
    */
-  _symbolData( symbol ) {
-    let regx        = /^([A-Z]+)(BTC|ETH|BNB|USDT|TUSD|DAI)$/;
-    let token       = symbol.replace( regx, '$1' );
-    let asset       = symbol.replace( regx, '$2' );
-    let name        = token;
-    let pair        = token +'/'+ asset;
-    let route       = '/symbol/'+ symbol;
-    let defaultIcon = 'public/images/icons/default_.png';
-    let tokenIcon   = 'public/images/icons/'+ String( token ).toLowerCase() +'_.png';
-    let assetIcon   = 'public/images/icons/'+ String( asset ).toLowerCase() +'_.png';
-    let infoUrl     = 'https://coinlib.io/coin/'+ token +'/';
-    let image       = '';
-    return { symbol, token, asset, name, pair, route, defaultIcon, tokenIcon, assetIcon, infoUrl, image };
+  sockCloseAll() {
+    Object.keys( this._socks ).forEach( id => this.sockClose( id ) );
   }
 
 }

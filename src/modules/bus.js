@@ -1,22 +1,40 @@
 /**
- * Basic event bus
+ * Basic event bus class
  */
-export default {
-  _data: {},
+export default class Bus {
 
-  // register
-  on( event, callback ) {
-    if ( !event || typeof event !== 'string' ) return;
+  /**
+   * Constructor
+   */
+  constructor() {
+    this._events = {};
+  }
+
+  /**
+   * Register an event handler
+   * @param {string}    name      Event name
+   * @param {function}  callback  Event callback function
+   */
+  on( name, callback ) {
+    if ( !name || typeof name !== 'string' ) return;
     if ( typeof callback !== 'function' ) return;
-    if ( !this._data.hasOwnProperty( event ) ) this._data[ event ] = [];
-    this._data[ event ].push( callback );
-  },
+    if ( !this._events.hasOwnProperty( name ) ) this._events[ name ] = [];
+    this._events[ name ].push( callback );
+  }
 
-  // emit callbacks
+  /**
+   * Emit an event by name (first arg) with rest of args passed to it
+   */
   emit() {
-    let args  = Array.from( arguments );
-    let event = args.length ? args.shift() : '';
-    if ( !this._data.hasOwnProperty( event ) ) return;
-    this._data[ event ].forEach( cb => cb.apply( cb, args ) );
+    let args = Array.from( arguments );
+    let name = args.length ? args.shift() : '';
+
+    if ( this._events.hasOwnProperty( name ) ) {
+      for ( let i = 0; i < this._events[ name ].length; ++i ) {
+        let cb = this._events[ name ][ i ];
+        cb.apply( cb, args );
+      }
+    }
+    args = undefined; // gc
   }
 }

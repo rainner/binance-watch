@@ -3,40 +3,46 @@
  */
 export default class Twitter {
 
-  // constructor
+  /**
+   * Constructor
+   * @param {string}  handle   Twitter handle
+   * @param {object}  options  Fetching options
+   */
   constructor( handle, options ) {
     if ( !handle || typeof handle !== 'string' ) {
       throw 'Must provide a valid twitter handle string.';
     }
-    this.uid     = '';
-    this.handle  = '';
-    this.name    = '';
-    this.avatar  = '';
-    this.url     = '';
-    this.last    = 0;
-    this.error   = '';
-    this.options = {
-      // ignore pinned tweets
-      skipPinned: true,
-      // ignore re-tweets
-      skipRetweet: true,
-      // strip html and whitespace from tweets
-      cleanTweets: true,
-      // prevent re-fetching for (secs)
-      fetchDelay: 300,
-      // limit number of tweets in local list
-      limitCount: 20,
+    this.uid       = '';
+    this.handle    = '';
+    this.name      = '';
+    this.avatar    = '';
+    this.url       = '';
+    this.error     = '';
+    this.last      = 0;
+    this.fetching  = false;
+    this._options  = {
+      skipPinned  : true,  // ignore pinned tweets
+      skipRetweet : true,  // ignore re-tweets
+      cleanTweets : true,  // strip html and whitespace from tweets
+      fetchDelay  : 300,   // prevent re-fetching for (secs)
+      limitCount  : 1,     // limit number of tweets parsed
     };
     this.setOptions( options );
     this.setData( { handle: handle, name: handle } );
   }
 
-  // merge new options
+ /**
+   * Update options
+   * @param {object}  options  Options object
+   */
   setOptions( options ) {
-    this.options = Object.assign( this.options, options );
+    Object.assign( this._options, options );
   }
 
-  // set new acocunt data
+  /**
+   * Set new acocunt data
+   * @param {object} data  Twitter account data
+   */
   setData( data ) {
     if ( typeof data !== 'object' ) return;
     if ( data.uid )    this.uid    = String( this.uid ).replace( /[^\w\-]+/g, '' );
@@ -46,55 +52,63 @@ export default class Twitter {
     this.url = 'https://twitter.com/'+ this.handle;
   }
 
-  // get account info
+  /**
+   * Get account info
+   */
   getData() {
-    let { uid, handle, name, avatar, url, last, error } = this;
-    return { uid, handle, name, avatar, url, last, error };
+    let { uid, handle, name, avatar, url, last, fetching, error } = this;
+    return { uid, handle, name, avatar, url, last, fetching, error };
   }
 
-  // fetch remote tweets using teh ajax module passed in
+  /**
+   * Fetch remote tweets using ajax module
+   * @param {object}    ajax      Ajax module instance to use for request
+   * @param {function}  callback  Callback function
+   */
   fetchTweets( ajax, callback ) {
-    const now = Date.now();
-    const elapsed = ( now - this.last ) / 1000;
-    const delay = this.options.fetchDelay | 0;
-
     if ( !callback || typeof callback !== 'function' ) return;
-    if ( !ajax || typeof ajax !== 'object' ) return callback( 'Must provide an ajax module reference.', this.handle );
-    if ( delay && elapsed < delay ) return callback( null, this.handle );
+    if ( !ajax || typeof ajax !== 'object' ) return callback( 'Must provide an ajax module reference.', [] );
+    if ( !this._canFetch() ) return callback( '', [] ); // too soon, ignore
 
-    this.last = now;
+    this.fetching = true;
     this.error = '';
 
     ajax.get( this.url, {
       type: 'text',
       timeout: 30,
+
       done: ( xhr, status, response ) => {
+        this.fetching = false;
+      },
+      error: ( xhr, status, error ) => {
+        this.error = error +' | @'+ this.handle +'.';
+        return callback( this.error, [] );
+      },
+      success: ( xhr, status, response ) => {
+        let parser = new DOMParser();
+        let html   = this._cleanHtml( response );
+        let doc    = parser.parseFromString( html, 'text/html' );
 
-        // check response status and content
-        if ( !status || status !== 200 || !response ) {
-          this.error = 'httpError ('+ status +'): Could not fetch content from '+ this.url;
-          return callback( this.error, this.handle );
+        if ( doc && doc instanceof HTMLDocument ) {
+          this.last = Date.now();
+          callback( '', this.parseTweets( doc ) );
+        } else {
+          this.error = 'DOMParserError: Could not parse response from '+ this.url;
+          callback( this.error, [] );
         }
-        // try to parse repsonse as HTML
-        const parser = new DOMParser();
-        const html   = this._cleanHtml( response );
-        const doc    = parser.parseFromString( html, 'text/html' );
-
-        // check parsed document
-        if ( !doc || !( 'querySelector' in doc ) ) {
-          this.error = 'parserError: Could not parse response from '+ this.url;
-          return callback( this.error, this.handle );
-        }
-        // parse tweets and pass to callback
-        const tweets = this.parseTweets( doc );
-        callback( null, this.handle, tweets );
+        parser = null;
+        html = null;
+        doc = null;
       }
     });
   }
 
-  // parse account and tweets data from a fetched HTML response
+  /**
+   * Darse account and tweets data from a fetched HTML response
+   * @param {HTMLDocument}  doc  Twitter account page document
+   */
   parseTweets( doc ) {
-    let limit  = this.options.limitCount | 0;
+    let limit  = this._options.limitCount | 0;
     let count  = 0;
     let output = [];
 
@@ -109,43 +123,64 @@ export default class Twitter {
     for ( let i = 0; i < items.length; ++i ) {
       if ( limit && count >= limit ) break;
 
-      // look for tweet containers
+      // look for tweet data
       let item    = items[ i ];
-      let tweet   = item ? item.querySelector( '.js-stream-tweet' ) : null; // metadata tag
-      let posted  = item ? item.querySelector( '.js-short-timestamp' ) : null; // date tag
-      let content = item ? item.querySelector( '.js-tweet-text' ) : null; // tweet wrapper
+      let tweet   = item   ? item.querySelector( '.js-stream-tweet' ) : null; // metadata tag
+      let posted  = item   ? item.querySelector( '.js-short-timestamp' ) : null; // date tag
+      let content = item   ? item.querySelector( '.js-tweet-text' ) : null; // tweet wrapper
+      let text    = '';
 
+      // look for account info
+      let id      = tweet  ? tweet.getAttribute( 'data-tweet-id' ) || '' : '';
+      let uid     = tweet  ? tweet.getAttribute( 'data-user-id' ) || '' : '';
+      let name    = tweet  ? tweet.getAttribute( 'data-name' ) || '' : '';
+      let handle  = tweet  ? tweet.getAttribute( 'data-screen-name' ) || '' : '';
+      let link    = tweet  ? 'https://twitter.com'+ tweet.getAttribute( 'data-permalink-path' ) || '' : '';
+      let time    = posted ? Number( posted.getAttribute( 'data-time-ms' ) ) || 0 : 0;
+
+      // update profile details
+      this.setData( { uid, handle, name, avatar } );
+
+      // resolve tweet text
+      if ( content ) {
+        text = this._options.cleanTweets
+          ? this._cleanTweet( content.textContent )
+          : String( content.innerHTML || '' ).trim();
+      }
       // check a few things, skip if needed
-      if ( !item || !tweet || !posted || !content ) continue;
-      if ( this.options.skipPinned && item.classList.contains( 'js-pinned' ) ) continue;
-      if ( this.options.skipRetweet && tweet.hasAttribute( 'data-retweet-id' ) ) continue;
-
-      // look for rest of tweet data
-      let id     = tweet.getAttribute( 'data-tweet-id' ) || '';
-      let uid    = tweet.getAttribute( 'data-user-id' ) || '';
-      let name   = tweet.getAttribute( 'data-name' ) || '';
-      let handle = tweet.getAttribute( 'data-screen-name' ) || '';
-      let link   = 'https://twitter.com'+ tweet.getAttribute( 'data-permalink-path' ) || '';
-      let time   = Number( posted.getAttribute( 'data-time-ms' ) ) || 0;
-      let text   = this.options.cleanTweets ? this._cleanTweet( content.textContent ) : String( content.innerHTML || '' ).trim();
-
-      // check tweet data and timestamp
-      if ( !id || !uid || !handle || !text ) continue;
-      if ( !time || time < 0 ) continue;
+      if ( !id || !uid || !name || !handle || !text || !time || time < 0 ) continue;
+      if ( this._options.skipPinned && item.classList.contains( 'js-pinned' ) ) continue;
+      if ( this._options.skipRetweet && tweet.hasAttribute( 'data-retweet-id' ) ) continue;
 
       // format time
       let d = new Date( time );
       let date = d.toDateString();
 
       // add tweet to list and update account info
-      this.setData( { uid, handle, name, avatar } );
       output.push( { id, uid, time, date, name, handle, avatar, text, link } );
       count++;
     }
+    items = null;
     return output;
   }
 
-  // clean tweet text
+  /**
+   * Check last fetch time to see if it's ok to fetch again
+   */
+  _canFetch() {
+    let now      = Date.now();
+    let elapsed  = Math.floor( ( now - this.last ) / 1000 );
+    let delay    = this._options.fetchDelay | 0;
+
+    if ( this.fetching || this.last >= now ) return false; // busy, wait
+    if ( delay && elapsed < delay ) return false; // too soon, wait
+    return true; // looks good
+  }
+
+  /**
+   * Clean tweet text
+   * @param {string}  text  Strign to clean
+   */
   _cleanTweet( text ) {
     return String( text || '' )
     .replace( /([^\s]+)(https?\:|pic\.)/g, '$1 $2' ) // add space around links
@@ -153,11 +188,13 @@ export default class Twitter {
     .replace( /([\`\'\’]+)/g, "'" ) // normalize apostrophes
     .replace( /([\“\”\“\”\"]+)/g, '"' ) // normalize quotes
     .replace( /[\…\#\$]+/g, ' ' ) // remove some junk chars
-    .replace( /(https?\:\/\/[\w\-\.\?\=\&\%\/\#]+)/gi, '<a href="$1" target="_blank">$1</a>' ) // format links
     .replace( /[\t\r\n\s\uFEFF\xA0]+/g, ' ' ).trim(); // collapse whitespace
   }
 
-  // clean html content
+  /**
+   * Clean html content
+   * @param {string}  html  HTML text to clean
+   */
   _cleanHtml( html ) {
     return String( html || '' )
     .replace( /<(style|script)[^>]*>(?:(?!<\/(style|script)>)[^])*<\/(style|script)>/gim, '' )

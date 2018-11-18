@@ -3,16 +3,6 @@
  */
 module.exports = {
 
-  // timeout cache
-  _sto: {},
-
-  // custom wrapper for setTimeout
-  delay( name, seconds, callback ) {
-    if ( !name || typeof callback !== 'function' ) return;
-    if ( this._sto[ name ] ) clearTimeout( this._sto[ name ] );
-    this._sto[ name ] = setTimeout( callback, 1000 * ( seconds | 0 ) );
-  },
-
   // convert url string into an anchor element (parser)
   parseUrl( url, prop ) {
     let link = document.createElement( 'a' );
@@ -20,6 +10,11 @@ module.exports = {
     let data = link[ prop ] || '';
     link = null;
     return data;
+  },
+
+  // convert URLs into clickable links
+  linkUrl( text ) {
+    return String( text || '' ).replace( /(https?\:\/\/[\w\-\.\?\=\&\%\/\#]+)/gi, '<a href="$1" target="_blank">$1</a>' );
   },
 
   // convert html tags to text content
@@ -52,35 +47,20 @@ module.exports = {
     audio.src = this.fullUrl( file );
     audio.volume = vol;
     audio.crossOrigin = 'anonymous';
-    audio.addEventListener( 'canplaythrough', e => audio.play() );
+    audio.addEventListener( 'canplaythrough', e => {
+      try { audio.play(); } catch( err ) {}
+    });
     audio.load();
   },
 
-  // to trimmed string
-  toStr( input, deft ) {
-    return String( String( input ) || deft ).trim();
-  },
-
-  // to integer
-  toInt( input, deft ) {
-    input = parseInt( input ) || false;
-    deft  = parseInt( deft )  || 0;
-    return ( input !== false ) ? input : deft;
-  },
-
-  // to float
-  toFloat( input, deft ) {
-    input = parseFloat( input ) || false;
-    deft  = parseFloat( deft )  || 0;
-    return ( input !== false ) ? input : deft;
-  },
-
-  // to boolean
-  toBool( input ) {
-    if ( typeof input === 'string' ) { // assume true, unless...
-      return /^(0|n|no|off|false)$/i.test( input ) ? false : true;
-    }
-    return input ? true : false;
+  // copy text to clipboard
+  copyText( text ) {
+    let elm = document.createElement( 'input' );
+    document.body.appendChild( elm );
+    elm.value = String( text || '' ).trim();
+    elm.select();
+    setTimeout( () => elm.remove(), 1000 );
+    return document.execCommand( 'Copy' );
   },
 
   // clamp a number between min and max
@@ -120,34 +100,29 @@ module.exports = {
     return new Intl.NumberFormat( 'en-US', o ).format( num );
   },
 
-  // convert candle time (1m, 1h, etc) into readable string
-  candleTime( candle, count, add ) {
-    count  = Math.max( 1, parseInt( count ) || 1 );
-    add    = parseInt( add ) || 0;
-    let numb    = parseInt( candle ) || 1;
-    let letter  = String( candle ).replace( /[^a-zA-Z]+/g, '' );
-    let map     = { 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800, 'M': 2419200 };
-    let seconds = ( Number( map[ letter ] || 0 ) * numb ) * count + add;
-    return this.elapsed( seconds );
+  // fixed numbers
+  fixed( num, decimals ) {
+    if ( typeof decimals === 'number' ) return Number( num ).toFixed( decimals );
+    if ( /^(T?USDT?|PAX|DAI)$/.test( decimals ) ) return this.money( num, 3 );
+    return Number( num ).toFixed( 8 );
   },
 
   // get info about how long something has been
-  elapsed( seconds ) {
-    seconds = parseInt( seconds ) || 0;
-    if ( !seconds ) return '0s';
-
-    let out = [], list = [];
-    list.push( [ 'M', Math.floor( seconds / 2419200 ) ] );
-    list.push( [ 'w', Math.floor( seconds / 604800 % 4 ) ] );
-    list.push( [ 'd', Math.floor( seconds / 86400 % 7 ) ] );
-    list.push( [ 'h', Math.floor( seconds / 3600 % 24 ) ] );
-    list.push( [ 'm', Math.floor( seconds / 60 % 60 ) ] );;
-    list.push( [ 's', Math.floor( seconds % 60 ) ] );
-    list.forEach( arr => {
-      let [ letter, time ] = arr;
-      if ( time ) out.push( time + letter );
-    });
-    return out.join( ' ' );
+  elapsed( secs, suffix, short ) {
+    secs = parseInt( secs ) || 0;
+    if ( short && secs < 60 ) return 'Just now';
+    let list = [];
+    let data = {
+      'M': Math.floor( secs / 2419200 ),
+      'w': Math.floor( secs / 604800 % 4 ),
+      'd': Math.floor( secs / 86400 % 7 ),
+      'h': Math.floor( secs / 3600 % 24 ),
+      'm': Math.floor( secs / 60 % 60 ),
+    };
+    if ( !short ) data.s = Math.floor( secs % 60 );
+    Object.keys( data ).forEach( k => { if ( data[ k ] ) list.push( data[ k ] + k ); } );
+    if ( suffix ) list.push( suffix );
+    return list.join( ' ' );
   },
 
   // get data about current date and time
@@ -179,19 +154,21 @@ module.exports = {
   },
 
   // get readable date
-  date( time ) {
+  date( time, full ) {
     let { month, day, year, hour, minute, second, ampm } = this.dateData( time );
-    return month +' '+ day +' '+ year +' '+ hour +':'+ minute +':'+ second +' '+ ampm;
+    let out = [ month +'/'+ day +'/'+ year ];
+    if ( full ) out.push( hour +':'+ minute +':'+ second, ampm );
+    return out.join( ' ' );
   },
 
   // get current time
   time( time ) {
-    let { month, day, year, hour, minute, second, ampm } = this.dateData( time );
+    let { hour, minute, second, ampm } = this.dateData( time );
     return hour +':'+ minute +':'+ second +' '+ ampm;
   },
 
   // calculate percent change
-  percent( current, last ) {
+  percent( current, last, toNum ) {
     let isnum   = Boolean( last > 0 );
     let isup    = Boolean( current >= last );
     let change  = isup  ? ( current - last ) : ( last - current );
@@ -199,6 +176,7 @@ module.exports = {
     let sign    = isup  ? '+' : '-';
     let arrow   = isup  ? '▲' : '▼';
     let color   = isup  ? 'green' : 'red';
+    if ( toNum === true ) return +Number( sign + percent ).toFixed( 3 );
     return { change, percent, sign, arrow, color };
   },
 
@@ -227,6 +205,39 @@ module.exports = {
     return out;
   },
 
+  // compute placement for an absolute box on the screen
+  boxPosition( triggerElm ) {
+    let [ top, right, bottom, left ] = [ true, false, false, true ];
+
+    if ( triggerElm instanceof HTMLElement ) {
+      let box     = triggerElm.getBoundingClientRect();
+      let posx    = box.left + ( triggerElm.offsetWidth / 2 );
+      let posy    = box.top + ( triggerElm.offsetHeight / 2 );
+      let centerx = ( window.innerWidth / 2 );
+      let centery = ( window.innerHeight / 2 );
+
+      top    = ( posy < centery ) ? true : false;
+      right  = ( posx > centerx ) ? true : false;
+      bottom = ( posy > centery ) ? true : false;
+      left   = ( posx < centerx ) ? true : false;
+      return { top, right, bottom, left };
+    }
+  },
+
+  // check a key-press event for some common keys being pressed
+  keyboard( e ) {
+    let code = e.keyCode || e.key || 0;
+    let up     = ( code === 38 );
+    let down   = ( code === 40 );
+    let left   = ( code === 37 );
+    let right  = ( code === 39 );
+    let back   = ( code === 8 );
+    let escape = ( code === 27 );
+    let space  = ( code === 32 );
+    let enter  = ( code === 13 );
+    return { up, down, left, right, back, escape, space, enter };
+  },
+
   // shuffle an array
   shuffle( o ) {
     for ( let j, x, i = o.length; i; j = parseInt( Math.random() * i ), x = o[--i], o[i] = o[j], o[j] = x );
@@ -248,32 +259,38 @@ module.exports = {
     return arguments[ 0 ];
   },
 
-  // return matching results from a list
-  search( list, key, match, strict ) {
-    if ( !Array.isArray( list ) || !key || !match ) return [];
-    let search  = '\\b'+ String( match || '' ).replace( /[\|]+/g, '\\b|\\b' ) +'\\b';
-    let options = strict ? 'g' : 'gi';
-    let regex   = new RegExp( search, options );
-    return list.filter( obj => obj[ key ].search( regex ) >= 0 );
+  // search objects in a list by key and search text
+  search( list, key, text, fullword, fullcase ) {
+    text = String( text || '' ).replace( /[^\w\s\|]+/g, '' );
+
+    if ( text.length > 1 ) {
+      let search  = fullword ? '\\b'+ text.replace( /[\|]+/g, '\\b|\\b' ) +'\\b' : text;
+      let options = fullcase ? 'g' : 'gi';
+      let regex   = new RegExp( search, options );
+      let count   = list.length;
+      let output  = [];
+
+      while ( count-- ) {
+        if ( String( list[ count ][ key ] || '' ).search( regex ) < 0 ) continue;
+        output.push( list[ count ] );
+      }
+      return output;
+    }
+    return list;
   },
 
   // sort objects in an array by a key
-  sort( list, key, order ) {
-    if ( !Array.isArray( list ) || !key ) return [];
-    if ( !key || typeof key !== 'string' ) return list;
-
-    // check order, default to ascending
-    order = ( order && /^(asc|desc)$/i.test( order ) ) ? order.toLowerCase() : 'asc';
-
+  sort( list, key, order, ignore ) {
     return list.sort( ( a, b ) => {
-      let _a = a[ key ];
-      let _b = b[ key ];
+      if ( a.hasOwnProperty( key ) ) {
 
-      if ( _a && _b ) {
-        // ignore case when sorting strings
-        _a = ( typeof _a === 'string' ) ? _a.toUpperCase() : _a;
-        _b = ( typeof _b === 'string' ) ? _b.toUpperCase() : _b;
+        let _a = a[ key ];
+        let _b = b[ key ];
 
+        if ( ignore ) { // sort strings using same case
+          _a = ( typeof _a === 'string' ) ? _a.toUpperCase() : _a;
+          _b = ( typeof _b === 'string' ) ? _b.toUpperCase() : _b;
+        }
         if ( order === 'asc' ) {
           if ( _a < _b ) return -1;
           if ( _a > _b ) return 1;
@@ -287,21 +304,22 @@ module.exports = {
     });
   },
 
-  // look over anything with a custom callback: loop( data, ( key, val ) => { ... } )
-  loop( data, callback ) {
-    if ( Array.isArray( data ) ) {
-      return data.forEach( ( item, i ) => { callback( i, item ) } );
-    }
-    else if ( typeof data === 'string' ) {
-      data.trim().split( /\s+/g ).forEach( ( word, i ) => { callback( i, word ) } );
-    }
-    else if ( typeof data === 'object' ) {
-      Object.keys( data ).forEach( ( key, i ) => { callback( key, data[ key ] ) } );
-    }
-    else if ( typeof data === 'number' ) {
-      let i = 0, len = parseInt( data ) || 1;
-      for ( i; i < len; ++i ) callback( i, null );
-    }
+  // remove items from the start of a list
+  trimLeft( list, max ) {
+    return ( list.length > max ) ? list.slice( list.length - max ) : list;
+  },
+
+  // remove items from the end of a list
+  trimRight( list, max ) {
+    return ( list.length > max ) ? list.slice( 0, max ) : list;
+  },
+
+  // create unique hash from a string
+  unique( str ) {
+    str = String( str || '' ).replace( /[\r\n\t\s]+/g, ' ' ).trim();
+    let hash = 5381, i = str.length;
+    while ( --i ) hash = ( hash * 33 ) ^ str.charCodeAt( i );
+    return 'unq_' + ( hash >>> 0 );
   },
 
   // random string for a given length

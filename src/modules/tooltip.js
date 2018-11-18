@@ -22,7 +22,7 @@ export default class Tooltip {
       // delay to show the tooltip
       showDelay : 100,
       // auto hide delay
-      hideDelay: 2000,
+      hideDelay: 3000,
       // ...
     }, options );
 
