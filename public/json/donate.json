@@ -1,0 +1,10 @@
+{
+  "info": "Crypto donation addresses.",
+  "addresses": [
+    { "active": true,  "token": "BTC", "name": "Bitcoin", "address": "39YQLqDjhpqCGwbhCi8kEC5WEDEg3KzdcX" },
+    { "active": false, "token": "BCH", "name": "Bitcoin Cash", "address": "qzeumfcxlvgapzudtpkzg6njd37k3cyhtvkveew5ux" },
+    { "active": false, "token": "ETH", "name": "Etherium", "address": "0x1fCe7D18012E49c778884B255f5a4FD6Cf21690f" },
+    { "active": false, "token": "ETC", "name": "Eth Classic", "address": "0xb09D875aB587eb7EAAfB2085222E8012f9A5866b" },
+    { "active": false, "token": "LTC", "name": "Litecoin", "address": "MKMJX9Sjv5HfMMdzdRaS6ShK13HaJiFyBu" }
+  ]
+}
