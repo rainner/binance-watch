@@ -1,23 +1,23 @@
 <template>
-  <header class="topbar-wrap" :class="{ 'collapsed': scrollDir === 'down' }">
+  <header class="topbar-wrap" :class="{ 'collapsed': header.collapsed }">
     <div class="container">
 
       <!-- main topbar row with logo and buttons -->
       <div class="topbar-main flex-row flex-middle flex-stretch">
 
         <!-- topbar logo -->
-        <div class="topbar-logo text-clip">
-          <h1 class="text-clip text-primary-hover clickable" @click="setRoute( '/' )">
+        <div class="topbar-logo">
+          <h1 class="text-primary-hover clickable" @click="setRoute( '/' )">
             <i class="icon-chart-line"></i> <span class="text-uppercase text-clip if-medium">Binance Watch</span>
           </h1>
         </div>
 
-        <!-- topbar buttons and menu -->
+        <!-- topbar top tokens -->
         <div class="topbar-prices flex-row flex-middle flex-1">
-          <div class="text-clip clickable" v-for="a in assetPrices" :key="a.token" @click="setRoute( a.route )">
+          <div v-if="options.prices.header" v-for="(a, i) in assetPrices" :key="a.token" class="text-clip clickable fx fx-slide-down" :class="'fx-delay-' + (i + 1)" @click="setRoute( a.route )">
             <span class="text-bright">{{ a.token }}</span>
             <span :class="{ 'text-gain': ( a.percent > 0 ), 'text-loss': ( a.percent < 0 ) }">{{ a.sign }}{{ a.percent | toFixed( 3 ) }}%</span> <br />
-            <span class="text-default">{{ a.close | toFixed( a.asset ) }} {{ a.arrow }}</span> <br />
+            <span class="text-default">${{ a.close | toFixed( a.asset ) }} {{ a.arrow }}</span> <br />
           </div>
         </div>
 
@@ -25,59 +25,62 @@
         <div class="topbar-menu text-nowrap">
 
           <button
-            class="topbar-btn icon-alarm"
-            :class="{ 'text-gain pulse': watching, 'text-grey': !watching }"
+            class="topbar-btn"
+            :class="{ 'icon-visible text-danger pulse': watching, 'icon-hidden text-grey': !watching }"
             @click="$bus.emit( 'toggleWatchform', 'toggle' )">
           </button>
 
           <Dropdown class="topbar-dropdown">
-            <button slot="trigger" class="topbar-btn icon-signal" :class="{ 'text-gain': isConnected, 'text-danger': !isConnected }"></button>
+            <button slot="trigger" class="topbar-btn icon-signal" :class="{ 'text-gain': tickerStatus, 'text-danger': !tickerStatus }"></button>
             <div slot="list" class="text-center">
 
-              <div class="form-label pad-h">Socket Connection</div>
+              <div class="form-label pad-h">Price Ticker Connection</div>
 
               <hr />
               <div class="pad-h push-bottom">
                 <span class="text-default">Status:</span> &nbsp;
-                <span v-if="socketStatus == 0" class="text-loss">Diconnected <i class="icon-cry"></i></span>
-                <span v-else-if="socketStatus == 1" class="text-primary">Waiting... <i class="icon-clock"></i></span>
-                <span v-else-if="socketStatus == 2" class="text-gain">Connected <i class="icon-check"></i></span>
+                <span v-if="tickerStatus == 0" class="text-loss">Disconnected <i class="icon-cry"></i></span>
+                <span v-if="tickerStatus == 1" class="text-primary">Connecting... <i class="icon-clock"></i></span>
+                <span v-if="tickerStatus == 2" class="text-gain">Connected <i class="icon-check"></i></span>
                 <br />
                 <span class="text-default">Time:</span> &nbsp;
-                <span class="text-bright">{{ socketTime }}</span>
+                <span class="text-bright">{{ tickerTime }}</span>
               </div>
 
               <div class="pad-h">
-                <button v-if="isConnected" class="form-btn icon-close iconLeft bg-danger-hover" @click="toggleConnection">Disconnect</button>
+                <button v-if="tickerStatus" class="form-btn icon-close iconLeft bg-danger-hover" @click="toggleConnection">Disconnect</button>
                 <button v-else class="form-btn icon-connection iconLeft bg-success-hover" @click="toggleConnection">Connect</button>
               </div>
 
             </div>
           </Dropdown>
 
-          <Dropdown class="topbar-dropdown" :class="{ 'alert-bubble': alertCount }">
-            <button slot="trigger" class="topbar-btn icon-menu" @click="resetCount"></button>
+          <Dropdown class="topbar-dropdown" :class="{ 'alert-bubble': hasBubble }">
+            <button slot="trigger" class="topbar-btn icon-menu"></button>
             <ul slot="list">
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/' )">
-                <i class="icon-chart-line iconLeft"></i> Prices
+              <li class="heading">
+                <span class="form-label">Main Navigation</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/news' )">
-                <i class="icon-feedback iconLeft"></i> News <span class="text-grey" v-if="newsData.count">({{ newsData.count }})</span>
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/' )">
+                <i class="icon-chart-line iconLeft"></i> Live Ticker
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/history' )">
-                <i class="icon-clock iconLeft"></i> History <span class="text-grey" v-if="historyData.length">({{ historyData.length }})</span>
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/trade' )">
+                <i class="icon-percent iconLeft"></i> Trade Bot
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/alarms' )">
-                <i class="icon-alarm iconLeft"></i> Alarms <span class="text-grey" v-if="alarmsCount">({{ alarmsCount }})</span>
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/news' )">
+                <i class="icon-feedback iconLeft"></i> Twitter News <span class="text-grey" v-if="newsCount">({{ newsCount }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/about' )">
-                <i class="icon-help iconLeft"></i> About
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/alarms' )">
+                <i class="icon-alarm iconLeft"></i> Saved Alarms <span class="text-grey" v-if="alarmsData.length">({{ alarmsData.length }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/options' )">
-                <i class="icon-config iconLeft"></i> Options
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/history' )">
+                <i class="icon-clock iconLeft"></i> Recent History <span class="text-grey" v-if="historyData.length">({{ historyData.length }})</span>
               </li>
-              <li class="clickable text-primary-hover text-nowrap" @click="setRoute( '/donate' )">
-                <i class="icon-like iconLeft"></i> Donate
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/options' )">
+                <i class="icon-config iconLeft"></i> App Options
+              </li>
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/about' )">
+                <i class="icon-help iconLeft"></i> App Info
               </li>
             </ul>
           </Dropdown>
@@ -90,7 +93,6 @@
 </template>
 
 <script>
-// components
 import Dropdown from './Dropdown.vue';
 
 // component
@@ -101,78 +103,73 @@ export default {
 
   // component props
   props: {
-    watching: { type: Boolean, default: false },
-    socketStatus: { type: Number, default: 0 },
-    socketTime: { type: String, default: '' },
-    scrollDir: { type: String, default: '' },
-    scrollPos: { type: Number, default: 0 },
-    priceData: { type: Array, default: [] },
-    historyData: { type: Array, default: [] },
-    alarmsData: { type: Object, default() { return {} } },
-    newsData: { type: Object, default() { return {} } },
+    header: { type: Object, default() { return {} } },
+    options: { type: Object, default() { return {} } },
+    priceData: { type: Array, default() { return [] } },
+    historyData: { type: Array, default() { return [] } },
+    alarmsData: { type: Array, default() { return [] } },
+    newsEntries: { type: Array, default() { return [] } },
+    tickerStatus: { type: Number, default: 0 },
+    tickerTime: { type: String, default: '' },
   },
 
   // component data
   data() {
     return {
-      alertCount: 0,
+      watching: false,
     }
   },
 
   // computed methods
   computed: {
 
-    // check if socket is connected
-    isConnected() {
-      return ( this.socketStatus > 0 ) ? true : false;
-    },
-
-    // get total number of alerms
+    // compute number of active alarms for all tokens
     alarmsCount() {
-      let count = 0;
-      Object.keys( this.alarmsData ).forEach( a => { count += this.alarmsData[ a ].length } );
-      return count;
+      return this.alarmsData.filter( e => e.active ).length | 0;
     },
 
-    // get a few top tokens to be listed on topbar
+    // compute number of "new" history entries
+    historyCount() {
+      return this.historyData.filter( e => e.isNew ).length | 0;
+    },
+
+    // compute number of "new" news entries
+    newsCount() {
+      return this.newsEntries.filter( e => e.isNew ).length | 0;
+    },
+
+    // check if alert button should be visible
+    hasBubble() {
+      return ( this.historyCount || this.newsCount );
+    },
+
+    // get top 3 usdt coins based on volume
     assetPrices() {
-      let tokens = /^(BTC|ETH|LTC)$/;
-      let asset  = 'USDT';
-      return this.priceData.filter( p => ( tokens.test( p.token ) && p.asset === asset ) );
+      let asset = 'USDT';
+      let list  = this.priceData.filter( p => ( p.asset === asset ) );
+      return this.$utils.sort( list, 'assetVolume', 'desc' ).slice( 0, 3 );
     },
   },
 
   // custom methods
   methods: {
 
-    // reset bubble alert count
-    resetCount() {
-      this.alertCount = 0;
-    },
-
-    // increase bubble alert count
-    increaseCount() {
-      this.alertCount += 1;
+    // set app url route
+    setRoute( route ) {
+      this.$router.setRoute( route );
     },
 
     // toggle socket connection
     toggleConnection() {
-      this.$bus.emit( 'toggleSocket', !this.isConnected );
-    },
-
-    // proxy for settings a route
-    setRoute( route, reset ) {
-      this.$bus.emit( 'setRoute', route );
-      if ( reset ) this.resetCount();
+      if ( this.tickerStatus ) { this.$binance.stopTickerStream(); }
+      else { this.$binance.startTickerStream( true ); }
     },
   },
 
-  // component mounted
-  mounted() {
-    // used to add the alert bubble to the menu
-    this.$bus.on( 'mainMenuAlert', this.increaseCount );
-    this.$bus.on( 'mainMenuReset', this.resetCount );
-  },
+  // on component created
+  created() {
+    this.$bus.on( 'priceWatch', status => { this.watching = status } );
+  }
 }
 </script>
 

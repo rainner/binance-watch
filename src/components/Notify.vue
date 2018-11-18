@@ -1,16 +1,14 @@
 <template>
-  <div class="notify-wrap">
-    <div class="notify-alert"
-      v-for="alert in alerts"
-      :class="[ 'notify-' + alert.type, { 'notify-closed': alert.closed } ]"
-      :key="alert.id">
-        <span class="notify-message">{{ alert.message }}</span>
-        <button class="notify-close icon-close" @click.stop="close( alert.id )"></button>
+  <section class="notify-wrap">
+    <div v-for="a in alerts" class="notify-alert" :class="[ 'notify-' + a.type, { 'notify-closed': a.closed } ]" :key="a.id">
+      <span class="notify-message">{{ a.message }}</span>
+      <button class="notify-close icon-close" @click.stop="close( a.id )"></button>
     </div>
-  </div>
+  </section>
 </template>
 
 <script>
+// component
 export default {
 
   // component data
@@ -25,31 +23,34 @@ export default {
 
     // show new alert, types: (success, error, warning, info)
     show( message, type, timeout ) {
-      timeout = ( !timeout && type !== 'error' ) ? 5000 : timeout;
+      message    = String( message || 'No message available.' );
+      type       = String( type || 'info' );
+      timeout    = Number( ( !timeout && type !== 'error' ) ? 5000 : timeout ) || 0;
 
-      let alert = {
-        id: 'alert-' + Math.random().toString( 36 ).replace( /[^a-z]+/g, '' ).substr( 0, 5 ),
-        message: message || 'No message available.',
-        type: type || 'info',
-        closed: false,
-      };
-      if ( timeout && typeof timeout === 'number' ) {
-        setTimeout( () => { this.close( alert.id ); }, timeout );
+      let id     = this.$utils.randString( 20 );
+      let sto    = timeout ? setTimeout( () => this.close( id ), timeout ) : 0;
+      let closed = false;
+
+      if ( this.alerts.length >= 5 ) {
+        let a = this.alerts.pop();
+        if ( a.sto ) clearTimeout( a.sto );
+        this.remove( a.id );
       }
-      this.$emit( 'onShow', alert );
-      this.alerts.push( alert );
+      this.alerts.push( { id, message, type, timeout, sto, closed } );
     },
 
     // close alert by id
     close( id ) {
-      for ( let i = 0; i < this.alerts.length; ++i ) {
-        let alert = this.alerts[ i ];
-        if ( alert.id === id && !alert.closed ) {
-          this.$emit( 'onClose', alert );
-          this.alerts[ i ].closed = true; // animate out, then...
-          setTimeout( () => { this.alerts.splice( i, 1 ); }, 500 );
-        }
-      }
+      this.alerts.forEach( ( a, i ) => {
+        if ( a.id !== id ) return;
+        a.closed = true; // animate out, then...
+        setTimeout( () => this.remove( id ), 500 );
+      });
+    },
+
+    // remove lert from the list
+    remove( id ) {
+      this.alerts = this.alerts.filter( a => ( a.id !== id ) );
     },
 
     // alias
@@ -77,48 +78,35 @@ export default {
 </script>
 
 <style lang='scss'>
-
-@keyframes notifyShow {
-    0% { transform: translateY( 20px ) scale( 0.8 ); opacity: 0; }
-  100% { transform: translateY( 0 ) scale( 1 ); opacity: 1; }
-}
-@keyframes notifyRemove {
-    0% { transform: scale( 1 ); opacity: 1; }
-  100% { transform: scale( 0.8 ); opacity: 0; }
-}
-
 .notify-wrap {
+  display: block;
   position: fixed;
   pointer-events: none;
   width: 100%;
-  padding: $padSpace;
-  left: 0;
+  max-width: $sizeMedium;
+  padding: 0 $padSpace;
+  left: 50%;
   bottom: 0;
   transition: none;
+  transform: translateX( -50% );
   z-index: $zindexAlerts;
 
   .notify-alert {
+    display: block;
     position: relative;
     pointer-events: auto;
     margin: 0 0 $padSpace 0;
-    padding: $padSpace 2em;
-    line-height: 1.2em;
+    padding: $padSpace ( $padSpace * 2 );
+    line-height: normal;
     background-color: $colorDefault;
     color: $colorDefaultText;
-    @include borderAccent;
     border-radius: $lineJoin;
     box-shadow: $shadowBold;
-    animation: notifyShow $fxSpeed $fxEaseBounce forwards;
-
-    @media #{$screenMedium} {
-      width: 600px;
-      margin: 0 auto $padSpace auto;
-    }
+    animation: zoomIn $fxSpeed $fxEase forwards;
 
     &.notify-closed {
-      animation: notifyRemove $fxSpeed $fxEase forwards;
+      animation: zoomOut $fxSpeed $fxEase forwards;
     }
-
     &.notify-success {
       background-color: $colorSuccess;
       color: $colorSuccessText;
@@ -135,11 +123,9 @@ export default {
       background-color: $colorInfo;
       color: $colorInfoText;
     }
-
     .notify-message {
       font-weight: normal;
     }
-
     .notify-close {
       display: inline-block;
       position: absolute;
@@ -149,8 +135,8 @@ export default {
       width: 2em;
       line-height: 1em;
       padding: 0.5em;
-      color: darken( $colorBright, 60% );
       background-color: $colorBright;
+      color: $colorInfo;
       border-radius: 100px;
       box-shadow: $shadowPaper;
 

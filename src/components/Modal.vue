@@ -1,9 +1,9 @@
 <template>
   <div class="modal-overlay" :class="{ 'visible': visible, 'under': under }" @click.stop="close">
     <section class="modal-container" ref="container" @click.stop>
-      <header class="modal-header">
-        <div class="modal-title text-clip">{{ title }}</div>
-        <button class="modal-close icon-close" @click.stop="close"></button>
+      <header class="flex-row flex-middle flex-stretch pad-all border-bottom">
+        <div class="flex-1 text-clip text-bright">{{ title }}</div>
+        <button class="text-danger-hover icon-close" @click.stop="close"></button>
       </header>
       <main class="modal-body">
         <slot></slot>
@@ -13,7 +13,7 @@
 </template>
 
 <script>
-// modal component
+// component
 export default {
 
   // component data
@@ -95,39 +95,6 @@ export default {
     box-shadow: $shadowBold;
     transform: scale( 0.5 );
 
-    .modal-header {
-      display: flex;
-      flex-direction: row;
-      align-content: center;
-      justify-content: space-between;
-      padding: $padSpace;
-      line-height: 1.2em;
-      border-bottom: $lineWidth $lineStyle $lineColor;
-
-      .modal-title, .modal-close {
-        display: inline-block;
-        font-size: 120%;
-        font-weight: normal;
-        text-transform: capitalize;
-        vertical-align: middle;
-        line-height: 1.2em;
-      }
-
-      .modal-title {
-        flex: 1;
-        opacity: 0.6;
-      }
-      .modal-close {
-        cursor: pointer;
-        color: $colorBright;
-        opacity: 1;
-
-        &:hover {
-          opacity: 0.8;
-        }
-      }
-    }
-
     .modal-body {
       display: block;
       position: relative;
@@ -140,18 +107,16 @@ export default {
     }
   }
 }
-
+// visible state
 .modal-overlay.visible {
   opacity: 1;
-
   .modal-container {
     transform: scale( 1 );
   }
 }
-
+// inactive state
 .modal-overlay.under {
   pointer-events: none;
   z-index: $zindexUnder;
 }
-
 </style>

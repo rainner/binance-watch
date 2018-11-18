@@ -2,31 +2,27 @@
   <section class="history-page">
 
     <div class="flex-row flex-middle flex-stretch push-bottom">
-      <div class="text-grey push-right">
-        Your custom alarms and price watch alerts will be added to this list in case you missed any.
-        Use the Flush button to delete all entries.
+      <div class="flex-1 text-clip push-right">Recent price alert activity history ({{ historyData.length }})</div>
+      <button class="form-btn bg-info-hover icon-close iconLeft" :class="{ 'disabled': !historyData.length }" @click="flushHistory">Flush</button>
+    </div>
+
+    <div class="flex-list">
+      <div v-if="!historyData.length" class="flex-item">
+        <div class="flex-1 text-info text-faded">
+          <span class="icon-info iconLeft">There's nothing here right now.</span>
+        </div>
       </div>
-      <button class="form-btn bg-danger-hover icon-reset iconLeft" :disabled="!historyData.length" @click.prevent="flushHistory()">
-        Flush
-      </button>
-    </div>
-
-    <div v-if="!historyData.length" class="icon-info iconLeft text-grey">
-      There's nothing here right now.
-    </div>
-
-    <div class="flex-list flex-middle flex-stretch">
       <div v-for="e in historyData" :key="e.id" class="flex-item">
-        <div class="push-right">
+        <div class="push-right" :class="{ 'alert-bubble': e.isNew }">
           <TokenIcon :image="e.icon"></TokenIcon>
         </div>
         <div class="flex-1 push-right">
-          <span class="text-bright">{{ e.title }}</span> <br />
-          <small>{{ formatInfo( e.info ) }}</small>
+          <div class="text-default">{{ e.title }}</div>
+          <div class="text-info">{{ formatInfo( e.info ) }}</div>
         </div>
         <div class="text-clip text-right">
-          <button class="icon-close" @click="deleteHistory( e.id )"></button> <br />
-          <small class="text-grey">{{ e.time | toElapsed }} ago</small>
+          <button class="icon-close" title="Delete" @click="deleteHistory( e.id )" v-tooltip></button>
+          <div class="text-default">{{ e.time | toElapsed }} ago</div>
         </div>
       </div>
     </div>
@@ -35,7 +31,6 @@
 </template>
 
 <script>
-// components
 import TokenIcon from './TokenIcon.vue';
 
 // component
@@ -46,8 +41,8 @@ export default {
 
   // component props
   props: {
+    historyData: { type: Array, default() { return [] }, required: true },
     modalData: { type: Object, default() { return {} } },
-    historyData: { type: Array, default: [], required: true },
   },
 
   // custom methods
@@ -55,16 +50,12 @@ export default {
 
     // delete item from history
     deleteHistory( id ) {
-      let saved = this.$history.delete( id );
-      if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'History data has been updated.', 'success' );
+      this.$history.remove( id );
     },
 
     // flush history list
     flushHistory() {
-      let saved = this.$history.flush();
-      if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the history data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'History data has been flushed.', 'success' );
+      this.$history.flush();
     },
 
     // format info string
@@ -72,6 +63,11 @@ export default {
       return String( info || '' ).replace( /[\r\n]+/g, ', ' ) + '.';
     }
   },
+
+  // on component destroyed
+  destroyed() {
+    this.$history.reset();
+  }
 }
 </script>
 

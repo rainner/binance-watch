@@ -7,13 +7,16 @@
 </template>
 
 <script>
+// component
 export default {
 
+  // component props
   props: {
     value: { type: Boolean, default: false },
     text: { type: String, default: '...' },
   },
 
+  // custom mounted
   methods: {
 
     onClick( e ) {

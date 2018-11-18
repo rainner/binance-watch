@@ -8,7 +8,14 @@
 </template>
 
 <script>
+// component
 export default {
+
+  // component props
+  props: {
+    active: { type: Boolean, default: false },
+    text: { type: String, default: 'Loading' },
+  },
 
   // component data
   data() {
@@ -52,6 +59,13 @@ export default {
     },
 
   },
+
+  // check initial state on mount
+  mounted() {
+    if ( this.active ) {
+      this.show( this.text );
+    }
+  }
 }
 </script>
 
@@ -99,8 +113,13 @@ export default {
   // absolute positioned spinner with overlay
   &.abs {
     position: absolute;
-    background-color: $colorOverlay;
-    z-index: $zindexElements;
+    background-color: rgba( black, .2 );
+    z-index: auto;
+  }
+
+  // rounded edges
+  &.rounded {
+    border-radius: $lineJoin;
   }
 
   // main flex centered content

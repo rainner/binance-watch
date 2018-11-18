@@ -1,5 +1,5 @@
 <template>
-  <section class="linechart-wrap">
+  <section :class="{ 'transparent': !values.length }">
     <svg :viewBox="svgBox" xmlns="http://www.w3.org/2000/svg">
       <polyline class="polyline" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" :points="chartPoints" />
       <circle class="circle" :cx="cx" :cy="cy" r="3" fill="#f0f0f0" stroke="none" />
@@ -8,8 +8,7 @@
 </template>
 
 <script>
-import utils from '../modules/utils';
-
+// component
 export default {
 
   // component props
@@ -30,10 +29,6 @@ export default {
   // computed methods
   computed: {
 
-    circX() {
-
-    },
-
     // svg view box size
     svgBox() {
       return '0 0 '+ this.width +' '+ this.height;
@@ -41,7 +36,7 @@ export default {
 
     // build points for SVG polyline
     chartPoints() {
-      let data = utils.points( this.width, this.height, this.values );
+      let data = this.$utils.points( this.width, this.height, this.values );
       let last = data.length ? data[ data.length - 1 ] : { x: 0, y: 0 };
       let list = data.map( d => ( d.x - 8 ) +','+ d.y );
       this.cx  = last.x - 3;
@@ -51,11 +46,3 @@ export default {
   },
 }
 </script>
-
-<style lang="scss">
-.linechart-wrap {
-  display: block;
-  position: relative;
-  overflow: hidden;
-}
-</style>

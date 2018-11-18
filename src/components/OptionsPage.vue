@@ -1,34 +1,48 @@
 <template>
   <section>
 
+    <!-- notifications and audio options -->
     <div class="push-bottom">
       <div class="form-label push-bottom">
         Browser Notifications <i class="icon-down-open"></i>
       </div>
-
       <div class="push-bottom">
-        <Toggle :text="'Grant permission to receive browser notifications'" v-model="canNotify" @click="askNotifyPermission"></Toggle>
-        <Toggle :text="'Play a notification sound effect'" v-model="options.audio.enabled" @change="applyOptions"></Toggle>
+        <Toggle :text="'Grant permission for browser notifications'" v-model="canNotify" @click="askNotifyPermission"></Toggle>
+        <Toggle :text="'Enable browser notifications for all events'" v-model="options.notify.enabled" @change="saveOptions()"></Toggle>
+        <Toggle :text="'Play a notification sound effect'" v-model="options.audio.enabled" @change="saveOptions()"></Toggle>
       </div>
-
       <div class="flex-row flex-middle flex-stretch">
-        <div class="form-input push-right">
-          <div class="text-grey text-nowrap">Sound:&nbsp;<i class="icon-down-open">&nbsp;</i></div>
-          <select class="flex-1 push-right" v-model="options.audio.file" @change="applyOptions( true )">
-            <option v-for="a of audioList" :key="a.name" :value="a.file">{{ a.name }}</option>
-          </select>
+        <div class="flex-1 form-input push-right">
+          <SelectMenu class="flex-1 push-right" :options="audioFiles" v-model="options.audio.file" @change="saveOptions( true )"></SelectMenu>
           <button class="text-bright icon-play" @click="playSound()"></button>
         </div>
-        <div class="form-input">
-          <span class="text-grey push-right">Volume:</span>
-          <input type="range" min="0.1" max="1.0" step="0.1" v-model="options.audio.volume" @change="applyOptions( true )" />
+        <div class="flex-1 form-input push-right">
+          <span class="text-grey push-right">Volume</span>
+          <input type="range" min="0.1" max="1.0" step="0.1" v-model="options.audio.volume" @change="saveOptions( true )" />
           <span class="push-left">{{ options.audio.volume }}</span>
+        </div>
+        <div class="flex-1 form-input">
+          <span class="text-grey push-right">Visible</span>
+          <input type="range" min="5" max="30" step="1" v-model="options.notify.duration" @change="saveOptions()" />
+          <span class="push-left">{{ options.notify.duration }}s</span>
         </div>
       </div>
     </div>
 
     <hr />
 
+    <!-- search options -->
+    <div class="push-bottom">
+      <div class="form-label push-bottom">
+        Search Options (Affects sentiment analysis) <i class="icon-down-open"></i>
+      </div>
+      <Toggle :text="'Must type full search words to see results'" v-model="options.search.fullword" @change="saveOptions()"></Toggle>
+      <Toggle :text="'Must type upper/lower case word letters'" v-model="options.search.fullcase" @change="saveOptions()"></Toggle>
+    </div>
+
+    <hr />
+
+    <!-- proxy and api config options -->
     <div class="push-bottom">
       <div class="form-label push-bottom">
         Outgoing Requests &amp; Notifications (Advanced) <i class="icon-down-open"></i>
@@ -40,7 +54,7 @@
           <form class="cors-form flex-row flex-middle flex-stretch push-bottom" action="#" @submit="corsFormSubmit" :disabled="testing">
             <div class="form-input flex-1 push-right">
               <span class="text-nowrap text-grey push-right">Proxy:</span>
-              <input type="text" name="proxyurl" placeholder="https://..." v-model="corsProxy" @blur="applyOptions" />
+              <input type="text" name="proxyurl" placeholder="https://..." v-model="corsProxy" @blur="saveOptions()" />
               <span class="push-left" :class="{ 'icon-check text-gain': urlSuccess, 'icon-close text-loss': !urlSuccess, 'icon-clock text-warning': testing }"></span>
             </div>
             <button class="form-btn bg-info-hover push-right push-small" type="submit">
@@ -66,24 +80,49 @@
           </div>
         </section>
 
+        <!-- binance -->
+        <section btn-class="icon-chart-line" btn-name="Binance API">
+          <Toggle class="push-bottom"
+            :text="'Enable Binance API for trading purposes'"
+            v-model="options.binance.enabled"
+            @change="saveOptions()">
+          </Toggle>
+          <div class="form-input push-bottom">
+            <span class="text-nowrap text-grey push-right">Binance API Key:</span>
+            <input class="flex-1" type="text" placeholder="..." v-model="options.binance.apikey" @blur="saveOptions()" />
+          </div>
+          <div class="form-input push-bottom">
+            <span class="text-nowrap text-grey push-right">Binance API Secret:</span>
+            <input class="flex-1" type="text" placeholder="..." v-model="options.binance.apisecret" @blur="saveOptions()" />
+          </div>
+          <div class="text-small text-grey">
+            <p>
+              Provide your <a href="#" @click.prevent="goBinance">Binance API keys</a>
+              if you wish to use the trading features available within this app.
+              The key you enter here will be stored in your web browser's local storage for use within this app only.
+              You can find your key, or create a new one by accessing your account page on the Binance website.
+            </p>
+          </div>
+        </section>
+
         <!-- mailgun -->
         <section btn-class="icon-at" btn-name="Mailgun API">
           <Toggle class="push-bottom"
             :text="'Enable notifications using Mailgun API'"
             v-model="options.mailgun.enabled"
-            @change="applyOptions">
+            @change="saveOptions()">
           </Toggle>
           <div class="form-input push-bottom">
             <span class="text-nowrap text-grey push-right">Mailgun Domain:</span>
-            <input class="flex-1" type="text" placeholder="mysite.com" v-model="options.mailgun.domain" @blur="applyOptions" />
+            <input class="flex-1" type="text" placeholder="mysite.com" v-model="options.mailgun.domain" @blur="saveOptions()" />
           </div>
           <div class="form-input push-bottom">
             <span class="text-nowrap text-grey push-right">Mailgun API Key:</span>
-            <input class="flex-1" type="text" placeholder="key-..." v-model="options.mailgun.apikey" @blur="applyOptions" />
+            <input class="flex-1" type="text" placeholder="key-..." v-model="options.mailgun.apikey" @blur="saveOptions()" />
           </div>
           <div class="form-input push-bottom">
             <span class="text-nowrap text-grey push-right">Recipient E-mail:</span>
-            <input class="flex-1" type="text" placeholder="me@site.com" v-model="options.mailgun.email" @blur="applyOptions" />
+            <input class="flex-1" type="text" placeholder="me@site.com" v-model="options.mailgun.email" @blur="saveOptions()" />
           </div>
           <div class="text-small text-grey">
             <p>
@@ -98,15 +137,15 @@
           <Toggle class="push-bottom"
             :text="'Enable notifications using Telegram Bot API'"
             v-model="options.telegram.enabled"
-            @change="applyOptions">
+            @change="saveOptions()">
           </Toggle>
           <div class="form-input push-bottom">
             <span class="text-nowrap text-grey push-right">Telegram Bot Key:</span>
-            <input class="flex-1" type="text" placeholder="00000:xxxxx..." v-model="options.telegram.botkey" @blur="applyOptions" />
+            <input class="flex-1" type="text" placeholder="00000:xxxxx..." v-model="options.telegram.botkey" @blur="saveOptions()" />
           </div>
           <div class="form-input push-bottom">
             <span class="text-nowrap text-grey push-right">Telegram User ID:</span>
-            <input class="flex-1" type="text" placeholder="0000000..." v-model="options.telegram.userid" @blur="applyOptions" />
+            <input class="flex-1" type="text" placeholder="0000000..." v-model="options.telegram.userid" @blur="saveOptions()" />
           </div>
           <div class="text-small text-grey">
             <p>
@@ -127,12 +166,12 @@
 // sub components
 import Tabs from './Tabs.vue';
 import Toggle from './Toggle.vue';
-import utils from '../modules/utils';
+import SelectMenu from './SelectMenu.vue';
 
 export default {
 
   // component list
-  components: { Tabs, Toggle },
+  components: { Tabs, Toggle, SelectMenu },
 
   // component props
   props: {
@@ -148,25 +187,17 @@ export default {
       testing: false,
       // notification choices
       audioFiles: [
-        { name: 'Audio 1', file: 'public/audio/audio_1.mp3' },
-        { name: 'Audio 2', file: 'public/audio/audio_2.mp3' },
-        { name: 'Audio 3', file: 'public/audio/audio_3.mp3' },
-        { name: 'Audio 4', file: 'public/audio/audio_4.mp3' },
-        { name: 'Audio 5', file: 'public/audio/audio_5.mp3' },
+        { text: 'Audio 1', value: 'public/audio/audio_1.mp3' },
+        { text: 'Audio 2', value: 'public/audio/audio_2.mp3' },
+        { text: 'Audio 3', value: 'public/audio/audio_3.mp3' },
+        { text: 'Audio 4', value: 'public/audio/audio_4.mp3' },
+        { text: 'Audio 5', value: 'public/audio/audio_5.mp3' },
       ]
     }
   },
 
   // computed methods
   computed: {
-
-    // build dropdown audio list
-    audioList() {
-      return this.audioFiles.map( a => {
-        a.selected = ( a.file === this.options.audio.file ) ? true : false;
-        return a;
-      });
-    },
 
     // list of saved proxies
     proxyList() {
@@ -180,17 +211,23 @@ export default {
   // custom methods
   methods: {
 
+    // lick to binance site with ref id added
+    goBinance( e ) {
+      e.preventDefault();
+      this.$bus.emit( 'handleClick', 'binance', '/', '_blank' );
+    },
+
     // play selected notification sound
     playSound() {
       let { file, volume } = this.options.audio;
-      utils.playAudio( file, volume );
+      this.$utils.playAudio( file, volume );
     },
 
     // apply options
-    applyOptions( audio ) {
+    saveOptions( audio ) {
       let options = Object.assign( {}, this.options, { proxy: this.corsProxy } );
-      this.$bus.emit( 'setOptions', options );
-      if ( audio ) this.playSound();
+      if ( audio === true ) this.playSound();
+      this.$opts.saveOptions( options );
     },
 
     // add proxy to options list
@@ -199,7 +236,7 @@ export default {
       this.options.proxylist = this.options.proxylist.filter( p => p !== url );
       this.options.proxylist.push( url );
       this.$bus.emit( 'showNotice', 'Proxy URL added to list.', 'success' );
-      this.applyOptions();
+      this.saveOptions();
     },
 
     // remove proxy from options list
@@ -207,14 +244,14 @@ export default {
       if ( !url ) return;
       this.options.proxylist = this.options.proxylist.filter( p => p !== url );
       this.$bus.emit( 'showNotice', 'Proxy URL removed from list.', 'success' );
-      this.applyOptions();
+      this.saveOptions();
     },
 
     // set active proxy from list
     setProxy( url ) {
       this.corsProxy = url;
       this.options.proxy = url;
-      this.applyOptions();
+      this.saveOptions();
     },
 
     // test cors proxy url
@@ -259,7 +296,7 @@ export default {
     },
   },
 
-  // test cors url when component mounts
+  // on component mounted
   mounted() {
     this.corsProxy = this.options.proxy;
     this.canNotify = this.$notify.canNotify();

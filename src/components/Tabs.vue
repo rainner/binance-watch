@@ -15,11 +15,12 @@
 </template>
 
 <script>
+// component
 export default {
 
-    // component props
+  // component props
   props: {
-    data: { type: Object, default: () => { return {} } },
+    data: { type: Object, default() { return {} } },
   },
 
   // component data
@@ -124,7 +125,7 @@ export default {
       for ( let i = 0; i < slots.length; ++i ) {
         let slide = slots[ i ].elm;
         if ( slide.hasAttribute( 'active' ) ) this.index = i;
-        slide.setAttribute( 'class', 'tabs-slide fx-on fx-fade-in' );
+        slide.setAttribute( 'class', 'tabs-slide fx fx-fade-in' );
         slides.push( slide );
       }
       this.slides = slides;
@@ -177,9 +178,10 @@ export default {
   .tabs-toggle {
     display: block;
     cursor: pointer;
-    padding: 0 0 ( $padSpace / 2 ) 0;
+    padding: ( $padSpace * .6 ) $padSpace;
     color: $colorSecondary;
-    border-bottom: $lineWidth solid $lineColor;
+    background-color: rgba( black, 0.1 );
+    border-radius: $lineJoin $lineJoin 0 0;
   }
 
   .tabs-nav {
@@ -194,7 +196,7 @@ export default {
       @include textClip;
 
       &.active  {
-        color: $colorSecondary;
+        color: $colorBright;
       }
     }
   }
@@ -235,16 +237,24 @@ export default {
     flex-direction: row;
     align-items: flex-end;
     justify-content: stretch;
-    border-bottom: $lineWidth solid $lineColor;
 
     button {
       flex: 1;
-      margin-bottom: -$lineWidth;
-      padding: 0 0 ( $padSpace / 2 ) 0;
-      border-bottom: $lineWidth solid transparent;
+      padding: ( $padSpace * .6 ) 0;
+      border-bottom: $lineWidth solid $colorGrey;
+      background-color: rgba( black, 0.1 );
+      border-radius: $lineJoin $lineJoin 0 0;
 
+      &:hover {
+        background-color: rgba( black, 0.16 );
+      }
       &.active {
+        background-color: rgba( black, 0.2 );
         border-color: $colorSecondary;
+        color: $colorSecondary;
+      }
+      & + button {
+        margin-left: $lineWidth;
       }
     }
   }

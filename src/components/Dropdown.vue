@@ -3,15 +3,14 @@
     <div class="dropdown-trigger clickable" ref="trigger" @click="listShow">
       <slot name="trigger"></slot>
     </div>
-    <div class="dropdown-list" :class="{ 'visible': visible, 'top': top, 'right': right, 'bottom': bottom, 'left': left }" @click.stop>
+    <div class="dropdown-container" :class="{ 'visible': visible, 'top': top, 'right': right, 'bottom': bottom, 'left': left }" @click.stop>
       <slot name="list"></slot>
     </div>
   </div>
 </template>
 
 <script>
-import Viewport from '../modules/viewport';
-
+// component
 export default {
 
   // component data
@@ -30,21 +29,13 @@ export default {
 
     // show dropdown
     listShow( e ) {
-      if ( !this.visible ) {
-        // get position of the trigger and window size
-        let trigger  = this.$refs.trigger;
-        let box      = trigger.getBoundingClientRect();
-        let posx     = box.left + ( trigger.offsetWidth / 2 );
-        let posy     = box.top + ( trigger.offsetHeight / 2 );
-        let centerx  = Viewport.clientWidth() / 2;
-        let centery  = Viewport.clientHeight() / 2;
-        // menu show position depends on trigger position in relation to window center
-        this.top     = ( posy < centery ) ? true : false;
-        this.right   = ( posx > centerx ) ? true : false;
-        this.bottom  = ( posy > centery ) ? true : false;
-        this.left    = ( posx < centerx ) ? true : false;
-        this.visible = true;
-      }
+      if ( this.visible || !this.$refs.trigger ) return;
+      let pos      = this.$utils.boxPosition( this.$refs.trigger );
+      this.top     = pos.top;
+      this.right   = pos.right;
+      this.bottom  = pos.bottom;
+      this.left    = pos.left;
+      this.visible = true;
     },
 
     // hide dropdown
@@ -74,61 +65,21 @@ export default {
 </script>
 
 <style lang='scss'>
-
-@keyframes dropSlideUp {
-    0% { transform: translateY( 20px ); opacity: 0.000000001; }
-  100% { transform: translateY( 0 ); opacity: 1; }
-}
-@keyframes dropSlideDown {
-    0% { transform: translateY( -20px ); opacity: 0.000000001; }
-  100% { transform: translateY( 0 ); opacity: 1; }
-}
-
 .dropdown-menu {
   display: inline-block;
-  overflow: visible;
   position: relative;
+  overflow: visible;
 
-  & > .dropdown-trigger {
+  .dropdown-trigger {
     display: inline-block;
     cursor: pointer;
   }
 
-  & > .dropdown-list {
-    display: none;
-    position: absolute;
-    transition: none;
-    opacity: 0.000000001;
-    margin: 0;
+  .dropdown-container {
+    @include commonDropdown;
     padding: $padSpace 0;
-    min-width: 200px;
-    max-width: 400px;
-    background-color: lighten( $colorDocument, 8% );
-    border-radius: $lineJoin;
-    box-shadow: $shadowBold;
-    z-index: ( $zindexModals + 2 );
-
-    &.left { // show from left
-      left: 0;
-      right: auto;
-    }
-    &.right { // show from right
-      left: auto;
-      right: 0;
-    }
-    &.top { // show from top
-      top: 50%;
-      bottom: auto;
-      animation: dropSlideUp $fxSpeed $fxEaseBounce forwards;
-    }
-    &.bottom { // show from bottom
-      top: auto;
-      bottom: 50%;
-      animation: dropSlideDown $fxSpeed $fxEaseBounce forwards;
-    }
-    &.visible {
-      display: block;
-    }
+    min-width: 240px;
+    max-width: 420px;
 
     & > ul {
       display: block;
@@ -140,19 +91,22 @@ export default {
       & > li {
         display: block;
         margin: 0;
-        padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
         text-align: left;
         white-space: nowrap;
 
+        &.heading {
+          margin: 0 0 $padSpace 0;
+          padding: 0 $padSpace;
+        }
+
         &.clickable {
-          border-top: $lineWidth $lineStyle $lineColor;
-          background-color: rgba( 0, 0, 0, 0 );
+          padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
+          border-top: ( $lineWidth / 2 ) $lineStyle $lineColor;
+          border-bottom: ( $lineWidth / 2 ) $lineStyle $lineColor;
+          background-color: rgba( black, 0 );
 
           &:hover {
-            background-color: rgba( 0, 0, 0, 0.1 );
-          }
-          &:first-of-type {
-            border-top: none;
+            background-color: rgba( black, 0.1 );
           }
         }
 

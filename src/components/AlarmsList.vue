@@ -1,40 +1,56 @@
 <template>
   <section>
 
-    <div v-if="!pairData.symbol" class="text-grey push-bottom">
-      List of active alarms for all symbols ({{ alarmsList.length }})
-    </div>
-
     <form v-if="pairData.symbol" class="flex-row flex-middle flex-stretch push-bottom" action="#" @submit.prevent="saveAlarm">
       <div class="form-input flex-1 push-right">
         <div class="icon-chart-line push-right"></div>
-        <input class="push-right" placeholder="0.00000000" name="alarmPrice" v-model="curPrice" />
+        <input class="push-right" placeholder="0.00000000" name="price" v-model="curPrice" />
         <div class="text-grey">{{ pairData.asset }}</div>
       </div>
-      <button type="submit" class="form-btn bg-grey-hover icon-alarm iconLeft">Set</button>
+      <button type="submit" class="form-btn bg-info-hover icon-add iconLeft">Create</button>
     </form>
 
-    <div v-if="!alarmsList.length" class="icon-info iconLeft text-grey">
-      <span v-if="pairData.symbol">There are no alarms for {{ pairData.symbol }}.</span>
-      <span v-else>There are no alarms.</span>
-    </div>
-
     <div class="flex-list">
-      <div v-for="a in alarmsList" :key="a.id" class="flex-item">
-        <div class="flex-1 text-clip push-right">
-          <span class="text-default icon-alarm iconLeft"></span>
-          <span class="text-bright">{{ a.pair }}</span>
-          <span class="text-big" :class="[ 'text-'+ a.check ]">&nbsp;{{ a.sign }}&nbsp;</span>
-          <span class="text-bright">{{ a.alarmPrice | toFixed( a.asset ) }}</span>
-          <span class="text-default">{{ a.asset }}</span>
-        </div>
-        <div class="text-clip push-right">
-          <span class="text-grey">{{ a.time | toElapsed }} ago</span>
-        </div>
-        <div class="text-clip">
-          <button class="icon-close" @click="deleteAlarm( a.symbol, a.id )"></button>
+      <div class="flex-header">
+        <div class="push-right"><span class="icon-alarm text-faded"></span></div>
+        <div class="flex-1 push-right">Symbol</div>
+        <div class="flex-1 push-right">Alarm</div>
+        <div class="flex-1 push-right">Status</div>
+        <div class="flex-1 push-right">Created</div>
+        <div><button class="icon-close text-danger-hover" title="Delete All" @click="flushAlarms" v-tooltip></button></div>
+      </div>
+
+      <div v-if="!alarmsList.length" class="flex-item">
+        <div class="flex-1 text-info text-faded">
+          <span class="icon-info">&nbsp;</span>
+          <span v-if="pairData.symbol">There are no alarms for {{ pairData.symbol }}.</span>
+          <span v-else>There are no alarms.</span>
         </div>
       </div>
+
+      <div v-for="a in alarmsList" :key="a.id" class="flex-item">
+        <div class="push-right">
+          <button class="icon-alarm" :class="{ 'text-gain': a.active, 'text-info': !a.active }" title="Toggle" @click="toggleAlarm( a.id, a.symbol, !a.active )" v-tooltip></button>
+        </div>
+        <div class="flex-1 push-right">
+          <button class="text-bright-hover" @click="$bus.emit( 'setRoute', '/symbol/'+ a.symbol )">{{ a.pair }}</button>
+        </div>
+        <div class="flex-1 push-right">
+          <span class="text-big" :class="[ 'text-'+ a.check ]">{{ a.sign }}</span>
+          <span class="text-bright">{{ a.price | toFixed( a.asset ) }}</span>
+          <span class="text-info">{{ a.asset }}</span>
+        </div>
+        <div class="flex-1 push-right">
+          <span :class="{ 'text-success': a.active, 'text-info': !a.active }">{{ a.active ? 'Active' : 'Triggered' }}</span>
+        </div>
+        <div class="flex-1 push-right">
+          <span class="text-grey">{{ a.time | toDate }}</span>
+        </div>
+        <div>
+          <button class="icon-close" title="Delete" @click="deleteAlarm( a.id, a.symbol )" v-tooltip></button>
+        </div>
+      </div>
+
     </div>
 
   </section>
@@ -46,8 +62,8 @@ export default {
 
   // component props
   props: {
-    alarmsData: { type: Object, default: {}, required: true },
-    pairData: { type: Object, default: () => { return {} } },
+    alarmsData: { type: Array, default() { return [] }, required: true },
+    pairData: { type: Object, default() { return {} } },
   },
 
   // comonent data
@@ -62,26 +78,17 @@ export default {
 
     // filter alarms for this token
     alarmsList() {
-      let list   = [];
-      let alarms = this.alarmsData;
-      let pair   = this.pairData;
+      let list = this.alarmsData.slice();
+      let symbol = this.pairData.symbol || '';
 
-      // filter alarms for a specific pair
-      if ( pair.symbol ) {
-        list = alarms.hasOwnProperty( pair.symbol ) ? alarms[ pair.symbol ] : [];
+      // sort all alarms by symbol
+      list = this.$utils.sort( list, 'symbol', 'asc' );
+
+      // sort alarms for a specific symbol by status
+      if ( symbol ) {
+        list = list.filter( a => a.symbol === symbol );
+        list = this.$utils.sort( list, 'active', 'desc' );
       }
-      // or build list of alarms for all pairs
-      else {
-        Object.keys( alarms ).forEach( symbol => {
-          Array.from( alarms[ symbol ] ).forEach( alarm => { list.push( alarm ) } );
-        });
-      }
-      // sort by pair ascending
-      list = list.sort( ( a, b ) => {
-        if ( a.symbol < b.symbol ) return -1;
-        if ( a.symbol > b.symbol ) return 1;
-        return 0;
-      });
       // update count outside
       this.$emit( 'listCount', list.length );
       return list;
@@ -93,23 +100,31 @@ export default {
 
     // save a new alert for this token
     saveAlarm( e ) {
-      let price = parseFloat( e.target.alarmPrice.value ) || 0;
       let { symbol, asset, close } = this.pairData;
+      let price = parseFloat( e.target.price.value ) || 0;
+      let saved = this.$alarms.add( this.pairData, price );
+      if ( !saved ) return this.$bus.emit( 'showNotice', 'Please enter a different '+ asset +' alarm price.', 'warning' );
+      this.$bus.emit( 'showNotice', 'New alarm for '+ symbol +' set for '+ price.toFixed( 8 ) +' '+ asset +'.', 'success' );
+    },
 
-      if ( !price || price === close ) {
-        let word = ( price === close ) ? 'different' : 'valid';
-        return this.$bus.emit( 'showNotice', 'Please enter a '+ word +' '+ asset +' price.', 'warning' );
-      }
-      let saved = this.$notify.saveAlarm( this.pairData, price );
-      if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'New alarm for '+ symbol +' has been saved.', 'success' );
+    // toggle existing alarm for as symbol by id
+    toggleAlarm( id, symbol, toggle ) {
+      let action = toggle ? 'enabled' : 'disabled';
+      this.$alarms.toggle( id, toggle );
+      this.$bus.emit( 'showNotice', 'Alarm for '+ symbol +' has been '+ action +'.', 'success' );
     },
 
     // remove an alert from the list by id
-    deleteAlarm( symbol, id ) {
-      let saved = this.$notify.deleteAlarm( symbol, id );
-      if ( !saved ) return this.$bus.emit( 'showNotice', 'There was a problem updating the alarms data.', 'warning' );
-      this.$bus.emit( 'showNotice', 'Alarm for '+ symbol +' has been removed from list.', 'success' );
+    deleteAlarm( id, symbol ) {
+      this.$alarms.remove( id );
+      this.$bus.emit( 'showNotice', 'Alarm for '+ symbol +' has been removed.', 'success' );
+    },
+
+    // flush all alarms from the list
+    flushAlarms() {
+      if ( !confirm( 'Delete all alarms from the list?' ) ) return;
+      this.$alarms.flush();
+      this.$bus.emit( 'showNotice', 'All alarms have been deleted.', 'success' );
     },
   },
 

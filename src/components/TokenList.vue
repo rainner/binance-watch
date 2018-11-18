@@ -1,35 +1,26 @@
 <template>
-  <main class="tokenlist-wrap" :class="{ 'collapsed': scrollDir === 'down', 'opaque': scrollPos > 10 }">
-
-    <!-- list spinner -->
-    <Spinner class="tokenlist-spinner abs" ref="spinner"></Spinner>
+  <main class="page-wrap" :class="{ 'collapsed': header.collapsed, 'opaque': header.opaque }">
 
     <!-- fixed list search/sorting controls -->
-    <section class="tokenlist-controls">
+    <section class="page-topbar">
       <div class="container">
-        <div class="tokenlist-controls-row flex-row flex-middle flex-space">
+        <div class="flex-row flex-middle flex-space">
 
-          <!-- control input -->
-          <div class="tokenlist-controls-input push-right">
-            <div class="form-input">
-              <div class="icon-search iconLeft"></div>
-              <input class="push-right" type="text" v-model="searchToken" placeholder="Search ..." />
-              <button class="icon-close text-primary-hover" @click="searchToken = ''" v-if="searchToken"></button>
-            </div>
-          </div>
+          <!-- control search -->
+          <Search class="light push-right" v-model="searchStr"></Search>
 
           <!-- control heading -->
-          <div class="tokenlist-controls-title push-right text-clip text-center flex-1 if-medium">
-            <big>24h Change</big>
-          </div>
+          <div class="flex-1 text-clip text-big text-center push-right if-medium">24h Change</div>
 
           <!-- control dropdown menus -->
-          <div class="tokenlist-controls-filters text-nowrap">
+          <div class="text-nowrap">
+
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-grey-hover icon-down-open" title="List Limit" v-tooltip>
-                {{ limitCountLabel }}
-              </button>
+              <button slot="trigger" class="form-btn bg-info-hover icon-down-open">{{ limitCountLabel }}</button>
               <ul slot="list">
+                <li class="heading">
+                  <span class="form-label">List Limit Options</span>
+                </li>
                 <li class="clickable" @click="limitList( 10 )">
                   <i class="icon-list-add iconLeft"></i> 10 tokens
                 </li>
@@ -49,65 +40,80 @@
             </Dropdown>&nbsp;
 
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-grey-hover iconLeft"
-                :class="{ 'icon-down': sortOrder === 'desc', 'icon-up': sortOrder === 'asc' }"
-                v-text="sortByLabel" title="Sort Options" v-tooltip>
+              <button slot="trigger" class="form-btn bg-info-hover iconLeft">
+                <i :class="$sorter.getStyles( 'ticker' )"></i> {{ sortByLabel }}
               </button>
               <ul slot="list">
-                <li class="clickable" @click="toggleSort( 'token', 'asc' )">
+                <li class="heading">
+                  <span class="form-label">List Sorting Options</span>
+                </li>
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'token', 'asc' )">
                   <i class="icon-bitcoin iconLeft"></i> Token
                 </li>
-                <li class="clickable" @click="toggleSort( 'percent', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'percent', 'desc' )">
                   <i class="icon-percent iconLeft"></i> Percent
                 </li>
-                <li class="clickable" @click="toggleSort( 'close', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'close', 'desc' )">
                   <i class="icon-chart-line iconLeft"></i> Price
                 </li>
-                 <li class="clickable" @click="toggleSort( 'volatility', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'volatility', 'desc' )">
                   <i class="icon-chart-line iconLeft"></i> Volatility
                 </li>
-                <li class="clickable" @click="toggleSort( 'change', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'danger', 'desc' )">
+                  <i class="icon-alert iconLeft"></i> Danger
+                </li>
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'change', 'desc' )">
                   <i class="icon-clock iconLeft"></i> Change
                 </li>
-                <li class="clickable" @click="toggleSort( 'assetVolume', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'assetVolume', 'desc' )">
                   <i class="icon-chart-area iconLeft"></i> Volume
                 </li>
-                <li class="clickable" @click="toggleSort( 'trades', 'desc' )">
+                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'trades', 'desc' )">
                   <i class="icon-reload iconLeft"></i> Trades
                 </li>
               </ul>
             </Dropdown>&nbsp;
 
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-primary-hover icon-star iconLeft"
-                v-text="filterAsset" title="Filter Asset" v-tooltip>
-              </button>
+              <button slot="trigger" class="form-btn bg-primary-hover icon-star iconLeft" v-text="options.prices.asset"></button>
               <ul slot="list">
+                <li class="heading">
+                  <span class="form-label">Filter by Market</span>
+                </li>
                 <li class="clickable" v-for="asset in assetsList" :key="asset" @click="toggleAsset( asset )">
                   <i class="icon-star iconLeft"></i> {{ asset }}
                 </li>
               </ul>
+            </Dropdown>&nbsp;
+
+            <Dropdown>
+              <button slot="trigger" class="form-btn bg-primary-hover icon-config"></button>
+              <div slot="list" class="pad-h">
+                <div class="form-label push-bottom push-small">Live Price Options</div>
+                <Toggle :text="'Show top coins price in header'" v-model="options.prices.header" @change="saveOptions"></Toggle>
+                <Toggle :text="'Show price chart for in list'" v-model="options.prices.chart" @change="saveOptions"></Toggle>
+              </div>
             </Dropdown>
+
           </div>
 
         </div>
       </div>
     </section>
 
-    <!-- live ticker price list -->
+    <!-- empty list message -->
     <section class="push-bottom" v-if="!listCount">
       <div class="container">
-        <div class="card flex-row flex-middle flex-stretch">
+        <div class="card pad-all flex-row flex-middle flex-stretch">
           <div class="icon-help iconLarge push-right"></div>
           <div class="text-clip flex-1">
-            <div v-if="searchToken">
-              <span class="text-bright">No match for search: <span class="text-primary">{{ searchToken }}</span></span> &nbsp;
-              <button class="icon-close iconLeft text-pill bg-grey-hover" @click.prevent="searchToken = ''">Reset</button> <br />
-              <span class="text-grey">Can't find anything matching your search input.</span>
+            <div v-if="searchStr">
+              <span class="text-bright">No match for <span class="text-secondary">{{ searchStr }}</span></span> <br />
+              <span class="text-info">Can't find anything matching your search input.</span>
             </div>
             <div v-else>
               <span class="text-bright">No price data available</span> <br />
-              <span class="text-grey">Price data from remote API has not loaded yet.</span>
+              <span class="text-info">Price data from remote API has not loaded yet.</span>
             </div>
           </div>
         </div>
@@ -115,54 +121,50 @@
     </section>
 
     <!-- live ticker price list -->
-    <section class="tokenlist-list">
+    <section class="pagelist-wrap">
       <div class="container">
 
-        <div class="tokenlist-item flex-row flex-middle flex-stretch" v-if="tickerList.length">
-          <div class="tokenlist-item-icon push-right if-small"></div>
-          <div class="tokenlist-item-symbol text-clip flex-1"><span class="text-default-hover icon-bitcoin iconLeft clickable" @click="toggleSort( 'token', 'asc' )">Token</span></div>
-          <div class="tokenlist-item-price text-right text-clip flex-2"><span class="text-default-hover icon-chart-line iconLeft clickable" @click="toggleSort( 'close', 'desc' )">Price</span></div>
-          <div class="tokenlist-item-chart push-left flex-2 if-medium disabled"></div>
-          <div class="tokenlist-item-price text-clip push-left flex-1"><span class="text-default-hover icon-percent iconLeft clickable" @click="toggleSort( 'percent', 'desc' )">Percent</span></div>
-          <div class="tokenlist-item-volume text-right text-clip flex-2"><span class="text-default-hover icon-chart-area iconLeft clickable" @click="toggleSort( 'assetVolume', 'desc' )">Volume</span></div>
-          <div class="tokenlist-item-trades text-right text-clip flex-2 if-large"><span class="text-default-hover icon-list-add iconLeft clickable" @click="toggleSort( 'trades', 'desc' )">Book</span></div>
+        <div class="pagelist-item flex-row flex-middle flex-stretch" v-if="tickerList.length">
+          <div class="iconWidth push-right if-small"></div>
+          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'token', 'asc' )">Token</span></div>
+          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'close', 'desc' )">Price</span></div>
+          <div class="well push-right flex-1 if-medium disabled" v-if="options.prices.chart"></div>
+          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'percent', 'desc' )">Percent</span></div>
+          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'assetVolume', 'desc' )">Volume</span></div>
+          <div class="text-right text-clip flex-1 if-large"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'trades', 'desc' )">Book</span></div>
         </div>
 
-        <div v-for="p in tickerList"
-          class="tokenlist-item flex-row flex-middle flex-stretch clickable"
-          :class="{ 'gain': ( p.percent > 0 ), 'loss': ( p.percent < 0 ) }"
-          @click.stop="setRoute( p.route )"
-          :key="p.symbol">
+        <div v-for="p in tickerList" class="pagelist-item flex-row flex-middle flex-stretch clickable" :class="p.style" @click.stop="setRoute( p.route )" :key="p.symbol">
 
-          <div class="tokenlist-item-icon push-right if-small" :class="{ 'alarm-bubble': p.alarms }">
+          <div class="push-right if-small" :class="{ 'alarm-bubble': p.alarms }">
             <TokenIcon :image="p.image" :alt="p.token"></TokenIcon>
           </div>
 
-          <div class="tokenlist-item-symbol text-clip flex-1">
-            <big class="text-bright">{{ p.token }}</big> <br />
-            <span class="text-default">{{ p.name }}</span>
+          <div class="push-right text-clip flex-1">
+            <big class="text-primary">{{ p.token }}</big> <br />
+            <span class="text-secondary">{{ p.name }}</span>
           </div>
 
-          <div class="tokenlist-item-price text-right text-clip flex-2">
-            <big class="text-nowrap text-bright">{{ p.close | toFixed( p.asset ) }} <span class="text-grey">{{ p.asset }}</span></big> <br />
-            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toFixed( p.asset ) }} <span class="text-grey">24H</span></span>
+          <div class="push-right text-clip flex-1">
+            <big class="text-nowrap text-bright">{{ p.close | toFixed( p.asset ) }} <span class="text-info">{{ p.asset }}</span></big> <br />
+            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toFixed( p.asset ) }} <span class="text-info">24H</span></span>
           </div>
 
-          <div class="tokenlist-item-chart push-left flex-2 if-medium">
-            <LineChart :width="300" :height="35" :values="p.history"></LineChart>
+          <div class="well push-right flex-1 if-medium" v-if="options.prices.chart">
+            <LineChart :width="200" :height="28" :values="p.history"></LineChart>
           </div>
 
-          <div class="tokenlist-item-price text-clip push-left flex-1">
+          <div class="push-right text-clip flex-1">
             <big class="text-nowrap color">{{ p.sign }}{{ p.percent | toMoney( 3 ) }}%</big> <br />
-            <span class="text-grey icon-chart-line iconLeft" title="Volatility score" v-tooltip>{{ p.volatility | toFixed( 3 ) }}</span>
+            <span class="icon-chart-line iconLeft" title="High/Low Volatility Score" v-tooltip>{{ p.volatility | toFixed( 3 ) }}</span>
           </div>
 
-          <div class="tokenlist-item-volume text-right text-clip flex-2">
-            <big class="text-nowrap text-bright">{{ p.assetVolume | toMoney }} <span class="text-nowrap text-grey">{{ p.asset }}</span></big> <br />
-            <span class="text-nowrap text-default">{{ p.tokenVolume | toMoney }} <span class="text-nowrap text-grey">{{ p.token }}</span></span>
+          <div class="push-right text-clip flex-1">
+            <big class="text-nowrap text-bright">{{ p.assetVolume | toMoney }} <span class="text-nowrap text-info">{{ p.asset }}</span></big> <br />
+            <span class="text-nowrap text-default">{{ p.tokenVolume | toMoney }} <span class="text-nowrap text-info">{{ p.token }}</span></span>
           </div>
 
-          <div class="tokenlist-item-trades text-right text-clip flex-2 if-large">
+          <div class="text-right text-clip flex-1 if-large">
             <big class="text-nowrap text-bright">{{ p.trades | toMoney }}</big> <br />
             <button class="text-primary-hover" @click.stop="tradeLink( p.token, p.asset )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
           </div>
@@ -170,60 +172,48 @@
         </div>
 
         <!-- if there are more items not included in list due to limit option -->
-        <div class="tokenlist-item flex-row flex-middle flex-stretch" v-if="listLeft">
-          <div class="tokenlist-item-icon push-right if-small">
-            <TokenIcon :image="'public/images/icons/default_.png'"></TokenIcon>
-          </div>
-          <div class="tokenlist-item-price text-clip text-grey flex-1">
-            <span class="text-default">{{ listLeftText }} more ...</span> <br />
-            <button class="text-secondary-hover icon-list-add iconLeft" @click="limitList( 0 )">Show all</button>
-          </div>
+        <div class="pagelist-item flex-row flex-middle flex-space" v-if="listCount">
+          <div class="text-info icon-list iconLeft">{{ listLeftText }}</div>
+          <button v-if="listLeft" class="text-bright-hover icon-list-add iconLeft" @click="limitList( 0 )">Show all</button>
         </div>
 
       </div>
     </section>
 
+    <!-- list spinner -->
+    <Spinner class="fixed" ref="spinner"></Spinner>
+
   </main>
 </template>
 
 <script>
-// components
 import Spinner from './Spinner.vue';
+import Search from './Search.vue';
 import TokenIcon from './TokenIcon.vue';
 import Dropdown from './Dropdown.vue';
+import Toggle from './Toggle.vue';
 import LineChart from './LineChart.vue';
-import utils from '../modules/utils';
 
 // component
 export default {
 
   // component list
-  components: { Spinner, TokenIcon, Dropdown, LineChart },
+  components: { Spinner, Search, TokenIcon, Dropdown, Toggle, LineChart },
 
   // component props
   props: {
-    active: { type: Boolean, default: false },
-    options: { type: Object, default() { return {} } },
-    socketStatus: { type: Number, default: 0, required: false },
-    scrollDir: { type: String, default: '', required: false },
-    scrollPos: { type: Number, default: 0, required: false },
-    assetsList: { type: Array, default: [], required: false },
-    priceData: { type: Array, default: [], required: true },
+    header: { type: Object, default() { return {} } },
+    options: { type: Object, default() { return {} }, required: true },
+    sortData: { type: Object, default() { return {} }, required: true },
+    priceData: { type: Array, default() { return [] }, required: true },
+    assetsList: { type: Array, default() { return [] }, required: true },
+    tickerStatus: { type: Number, default: 0 },
   },
 
   // comonent data
   data() {
     return {
-      optKey: 'tokens_sort_options',
-      // filter/sorting/limit options
-      filterAsset: 'USDT',
-      searchToken: '',
-      sortOrder: 'desc',
-      sortBy: 'assetVolume',
-      limitMin: 10,
-      limitMax: 200,
-      limitCount: 50,
-      // filtered list data
+      searchStr: '',
       listCount: 0,
       listLeft: 0,
     }
@@ -232,14 +222,11 @@ export default {
   // watch methods
   watch: {
 
-    // update spinenr based on socket and price data status
-    priceData: function() {
-      if ( !this.$refs.spinner ) return;
-      if ( !this.priceData.length ) {
-        if ( this.socketStatus === 0 ) return this.$refs.spinner.error( 'Socket API not connected' );
-        if ( this.socketStatus === 1 ) return this.$refs.spinner.show( 'Waiting for price data' );
-      }
-      this.$refs.spinner.hide();
+    priceData() {
+      this.updateSpinner();
+    },
+    tickerStatus() {
+      this.updateSpinner();
     },
   },
 
@@ -248,27 +235,30 @@ export default {
 
     // get filtered and sorted ticker list for display
     tickerList() {
-      let list  = this.priceData.slice(); // copy
-      let limit = parseInt( this.limitCount ) | 0;
+      let { asset } = this.options.prices;
+      let { column, order } = this.sortData.ticker;
 
-      // filter by trading asset
-      if ( this.filterAsset ) {
-        list = list.filter( p => p.asset === this.filterAsset );
-      }
-      // filter by search text
-      if ( this.searchToken && this.searchToken.length > 1 ) {
-        list = utils.search( list, 'token', this.searchToken );
-      }
-      // sort list based column and order
-      list = utils.sort( list, this.sortBy, this.sortOrder );
+      let limit = parseInt( this.options.prices.limit ) | 0;
+      let regex = ( this.searchStr.length > 1 ) ? new RegExp( '^('+ this.searchStr +')', 'i' ) : null;
+      let count = this.priceData.length;
+      let list  = [];
 
-      // compute list totals before cutting the list
+      // filter the list
+      while ( count-- ) {
+        let p = this.priceData[ count ];
+        if ( asset && p.asset !== asset ) continue;
+        if ( regex && !( regex.test( p.token ) || regex.test( p.name ) ) ) continue;
+        list.push( p );
+      }
+      // sort the list
+      list = this.$utils.sort( list, column, order );
+
+      // update paging totals
       let total = list.length;
-      this.limitMax  = total;
       this.listCount = total;
-      this.listLeft  = 0;
+      this.listLeft = 0;
 
-      // limit list to a number of entries
+      // trim the list
       if ( total && limit && limit < total ) {
         list = list.slice( 0, limit );
         this.listLeft = ( total - list.length );
@@ -278,11 +268,13 @@ export default {
 
     // sort-by label for buttons, etc
     sortByLabel() {
-      switch ( this.sortBy ) {
+      let { column } = this.sortData.ticker;
+      switch ( column ) {
         case 'token'       :  return 'Token';
         case 'percent'     :  return 'Percent';
         case 'close'       :  return 'Price';
         case 'volatility'  :  return 'Volatility';
+        case 'danger'      :  return 'Danger';
         case 'change'      :  return 'Change';
         case 'assetVolume' :  return 'Volume';
         case 'tokenVolume' :  return 'Volume';
@@ -293,26 +285,34 @@ export default {
 
     // text to show in limit filter controls
     limitCountLabel() {
-      if ( this.limitCount && this.limitCount < this.listCount ) {
-        return this.limitCount +'/'+ this.listCount;
-      }
+      let limit = parseInt( this.options.prices.limit ) | 0;
+      if ( limit && limit < this.listCount ) return limit +'/'+ this.listCount;
       return 'All '+ this.listCount;
     },
 
     // text about hidden list pair
     listLeftText() {
-      let count = this.listLeft;
-      let asset = this.filterAsset;
-      return utils.noun( count, asset +' pair', asset +' pairs' );
+      let total  = this.listCount;
+      let remain = this.listLeft;
+      let asset  = this.options.prices.asset;
+      let limit  = this.options.prices.limit;
+      let count  = this.$utils.noun( total, asset +' token pair', asset +' token pairs' );
+      if ( remain ) return 'Showing '+ limit +' of '+ count;
+      return 'Showing all '+ count;
     },
   },
 
   // custom mounted
   methods: {
 
-    // proxy for setting a route
+    // apply options
+    saveOptions() {
+      this.$opts.saveOptions( this.options );
+    },
+
+    // set app url route
     setRoute( route ) {
-      this.$bus.emit( 'setRoute', route );
+      this.$router.setRoute( route );
     },
 
     // lick to binance site with ref id added
@@ -322,148 +322,36 @@ export default {
 
     // set list limit value
     limitList( num ) {
-      this.limitCount = parseInt( num ) | 0;
-      this.saveSortOptions();
-    },
-
-    // change list sort order for selected key
-    toggleSort( sort, order ) {
-      if ( this.sortBy !== sort ) { this.sortOrder = order || 'asc'; } // initial order
-      else { this.sortOrder = ( this.sortOrder === 'asc' ) ? 'desc' : 'asc'; } // toggle order
-      this.sortBy = sort; // sort column
-      this.saveSortOptions();
+      this.options.prices.limit = parseInt( num ) | 0;
+      this.saveOptions();
     },
 
     // filter by asset
     toggleAsset( asset ) {
-      this.filterAsset = String( asset || 'BTC' );
-      this.saveSortOptions();
+      this.options.prices.asset = String( asset || 'BTC' );
+      this.saveOptions();
     },
 
-    // process volatility value for a token
-    calcVolatility( value ) {
-      let str = 'Low';
-      if ( value > 1 ) str = 'Normal';
-      if ( value > 3 ) str = 'High';
-      if ( value > 5 ) str = 'Volitile';
-      if ( value > 9 ) str = 'Extreme';
-      return str;
+    // update page spinner
+    updateSpinner() {
+      if ( !this.$refs.spinner ) return;
+      if ( this.tickerList.length ) return this.$refs.spinner.hide();
+      if ( this.tickerStatus === 0 ) return this.$refs.spinner.error( 'Socket API not connected' );
+      if ( this.tickerStatus === 1 ) return this.$refs.spinner.show( 'Waiting for price data' );
     },
-
-    // load sorting options from store
-    loadSortOptions() {
-      let options = this.$store.getData( this.optKey );
-      if ( !options || typeof options !== 'object' ) return;
-      if ( options.filterAsset ) this.filterAsset = options.filterAsset;
-      if ( options.sortOrder )   this.sortOrder   = options.sortOrder;
-      if ( options.sortBy )      this.sortBy      = options.sortBy;
-      if ( options.limitCount )  this.limitCount  = options.limitCount;
-    },
-
-    // save current sorting options
-    saveSortOptions() {
-      this.$store.setData( this.optKey, {
-        filterAsset : this.filterAsset,
-        sortOrder   : this.sortOrder,
-        sortBy      : this.sortBy,
-        limitCount  : this.limitCount,
-      });
-    },
-
   },
 
-  // before mounted
-  beforeMount() {
-    this.loadSortOptions();
-  },
-
-  // waiting for socket
+  // on component mounted
   mounted() {
-    if ( !this.$refs.spinner ) return;
-    this.$refs.spinner.show( 'Connecting to socket API' );
+    this.updateSpinner();
   }
 }
 </script>
 
 <style lang="scss">
-// ticker wrap
-.tokenlist-wrap {
-  position: relative;
-  padding-top: calc( #{$topbarHeight} + 4.5em );
-  padding-bottom: $topbarHeight;
-  min-height: 100vh;
-
-  .tokenlist-controls {
-    position: fixed;
-    padding: calc( #{$topbarHeight} + 1em ) 0 1em 0;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background-color: rgba( $colorDocument, 0 );
-    z-index: ( $zindexElements - 1 );
-
-    .form-input {
-      background-color: lighten( $colorDocument, 4% );
-
-      &:hover {
-        background-color: lighten( $colorDocument, 6% );
-      }
-    }
-  }
-
-  .tokenlist-list {
-    position: relative;
-
-    .tokenlist-item {
-      margin: 0 0 ( $lineWidth * 2 ) 0;
-      padding: ( $padSpace / 2 ) $padSpace;
-      background-color: $colorDocumentLight;
-      border-radius: $lineJoin;
-
-      &:hover { background-color: lighten( $colorDocumentLight, 2% ); }
-
-      .color { color: $colorGrey; }
-      polyline { stroke: $colorGrey; }
-      circle { fill: $colorGrey; }
-
-      &.gain .color { color: $colorGain; }
-      &.gain polyline { stroke: $colorGain; }
-      &.gain circle { fill: $colorGain; }
-
-      &.loss .color { color: $colorLoss; }
-      &.loss polyline { stroke: $colorLoss; }
-      &.loss circle { fill: $colorLoss; }
-
-      .tokenlist-item-icon {
-        width: $iconSize;
-      }
-      .tokenlist-item-symbol,
-      .tokenlist-item-price,
-      .tokenlist-item-trades,
-      .tokenlist-item-volume {
-        margin-top: .1em;
-      }
-      .tokenlist-item-chart {
-        padding: .5em;
-        background-image: radial-gradient( ellipse at top right, rgba( #000, 0.2 ) 0%, rgba( #000, 0 ) 100% );
-        border-radius: $lineJoin;
-      }
-    }
-  }
-
-  // collapsed mode
-  &.collapsed {
-    .tokenlist-controls {
-      transform: translateY( -#{$topbarHeight} );
-    }
-  }
-
-  // opaque mode
-  &.opaque {
-    .tokenlist-controls {
-      background-color: rgba( 0, 0, 0, 0.85 );
-      box-shadow: $shadowBold;
-    }
-  }
+.pagelist-item-chart {
+  padding: .5em;
+  background-image: radial-gradient( ellipse at top right, rgba( #000, 0.2 ) 0%, rgba( #000, 0 ) 100% );
+  border-radius: $lineJoin;
 }
 </style>

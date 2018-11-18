@@ -3,59 +3,43 @@
 
     <!-- topbar with logo and menu -->
     <Topbar
+      :header="header"
       :options="options"
-      :watching="watching"
-      :socketStatus="socketStatus"
-      :socketTime="socketTime"
-      :scrollDir="scrollDir"
-      :scrollPos="scrollPos"
+      :tickerStatus="tickerStatus"
+      :tickerTime="tickerTime"
       :priceData="priceData"
       :historyData="historyData"
       :alarmsData="alarmsData"
-      :newsData="newsData">
+      :newsEntries="newsEntries">
     </Topbar>
 
     <!-- price watch form -->
     <WatchForm
-      ref="watchform"
+      :header="header"
       :options="options"
-      :socketStatus="socketStatus"
-      :scrollDir="scrollDir"
-      :scrollPos="scrollPos"
+      :tickerStatus="tickerStatus"
       :assetsList="assetsList"
-      :priceData="priceData"
-      @onStartWatch="watching = true"
-      @onStopWatch="watching = false">
+      :priceData="priceData">
     </WatchForm>
 
     <!-- main app pages wrapper -->
     <main class="app-main">
-
-      <!-- main ticker list component -->
-      <TokenList
-        class="app-page"
-        :class="{ 'visible': mainComp === 'TokenList' }"
-        :active="( mainComp === 'TokenList' )"
-        :options="options"
-        :socketStatus="socketStatus"
-        :scrollDir="scrollDir"
-        :scrollPos="scrollPos"
-        :assetsList="assetsList"
-        :priceData="priceData">
-      </TokenList>
-
-      <!-- news aggregator page -->
-      <NewsPage
-        class="app-page"
-        :class="{ 'visible': mainComp === 'NewsPage' }"
-        :active="( mainComp === 'NewsPage' )"
-        :options="options"
-        :scrollDir="scrollDir"
-        :scrollPos="scrollPos"
-        :priceData="priceData"
-        :coinsData="coinsData">
-      </NewsPage>
-
+      <keep-alive>
+        <component
+          :is="mainComp"
+          :key="mainComp"
+          :header="header"
+          :options="options"
+          :sortData="sortData"
+          :tickerStatus="tickerStatus"
+          :assetsList="assetsList"
+          :priceData="priceData"
+          :newsHandlers="newsHandlers"
+          :newsEntries="newsEntries"
+          :coinsData="coinsData"
+          class="fx fx-fade-in">
+        </component>
+      </keep-alive>
     </main>
 
     <!-- common modal component -->
@@ -63,10 +47,11 @@
       <component
         :is="modalComp"
         :options="options"
+        :sortData="sortData"
         :modalData="modalData"
         :historyData="historyData"
         :alarmsData="alarmsData"
-        :newsData="newsData">
+        :newsEntries="newsEntries">
       </component>
     </Modal>
 
@@ -79,7 +64,7 @@
     <button
       id="btt"
       class="icon-up"
-      :class="{ 'visible': scrollDir === 'down' }"
+      :class="{ 'visible': header.collapsed }"
       @click="handleClick( 'scroll', 0 )">
     </button>
 
@@ -87,7 +72,6 @@
 </template>
 
 <style lang="scss">
-// app common styles
 @import "../scss/reset";
 @import "../scss/common";
 @import "../scss/animations";
@@ -96,37 +80,24 @@
 @import "../scss/emoji";
 @import "../scss/type";
 @import "../scss/forms";
+@import "../scss/prompt";
 @import "../scss/tooltip";
 @import "../scss/modifiers";
 </style>
 
 <script>
-// custom modules
-import appOptions from '../configs/options';
-import Binance from '../modules/binance';
-import Scroller from '../modules/scroller';
-import msgQueue from '../modules/queue';
-import mailgun from '../modules/mailgun';
-import telegram from '../modules/telegram';
-import utils from '../modules/utils';
-
-// sub components
 import Topbar from './Topbar.vue';
 import Modal from './Modal.vue';
 import Notify from './Notify.vue';
 import WatchForm from './WatchForm.vue';
 import TokenList from './TokenList.vue';
 import NewsPage from './NewsPage.vue';
+import TradePage from './TradePage.vue';
 import AboutPage from './AboutPage.vue';
 import OptionsPage from './OptionsPage.vue';
 import HistoryPage from './HistoryPage.vue';
 import AlarmsList from './AlarmsList.vue';
-import DonatePage from './DonatePage.vue';
 import TokenPage from './TokenPage.vue';
-
-// helper class instances
-const _binance = new Binance();
-const _scroller = new Scroller();
 
 // component
 export default {
@@ -143,7 +114,7 @@ export default {
     TokenList,
     AlarmsList,
     NewsPage,
-    DonatePage,
+    TradePage,
     TokenPage,
   },
 
@@ -152,61 +123,101 @@ export default {
     return {
       refid: '12268078',
       title: 'Binance Watch',
-      optKey: 'app_options_data',
-      options: appOptions,
-      watching: false,
-      // app data
-      priceList: [],
+      // app options and data
+      options: {},
+      sortData: {},
       priceData: [],
       assetsList: [],
+      newsHandlers: [],
+      newsEntries: [],
       historyData: [],
-      alarmsData: {},
-      newsData: {},
+      alarmsData: [],
       coinsData: {},
       // page and modal related
       mainComp: '',
       modalComp: '',
       modalData: {},
-      // socket related data
-      socketStatus: 0, // ( 0: off, 1: wait, 2: on )
-      socketStart: 0,
-      socketInt: null,
-      socketReconnect: false,
-      socketTime: '',
-      // page scroll data
-      scrollDir: '',
-      scrollPos: 0,
+      // ticker related data
+      tickerStatus: 0, // ( 0: off, 1: wait, 2: on )
+      tickerStart: 0,
+      tickerTime: '',
+      // fixed header props
+      header: {
+        collapsed: false,
+        opaque: false
+      },
     }
   },
 
   // custom methods
   methods: {
 
-    // merge new options and save
-    setOptions( options ) {
-      setTimeout( () => {
-        this.options = utils.deepMerge( {}, this.options, options );
-        let a = this.options.audio;
+    // update app options and pass it on to other handlers
+    updateOptions( options ) {
+      this.options = options;
 
-        this.$ajax.setOptions( { proxy: this.options.proxy } );
-        this.$notify.setOptions( { soundEnabled: a.enabled, soundVolume: a.volume, soundFile: a.file } );
-        this.$store.setData( this.optKey, this.options );
-      }, 100 );
+      this.$ajax.setOptions( {
+        proxy: this.options.proxy,
+      });
+      this.$notify.setOptions( {
+        enabled: this.options.notify.enabled,
+        duration: this.options.notify.duration,
+        sound: this.options.audio.enabled,
+        volume: this.options.audio.volume,
+        audio: this.options.audio.file,
+      });
+      this.$news.setOptions( {
+        enabled: this.options.news.enabled,
+        interval: this.options.news.interval,
+        delay: this.options.news.delay,
+        days: this.options.news.days,
+        tweets: this.options.news.tweets,
+        total: this.options.news.total,
+      });
+      this.$messenger.setOptions( {
+        mailgin: this.options.mailgin,
+        telegram: this.options.telegram,
+      });
+      this.$binance.setApiKey( this.options.binance.apikey );
+      this.$binance.setApiSecret( this.options.binance.apisecret );
     },
 
-    // load saved options data from local store
-    loadOptions() {
-      let options = this.$store.getData( this.optKey );
-      let a = this.options.audio;
-
-      this.options = utils.deepMerge( {}, this.options, options );
-      this.$ajax.setOptions( { proxy: this.options.proxy } );
-      this.$notify.setOptions( { soundEnabled: a.enabled, soundVolume: a.volume, soundFile: a.file } );
+    // setup options class handlers and load saved options
+    setupOptionsHandlers() {
+      this.$opts.on( 'update', this.updateOptions );
+      this.$opts.loadOptions();
     },
 
-    // set loaded news data from somewhere
-    updateNewsData( data ) {
-      this.newsData = Object.assign( {}, this.newsData, data );
+    // setup sort order data handler
+    setupSorterHandlers() {
+      this.$sorter.setKey( 'ticker', 'assetVolume', 'desc' );
+      this.$sorter.setKey( 'sentiment', 'count', 'desc' );
+      this.$sorter.setKey( 'balances', 'asset', 'asc' );
+      this.$sorter.setKey( 'orders', 'time', 'desc' );
+      this.$sorter.setKey( 'trades', 'time', 'desc' );
+      this.$sorter.setKey( 'sessions', 'time', 'desc' );
+      this.$sorter.on( 'change', data => { this.sortData = data } );
+      this.$sorter.on( 'load', data => { this.sortData = data } );
+      this.$sorter.loadData();
+    },
+
+    // setup app routes
+    setupRoutes() {
+      // page routes
+      this.$router.on( '/', () => { this.showPage( 'TokenList', 'Price List' ) } );
+      this.$router.on( '/news', () => { this.showPage( 'NewsPage', 'Twitter News' ) } );
+      this.$router.on( '/trade', () => { this.showPage( 'TradePage', 'Trade Bot' ) } );
+      // modal routes
+      this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
+      this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Saved Price Alarms' ) } );
+      this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
+      this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
+      // symbol modal route
+      this.$router.on( '/symbol/([A-Z]+)', symbol => {
+        let d = this.priceData.filter( p => p.symbol === symbol ).shift();
+        if ( d ) return this.showModal( 'TokenPage', d.pair +' Info ', d );
+        this.$router.setRoute( '/' );
+      });
     },
 
     // set a url hash route
@@ -214,199 +225,144 @@ export default {
       this.$router.setRoute( route );
     },
 
-    // setup app routes
-    setupRoutes() {
-      // page routes
-      this.$router.on( '/', () => { this.showPage( 'TokenList', 'Price List' ) } );
-      this.$router.on( '/news', () => { this.showPage( 'NewsPage', 'Latest News' ) } );
-      // modal routes
-      this.$router.on( '/history', () => { this.showModal( 'HistoryPage', 'Recent Alert History' ) } );
-      this.$router.on( '/alarms', () => { this.showModal( 'AlarmsList', 'Active Price Alarms' ) } );
-      this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
-      this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
-      this.$router.on( '/donate', () => { this.showModal( 'DonatePage', 'Make a Donation' ) } );
-      // symbol modal route
-      this.$router.on( '/symbol/([A-Z]+)', symbol => {
-        let d = this.priceData.filter( p => p.symbol === symbol ).shift();
-        if ( d ) this.showModal( 'TokenPage', d.pair +' Info ', d );
-      });
-      // show current route asap
-      setTimeout( () => {
-        this.$router.trigger( window.location.hash || '/' );
-      }, 400 );
-    },
-
-    // setup msg queue to go off on a timer
-    setupMsgQueue() {
-      msgQueue.onBatch( 60, queue => {
-        let plist = [];
-        plist.push( mailgun( this.$ajax, this.options.mailgun, queue ) );
-        plist.push( telegram( this.$ajax, this.options.telegram, queue ) );
-
-        Promise.all( plist )
-          .then( msgs => { msgs.forEach( msg => { if ( msg ) this.showNotice( msg, 'info' ) } ) } )
-          .catch( err => { if ( err ) this.showNotice( err, 'warning' ) } );
-      });
-    },
-
-    // add data to outgoing msg queue
-    addMsgQueue( data ) {
-      msgQueue.add( data );
-    },
-
-    // setup notifications data handler
-    setupNotifications() {
-      this.$notify.permission();
-      this.$notify.loadAlarms();
-      this.$notify.onChange( alarms => { this.alarmsData = alarms; } );
-      this.alarmsData = this.$notify.getAlarms();
-    },
-
-    // setup history data handler
-    setupHistoryData() {
-      this.$history.loadData();
-      this.$history.onChange( data => { this.historyData = data; } );
-      this.historyData = this.$history.getData();
-    },
-
     // setup global event bus handlers
     setupGlobalHandlers() {
-      this.$bus.on( 'setOptions', this.setOptions );
       this.$bus.on( 'setTitle', this.setTitle );
       this.$bus.on( 'setRoute', this.setRoute );
-      this.$bus.on( 'toggleSocket', this.toggleSocket );
-      this.$bus.on( 'toggleWatchform', this.toggleWatchform );
-      this.$bus.on( 'newsData', this.updateNewsData );
       this.$bus.on( 'showModal', this.showModal );
       this.$bus.on( 'closeModal', this.closeModal );
       this.$bus.on( 'showNotice', this.showNotice );
       this.$bus.on( 'handleClick', this.handleClick );
-      this.$bus.on( 'msgQueue', this.addMsgQueue );
+    },
+
+    // setup alarms class handlers
+    setupAlarmsHandlers() {
+      this.$alarms.on( 'update', data => { this.alarmsData = data } );
+      this.$alarms.loadData();
+    },
+
+    // setup history class handlers
+    setupHistoryHandlers() {
+      this.$history.on( 'update', data => { this.historyData = data } );
+      this.$history.loadData();
+    },
+
+    // setup twitter news handlers
+    setupNewsHandlers() {
+      this.$news.useAjax( this.$ajax );
+      this.$news.on( 'error', err => { console.warn( err ) } );
+      this.$news.on( 'handlers', data => { this.newsHandlers = data } );
+      this.$news.on( 'tweets', data => { this.newsEntries = data } );
+    },
+
+    // setup msg queue to go off on a timer
+    setupMessengerHandlers() {
+      this.$messenger.useAjax( this.$ajax );
+      this.$messenger.on( 'sent', info => { this.showNotice( info, 'info' ) } );
+      this.$messenger.start();
     },
 
     // setup scroller handlers
     setupScrollHandlers() {
-      this.$bus.on( 'jumpTo', ( dest, cb ) => _scroller.jumpTo( dest, cb ) );
-      _scroller.onChange( pos => { this.scrollPos = pos; } );
-      _scroller.onDown( pos => { this.scrollDir = 'down'; } );
-      _scroller.onUp( pos => { this.scrollDir = 'up'; } );
+      this.$scroller.on( 'scroll', pos => { this.onScrollChange( 'scroll', pos ) } );
+      this.$scroller.on( 'down', pos => { this.onScrollChange( 'down', pos ) } );
+      this.$scroller.on( 'up', pos => { this.onScrollChange( 'up', pos ) } );
     },
 
-    // setup socket handlers
-    setupSocketHandlers() {
-      _binance.on( 'open', this.onSocketOpen );
-      _binance.on( 'error', this.onSocketError );
-      _binance.on( 'close', this.onSocketClose );
+    // setup binance live ticker data handlers
+    setupTickerHandlers() {
+      this.$binance.useAjax( this.$ajax );
+      this.$binance.on( 'sock_fail', this.onSockFail );
+      this.$binance.on( 'ticker_init', this.onTickerInit );
+      this.$binance.on( 'ticker_fail', this.onTickerFail );
+      this.$binance.on( 'ticker_error', this.onTickerError );
+      this.$binance.on( 'ticker_close', this.onTickerClose );
+      this.$binance.on( 'ticker_open', this.onTickerOpen );
+      this.$binance.on( 'ticker_data', this.onTickerData );
+      this.$binance.on( 'ticker_prices', this.onTickerPrices );
+      this.$binance.on( 'assets', assets => { this.assetsList = assets } );
+      this.$binance.startTickerStream( true );
+    },
+
+    // when scroll position updates
+    onScrollChange( dir, pos ) {
+      if ( dir === 'scroll' ) { this.header.opaque = ( pos > 10 ); }
+      if ( dir === 'down' ) { this.header.collapsed = true; }
+      if ( dir === 'up' ) { this.header.collapsed = false; }
     },
 
     // show socket related notifications
-    socketNotify( message ) {
+    tickerNotify( title, message ) {
       if ( document.hasFocus() ) return;
       let d = new Date();
-      this.$notify.add( 'Socket Status', message +' \nNow: '+ d.toLocaleString() );
+      this.$notify.add( title, message +' \nNow: '+ d.toLocaleString() );
+    },
+
+    // on socket init fail
+    onSockFail( error ) {
+      this.tickerStatus = 0;
+      this.showNotice( error, 'error' );
+    },
+
+    // on socket conenction attempt
+    onTickerInit( time ) {
+      this.tickerStatus = 0;
+      this.tickerStart = time;
+    },
+
+    // on socket failure to start
+    onTickerFail( error ) {
+      this.tickerStatus = 0;
+      this.showNotice( error, 'error' );
+    },
+
+    // when socket connection ends
+    onTickerError( e ) {
+      let info = String( e.message || 'Price ticker API connection failed, check the console for more details.' );
+      this.tickerStatus = 0;
+      this.tickerNotify( 'Ticker Error', info );
+      this.showNotice( info, 'error' );
+    },
+
+    // when socket connection ends
+    onTickerClose( e ) {
+      this.tickerStatus = 0;
+      this.$bus.emit( 'toggleWatchform', 'stop' );
+      this.$bus.emit( 'toggleTradeBot', 'stop' );
     },
 
     // when socket connection opens
-    onSocketOpen( ws, e ) {
-      this.socketStatus = 1;
-      this.socketStart = Date.now();
-      this.socketInt = setInterval( this.priceDataIntervalHandler, 1000 );
-      this.showNotice( 'Socket connection active.', 'success' );
-      this.socketNotify( 'Socket connection is now active.' );
+    onTickerOpen( e ) {
+      this.tickerStatus = 1;
+      this.tickerStart = Date.now();
     },
 
-    // when socket connection ends
-    onSocketClose( ws, e ) {
-      if ( this.socketInt ) clearInterval( this.socketInt );
-      this.socketStatus = 0;
-      this.socketStart = 0;
-      this.toggleWatchform( 'stop' );
-      this.showNotice( 'Socket connection closed.', 'warning' );
-      this.socketNotify( 'Socket connection has closed.' );
-
-      if ( this.socketReconnect ) {
-        setTimeout( () => { this.toggleSocket( true ); }, 5000 );
-      }
-    },
-
-    // when socket connection ends
-    onSocketError( ws, e ) {
-      if ( this.socketInt ) clearInterval( this.socketInt );
-      this.socketStatus = 0;
-      this.socketStart = 0;
-      this.showNotice( 'Socket connection error.', 'warning' );
-      this.socketNotify( 'Socket connection error, check the console for more details.' );
-      console.info( 'Socket-Error:', e.message || e );
-    },
-
-    // handle socket connection
-    toggleSocket( toggle ) {
-      this.socketStatus = 1;
-      this.socketReconnect = toggle;
-
-      if ( toggle === true && !this.socketStart ) {
-        _binance.getPrices( this.onTickerData );
-      }
-      if ( toggle === false && this.socketStart ) {
-        _binance.close();
-      }
-    },
-
-    // add base asset pair to the list
-    saveAssetPair( asset ) {
-      if ( !asset || this.assetsList.indexOf( asset ) >= 0 ) return;
-      this.assetsList.push( asset );
-    },
-
-    // update pair data inside modals
-    updateModalPairData( pair ) {
-      if ( !this.modalData || !this.modalData.symbol ) return;
-      if ( !pair || !pair.symbol || this.modalData.symbol !== pair.symbol ) return;
-      this.modalData = pair;
+    // when socket connection has data
+    onTickerData( data ) {
+      this.tickerStatus = 2;
     },
 
     // updates price data list from socket on an interval
-    priceDataIntervalHandler() {
-      let data  = [];
-      let total = this.priceList.length;
-      let secs  = ( Date.now() - this.socketStart ) / 1000;
-
-      for ( let i = 0; i < total; ++i ) {
-        let p = this.priceList[ i ];
-        p.alarms = this.$notify.alarmsCount( p.symbol );
-
-        if ( p.alarms ) {
-          this.$notify.checkAlarm( p.symbol, p.close, ( title, info, alertData ) => {
-            let icon = utils.fullUrl( alertData.image );
-            this.addMsgQueue( { title, info, icon } );
-            this.$history.add( title, info, icon );
-            this.$bus.emit( 'mainMenuAlert' );
-          });
-        }
-        this.saveAssetPair( p.asset );
+    onTickerPrices( prices ) {
+      for ( let i = 0; i < prices.length; ++i ) {
+        let p = prices[ i ];
+        p.alarms = this.$alarms.getCount( p.symbol );
         this.updateModalPairData( p );
-        data.push( p );
+        this.checkPairAlarms( p );
       }
-      this.socketTime = utils.elapsed( secs );
-      this.priceData  = data;
+      let secs = ( Date.now() - this.tickerStart ) / 1000;
+      this.tickerTime = this.$utils.elapsed( secs, '', true );
+      this.priceData = prices;
     },
 
-    // when live price data is recieved
-    onTickerData( list ) {
-      this.priceList = list;
-      this.socketStatus = 2;
-    },
-
-    // control watchform component
-    toggleWatchform( action ) {
-      if ( !this.$refs.watchform ) return;
-      switch ( action ) {
-        case 'open'   :  return this.$refs.watchform.open();
-        case 'close'  :  return this.$refs.watchform.close();
-        case 'toggle' :  return this.$refs.watchform.toggle();
-        case 'start'  :  return this.$refs.watchform.startWatch();
-        case 'stop'   :  return this.$refs.watchform.stopWatch();
-      }
+    // check if alarms need to go off for a pair
+    checkPairAlarms( pair ) {
+      this.$alarms.check( pair.symbol, pair.close, ( title, info, a ) => {
+        let icon = this.$utils.fullUrl( a.image );
+        this.$notify.add( title, info, icon, e => { this.setRoute( '/history' ) } );
+        this.$messenger.add( title, info, icon );
+        this.$history.add( title, info, icon );
+      });
     },
 
     // build page title
@@ -424,7 +380,7 @@ export default {
       let dest    = args.length ? args.shift() : '';
       let target  = args.length ? args.shift() : '_blank';
 
-      if ( action === 'scroll' )  return _scroller.jumpTo( dest );
+      if ( action === 'scroll' )  return this.$scroller.jumpTo( dest );
       if ( action === 'link' )    return window.open( dest, target );
       if ( action === 'reload' )  return window.location.reload();
       if ( action === 'return' )  return window.history.back();
@@ -438,11 +394,10 @@ export default {
 
     // change visible page component
     showPage( component, title ) {
-      title = title || component;
-      this.mainComp = component;
-      this.setTitle( title );
-      this.toggleWatchform( 'close' );
       this.closeModal();
+      this.$bus.emit( 'toggleWatchform', 'close' );
+      this.setTitle( title || component );
+      this.mainComp = component;
     },
 
     // show modal window
@@ -453,6 +408,13 @@ export default {
       this.modalComp = component;
       this.modalData = data;
       this.$refs.modal.show( title );
+    },
+
+    // update pair data inside modals
+    updateModalPairData( pair ) {
+      if ( !this.modalData || !this.modalData.symbol ) return;
+      if ( !pair || !pair.symbol || this.modalData.symbol !== pair.symbol ) return;
+      this.modalData = pair;
     },
 
     // close modal window, if open
@@ -480,10 +442,7 @@ export default {
         this.$ajax.get( 'public/afinn/'+ file +'.json', {
           type: 'json',
           proxy: false,
-          done: ( xhr, status, words ) => {
-            if ( typeof words !== 'object' ) return;
-            this.$sentiment.merge( words );
-          }
+          success: ( xhr, status, words ) => this.$sentiment.merge( words ),
         });
       });
     },
@@ -494,65 +453,56 @@ export default {
         type: 'json',
         proxy: false,
         done: ( xhr, status, list ) => {
-          if ( !Array.isArray( list ) ) return;
+          if ( !list || !Array.isArray( list ) ) return;
           let data = {};
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' ).toUpperCase();
             let name  = String( list[ i ].name || '' ).replace( /[^\w\.\-]+/g, ' ' ).replace( /[\.]+/g, '.' ).replace( /[\-]+/g, '-' ).replace( /[\n\r\t\s]+/g, ' ' ).trim();
             if ( token === 'BCH' ) token = 'BCC';
             if ( token === 'MIOTA' ) token = 'IOTA';
+            if ( token === 'YOYO' ) token = 'YOYOW';
             if ( token && name ) data[ token ] = name;
           }
-          _binance.setNames( data );
+          this.$binance.setNames( data );
           this.coinsData = data;
-        },
+        }
       });
     },
+
+    // hide initial page spinner
+    hideInitSpinner() {
+      const spinner = document.querySelector( '#_spnr' );
+      if ( spinner ) spinner.style.display = 'none';
+    }
   },
 
-  // init app data and handlers
-  beforeMount() {
-    this.loadOptions();
-    this.setupRoutes();
-    this.setupMsgQueue();
-    this.setupNotifications();
-    this.setupHistoryData();
+  // on component created
+  created() {
+    this.setupOptionsHandlers();
+    this.setupSorterHandlers();
     this.setupGlobalHandlers();
-    this.setupSocketHandlers();
+    this.setupTickerHandlers();
+    this.setupAlarmsHandlers();
+    this.setupHistoryHandlers();
+    this.setupNewsHandlers();
+    this.setupMessengerHandlers();
     this.setupScrollHandlers();
+    this.setupRoutes();
+  },
+
+  // on component mounted
+  mounted() {
+    this.$router.trigger( window.location.hash || '/' );
     this.fetchSentimentWords();
     this.fetchCoinsData();
+    this.hideInitSpinner();
   },
 
-  // start socket and other external data
-  mounted() {
-    this.setTitle();
-    this.toggleSocket( true );
-  },
-
-  // cleanup and close connetions
+  // on component destroyed
   destroyed() {
-    this.toggleSocket( false );
+    this.$binance.stopTickerStream();
+    this.$news.stopTimer();
   },
 }
 </script>
-
-<style lang="scss">
-
-.app-main {
-  display: block;
-  position: relative;
-
-  .app-page {
-    display: none;
-    transition: none;
-    animation: fadeIn $fxSpeed $fxEase forwards;
-
-    &.visible {
-      display: block;
-    }
-  }
-}
-</style>
-
 
