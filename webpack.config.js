@@ -26,14 +26,20 @@ const getLoaders = ( prod ) => {
 
  // webpack config
 module.exports = {
-  devtool: '#eval-source-map',
+
   entry: {
     app: appEntry,
   },
+
   output: {
     path: serverRoot,
     filename: path.join( bundleDir, '[name].min.js' ),
   },
+
+  stats: {
+    colors: true,
+  },
+
   module: {
     rules: [
       {
@@ -47,29 +53,26 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        loader: 'babel-loader',
         exclude: /node_modules/,
+        loader: 'babel-loader',
       }
     ]
   },
+
   plugins: [
     new ExtractTextPlugin( path.join( bundleDir, '[name].min.css' ) )
   ],
+
   resolve: {
     alias: {
       'vue$': 'vue/dist/vue.esm.js'
     }
   },
+
   devServer: {
     host: serverHost,
     port: serverPort,
     contentBase: serverRoot,
-    // proxy: {
-    //   '/': {
-    //     target: 'http://'+ serverHost +':'+ serverPort +'/',
-    //     secure: false,
-    //   },
-    // },
     clientLogLevel: 'info',
     hot: true,
     inline: true,
@@ -77,13 +80,13 @@ module.exports = {
     noInfo: false,
     compress: false,
   },
+
   performance: {
     hints: false
   }
 }
 
 if ( isProd ) {
-  // module.exports.devtool = '#source-map'
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': {

@@ -14,7 +14,7 @@
     "not ie <= 8"
   ],
   "dependencies": {
-    "vue": "^2.5.17"
+    "vue": "^2.5.22"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
@@ -30,6 +30,7 @@
     "postcss-loader": "^2.1.6",
     "sass-loader": "^6.0.6",
     "vue-loader": "^13.7.3",
+    "vue-style-loader": "^4.1.2",
     "vue-template-compiler": "^2.5.17",
     "webpack": "^3.12.0",
     "webpack-dev-server": "^2.11.3"
