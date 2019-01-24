@@ -85,6 +85,7 @@ export default class Binance extends Bus {
   addAsset( asset ) {
     if ( asset && this._assets.indexOf( asset ) < 0 ) {
       this._assets.push( asset );
+      this._assets.sort();
       this.emit( 'assets', this._assets );
     }
   }

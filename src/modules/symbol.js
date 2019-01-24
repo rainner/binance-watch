@@ -5,7 +5,7 @@ export default class Symbol {
 
   // constructor
   constructor( symbol ) {
-    const regex      = /^([A-Z]+)(BTC|ETH|BNB|USDT|USDC|TUSD|PAX|DAI)$/;
+    const regex      = /^([A-Z]+)(BTC|ETH|BNB|USDT|USDC|TUSD|PAX|DAI|XRP)$/;
     this.symbol      = String( symbol || '' ).toUpperCase();
     this.token       = this.symbol.replace( regex, '$1' );
     this.asset       = this.symbol.replace( regex, '$2' );

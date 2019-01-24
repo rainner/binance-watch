@@ -458,7 +458,8 @@ export default {
           for ( let i = 0; i < list.length; ++i ) {
             let token = String( list[ i ].symbol || '' ).toUpperCase();
             let name  = String( list[ i ].name || '' ).replace( /[^\w\.\-]+/g, ' ' ).replace( /[\.]+/g, '.' ).replace( /[\-]+/g, '-' ).replace( /[\n\r\t\s]+/g, ' ' ).trim();
-            if ( token === 'BCH' ) token = 'BCC';
+            if ( token === 'BCH' ) token = 'BCHABC';
+            if ( token === 'BSV' ) token = 'BCHSV';
             if ( token === 'MIOTA' ) token = 'IOTA';
             if ( token === 'YOYO' ) token = 'YOYOW';
             if ( token && name ) data[ token ] = name;
