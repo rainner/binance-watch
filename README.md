@@ -17,6 +17,6 @@ This application connects to the Binance.com public API to get live 24h price ch
 
 Rainner Lins: [@raintek_][twitter]
 
-### License
+### License alireza
 
 Licensed under [MIT][mit].
