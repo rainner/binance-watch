@@ -4,12 +4,12 @@
 export default {
 
   // cors proxy for outgoing http requests
-  proxy: 'https://cors-anywhere.herokuapp.com/',
+  proxy: 'https://binance-watch-wrapper.herokuapp.com/',
 
   // custom proxy list
   proxylist: [
+    'https://binance-watch-wrapper.herokuapp.com/',
     'https://cors-anywhere.herokuapp.com/',
-    'http://localhost:8080/',
   ],
 
   // notification options
@@ -33,12 +33,12 @@ export default {
 
   // live price options
   prices: {
-    header: true,        // show top coins in header
-    chart: true,         // show live price chart in list
-    asset: 'BTC',        // filter by base asset (BTC, ETH, BNB, USDT)
-    sort: 'assetVolume', // price data to sort by
-    order: 'desc',       // price sort direction
-    limit: 20,           // how many entries to show
+    header: true,         // show top coins in header
+    chart: true,          // show live price chart in list
+    market: 'USDT',       // default selected market token
+    sort: 'marketVolume', // price data to sort by
+    order: 'desc',        // price sort direction
+    limit: 20,            // how many entries to show
   },
 
   // news related options

@@ -6,7 +6,7 @@ export default [
     name: 'Top Coins',
     info: 'Coins with recent high trading volume.',
     options: {
-      asset: 'BTC',
+      market: 'USDT',
       priceType: 'change',
       priceChange: '2',
       priceCheck: 'below',
@@ -27,7 +27,7 @@ export default [
     name: 'Big Change',
     info: 'Big price change within a short time period.',
     options: {
-      asset: 'BTC',
+      market: 'USDT',
       priceType: 'change',
       priceChange: '3',
       priceCheck: 'above',
@@ -48,7 +48,7 @@ export default [
     name: 'Slow Market',
     info: 'Small price change with low volume.',
     options: {
-      asset: 'BTC',
+      market: 'USDT',
       priceType: 'change',
       priceChange: '1.5',
       priceCheck: 'above',
