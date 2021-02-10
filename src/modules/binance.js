@@ -19,9 +19,9 @@ export default class Binance extends Bus {
     this._apisecret = '';    // binance API secret
     this._listenkey = '';    // user stream listen key
     this._wait      = 10000; // reconnect wait (mils)
-    this._names     = {};    // map of token names passed in
+    this._coindata  = {};    // data about each token
     this._symbols   = {};    // unique symbols data cache
-    this._assets    = [];    // unique list of base assets
+    this._markets   = {};    // available markets and total assets
     this._reconnect = {};
     this._timers    = {};
     this._socks     = {};
@@ -29,7 +29,6 @@ export default class Binance extends Bus {
 
   /**
    * Set ajax module reference to use for requests
-   * @param {object}  ajax  Ajax class instance
    */
   useAjax( ajax ) {
     this._ajax = ajax;
@@ -37,32 +36,27 @@ export default class Binance extends Bus {
 
   /**
    * Set API key
-   * @param {string} key
    */
-  setApiKey( key ) {
+  setApiKey( key = '' ) {
     this._apikey = String( key || '' ).trim();
   }
 
   /**
    * Set API secret
-   * @param {string} secret
    */
-  setApiSecret( secret ) {
+  setApiSecret( secret = '' ) {
     this._apisecret = String( secret || '' ).trim();
   }
 
   /**
-   * Set object map of token -> name
-   * @param {object}  namesMap  Tokens names map
+   * Set coins data fetched from somewhere else
    */
-  setNames( namesMap ) {
-    this._names = Object.assign( this._names, namesMap );
+  setCoinData( data = {} ) {
+    this._coindata = Object.assign( this._coindata, data );
   }
 
   /**
    * Set socket reconnect boolean for an id
-   * @param {string}   id      Sock id ref
-   * @param {boolean}  toggle  Toggle
    */
   setReconnect( id, toggle ) {
     this._reconnect[ id ] = toggle ? true : false;
@@ -70,8 +64,6 @@ export default class Binance extends Bus {
 
   /**
    * Check reconnect toggle for an id and call a handler function
-   * @param {string}    id        Sock id ref
-   * @param {function}  callback  Handler function
    */
   checkReconnect( id, callback ) {
     if ( !this._reconnect[ id ] ) return;
@@ -79,24 +71,16 @@ export default class Binance extends Bus {
   }
 
   /**
-   * Add base asset symbol to the list
-   * @param {string}  asset  Asset symbol
+   * Get public api endpoint url
    */
-  addAsset( asset ) {
-    if ( asset && this._assets.indexOf( asset ) < 0 ) {
-      this._assets.push( asset );
-      this._assets.sort();
-      this.emit( 'assets', this._assets );
-    }
-  }
-
-  // get public api endpoint url
   getPublicUrl( endpoint, params ) {
     let qstr = this._ajax.serializeData( Object.assign( {}, params ) );
     return this._apiurl + endpoint + '?' + qstr;
   }
 
-  // get user signed api endpoint url
+  /**
+   * Get user signed api endpoint url
+   */
   getSignedUrl( endpoint, params ) {
     let crypto     = window.CryptoJS || null;
     let recvWindow = 100000;
@@ -107,8 +91,67 @@ export default class Binance extends Bus {
   }
 
   /**
+   * Fetch data about available markets form exchange
+   */
+  fetchMarketsData() {
+    if ( !this._ajax ) return;
+    const remote = `${this._apiurl}/v3/exchangeInfo`;
+    const local  = `public/json/exchangeInfo.json`;
+
+    // build markets data and emit it out
+    const handleResponse = ( res ) => {
+      if ( res && Array.isArray( res.symbols ) ) {
+        for ( let symb of res.symbols ) {
+          let token = symb.quoteAsset; // market
+          let count = res.symbols.filter( s => ( s.quoteAsset === token && s.baseAsset !== token && s.status === 'TRADING' ) ).length;
+          this._markets[ token ] = { token, count };
+        }
+        this.emit( 'markets_data', this._markets );
+      }
+    }
+    // try remote, then local if it fails
+    this._ajax.get( remote, {
+      type: 'json',
+      success: ( xhr, status, res ) => handleResponse( res ),
+      error: ( xhr, status, err ) => {
+        this._ajax.get( local, {
+          type: 'json',
+          proxy: false,
+          success: ( xhr, status, res ) => handleResponse( res ),
+        });
+      }
+    });
+  }
+
+  /**
+   * Fetch last 24h candle data
+   */
+  fetchChartData( symbol, cb ) {
+     if ( !this._ajax || !symbol ) return;
+     const endpoint = `${this._apiurl}/v3/klines?symbol=${symbol}&interval=1h&limit=168`;
+     const prices   = [];
+
+    this._ajax.get( endpoint, {
+      type: 'json',
+      // cache: 600,
+      success: ( xhr, status, res ) => {
+        if ( res && Array.isArray( res ) ) {
+          for ( let i = 0; i < res.length; ++i ) {
+            prices.push( parseFloat( res[ i ][ 4 ] ) ); // close price
+          }
+        }
+        if ( typeof cb === 'function' ) cb( prices );
+        this.emit( 'chart_data', { symbol, prices } );
+      },
+      error: ( xhr, status, err ) => {
+        if ( typeof cb === 'function' ) cb( prices );
+        console.warn( err );
+      }
+    });
+  }
+
+  /**
    * Parse user balances data
-   * @param {object}  data  Data payload from websocket, or http response
    */
   parseUserBalances( data ) {
     let balances = [];
@@ -312,7 +355,6 @@ export default class Binance extends Bus {
 
   /**
    * Attempt to start a new user stream
-   * @param {boolean}  reconnect  Auto reconnect on close
    */
   initUserStream( reconnect ) {
     if ( !this._apikey || !this._ajax ) return;
@@ -357,8 +399,6 @@ export default class Binance extends Bus {
 
   /**
    * Connect to a live user account data stream
-   * @param {string}   listenKey  Binance user stream listenKey
-   * @param {boolean}  reconnect  Auto reconnect on close
    */
   startUserStream( listenKey, reconnect ) {
     this.setReconnect( 'user', reconnect || false );
@@ -410,7 +450,6 @@ export default class Binance extends Bus {
 
   /**
    * Connect to live ticker prices socket endpoint
-   * @param {boolean}  reconnect  Auto reconnect on close
    */
   startTickerStream( reconnect ) {
     this.setReconnect( 'ticker', reconnect || false );
@@ -437,19 +476,23 @@ export default class Binance extends Bus {
 
     ws.addEventListener( 'message', e => {
       this.emit( 'ticker_data', true );
+      let list    = JSON.parse( e.data || '[]' ) || [];
+      let markets = Object.keys( this._markets );
+      let count   = list.length;
 
-      let list  = JSON.parse( e.data || '[]' ) || [];
-      let count = list.length;
+      // wait for markets data to be available before creating symbols
+      if ( !markets.length || !count ) return;
 
       while ( count-- ) {
-        let tkr = list[ count ];
-        let smb = this._symbols[ tkr.s ] || new Symbol( tkr.s );
+        let ticker   = list[ count ];
+        let pair     = ticker.s; // trading pair symbol str
+        let symbol   = this._symbols[ pair ] || new Symbol( pair ); // cached
 
-        smb.setName( this._names[ smb.token ] );
-        smb.setTickerData( tkr );
-
-        this.addAsset( smb.asset );
-        this._symbols[ tkr.s ] = smb;
+        symbol.splitSymbol( markets ); // split pair symbol into token / market
+        symbol.setCoinData( this._coindata[ symbol.token ] ); // data from coincap.io
+        symbol.setTickerData( ticker ); // update symbol ticker data
+        symbol.resolveImage(); // find an icon for this token
+        this._symbols[ pair ] = symbol; // update cache
       }
     });
   }

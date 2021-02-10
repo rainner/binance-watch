@@ -138,8 +138,12 @@ export default class Ajax {
     }
 
     // default headers
-    xhr.setRequestHeader( 'X-Requested-With', 'XMLHttpRequest' );
     xhr.setRequestHeader( 'Accept', 'application/json, text/plain, text/html, */*' );
+
+    // send ajax header unless stated not to
+    if ( !options.notAjax ) {
+      xhr.setRequestHeader( 'X-Requested-With', 'XMLHttpRequest' );
+    }
 
     // check for basic auth data and set header
     if ( options.auth && typeof options.auth === 'object' ) {

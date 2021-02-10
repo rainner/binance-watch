@@ -76,6 +76,7 @@ export default class Twitter {
     ajax.get( this.url, {
       type: 'text',
       timeout: 30,
+      notAjax: true,
 
       done: ( xhr, status, response ) => {
         this.fetching = false;

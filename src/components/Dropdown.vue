@@ -94,6 +94,10 @@ export default {
         text-align: left;
         white-space: nowrap;
 
+        & + li {
+          margin-top: $lineWidth;
+        }
+
         &.heading {
           margin: 0 0 $padSpace 0;
           padding: 0 $padSpace;
@@ -101,12 +105,15 @@ export default {
 
         &.clickable {
           padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
-          border-top: ( $lineWidth / 2 ) $lineStyle $lineColor;
-          border-bottom: ( $lineWidth / 2 ) $lineStyle $lineColor;
           background-color: rgba( black, 0 );
+          line-height: 1.2rem;
 
           &:hover {
-            background-color: rgba( black, 0.1 );
+            background-color: rgba( black, .1 );
+          }
+          &.active {
+            background-color: rgba( black, .2 );
+            color: $colorPrimary;
           }
         }
 

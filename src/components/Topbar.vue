@@ -13,11 +13,12 @@
         </div>
 
         <!-- topbar top tokens -->
-        <div class="topbar-prices flex-row flex-middle flex-1">
-          <div v-if="options.prices.header" v-for="(a, i) in assetPrices" :key="a.token" class="text-clip clickable fx fx-slide-down" :class="'fx-delay-' + (i + 1)" @click="setRoute( a.route )">
+        <div class="topbar-prices flex-row flex-middle flex-1" v-if="options.prices.header">
+          <div v-for="(a, i) in marketPrices" :key="a.token" class="text-clip clickable fx fx-slide-down" :class="'fx-delay-' + (i + 1)" @click="setRoute( a.route )">
             <span class="text-bright">{{ a.token }}</span>
             <span :class="{ 'text-gain': ( a.percent > 0 ), 'text-loss': ( a.percent < 0 ) }">{{ a.sign }}{{ a.percent | toFixed( 3 ) }}%</span> <br />
-            <span class="text-default">${{ a.close | toFixed( a.asset ) }} {{ a.arrow }}</span> <br />
+            <span class="text-default">{{ a.close | toFixed( a.market ) }}</span>
+            <span class="text-faded">{{ a.market }}</span>
           </div>
         </div>
 
@@ -64,9 +65,6 @@
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/' )">
                 <i class="icon-chart-line iconLeft"></i> Live Ticker
               </li>
-              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/trade' )">
-                <i class="icon-percent iconLeft"></i> Trade Bot
-              </li>
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/news' )">
                 <i class="icon-feedback iconLeft"></i> Twitter News <span class="text-grey" v-if="newsCount">({{ newsCount }})</span>
               </li>
@@ -75,6 +73,9 @@
               </li>
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/history' )">
                 <i class="icon-clock iconLeft"></i> Recent History <span class="text-grey" v-if="historyData.length">({{ historyData.length }})</span>
+              </li>
+              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/trade' )">
+                <i class="icon-percent iconLeft"></i> Trade Bot
               </li>
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/options' )">
                 <i class="icon-config iconLeft"></i> App Options
@@ -144,10 +145,10 @@ export default {
     },
 
     // get top 3 usdt coins based on volume
-    assetPrices() {
-      let asset = 'USDT';
-      let list  = this.priceData.filter( p => ( p.asset === asset ) );
-      return this.$utils.sort( list, 'assetVolume', 'desc' ).slice( 0, 3 );
+    marketPrices() {
+      let market = this.options.prices.market || 'USDT';
+      let list  = this.priceData.filter( p => ( p.market === market ) );
+      return this.$utils.sort( list, 'percent', 'desc' ).slice( 0, 3 );
     },
   },
 

@@ -19,11 +19,12 @@
       :options="options"
       :tickerStatus="tickerStatus"
       :assetsList="assetsList"
+      :marketsData="marketsData"
       :priceData="priceData">
     </WatchForm>
 
     <!-- main app pages wrapper -->
-    <main class="app-main">
+    <div class="app-main">
       <keep-alive>
         <component
           :is="mainComp"
@@ -33,6 +34,7 @@
           :sortData="sortData"
           :tickerStatus="tickerStatus"
           :assetsList="assetsList"
+          :marketsData="marketsData"
           :priceData="priceData"
           :newsHandlers="newsHandlers"
           :newsEntries="newsEntries"
@@ -40,7 +42,7 @@
           class="fx fx-fade-in">
         </component>
       </keep-alive>
-    </main>
+    </div>
 
     <!-- common modal component -->
     <Modal ref="modal" @onDone="modalDone">
@@ -132,6 +134,8 @@ export default {
       newsEntries: [],
       historyData: [],
       alarmsData: [],
+      quoteSymbols: [],
+      marketsData: {},
       coinsData: {},
       // page and modal related
       mainComp: '',
@@ -190,7 +194,7 @@ export default {
 
     // setup sort order data handler
     setupSorterHandlers() {
-      this.$sorter.setKey( 'ticker', 'assetVolume', 'desc' );
+      this.$sorter.setKey( 'ticker', 'marketVolume', 'desc' );
       this.$sorter.setKey( 'sentiment', 'count', 'desc' );
       this.$sorter.setKey( 'balances', 'asset', 'asc' );
       this.$sorter.setKey( 'orders', 'time', 'desc' );
@@ -269,6 +273,13 @@ export default {
       this.$scroller.on( 'up', pos => { this.onScrollChange( 'up', pos ) } );
     },
 
+    // setup coincap data handlers
+    setupCoincapHandlers() {
+      this.$coincap.useAjax( this.$ajax );
+      this.$coincap.on( 'allcoins', this.onCoincapData );
+      this.$coincap.fetchAll();
+    },
+
     // setup binance live ticker data handlers
     setupTickerHandlers() {
       this.$binance.useAjax( this.$ajax );
@@ -280,8 +291,22 @@ export default {
       this.$binance.on( 'ticker_open', this.onTickerOpen );
       this.$binance.on( 'ticker_data', this.onTickerData );
       this.$binance.on( 'ticker_prices', this.onTickerPrices );
-      this.$binance.on( 'assets', assets => { this.assetsList = assets } );
+      this.$binance.on( 'markets_data', this.onMarketsData );
+      this.$binance.fetchMarketsData();
       this.$binance.startTickerStream( true );
+    },
+
+    // handle coincap all coins data
+    onCoincapData( coins ) {
+      this.coinsData = coins;
+      this.$binance.setCoinData( coins );
+    },
+
+    // handle binance available markets data
+    onMarketsData( markets ) {
+      const list = Object.keys( markets );
+      this.assetsList = list;
+      this.marketsData = markets;
     },
 
     // when scroll position updates
@@ -447,29 +472,6 @@ export default {
       });
     },
 
-    // fetch list of all tokens and their names from API
-    fetchCoinsData() {
-      this.$ajax.get( 'https://coincap.io/map', {
-        type: 'json',
-        proxy: false,
-        done: ( xhr, status, list ) => {
-          if ( !list || !Array.isArray( list ) ) return;
-          let data = {};
-          for ( let i = 0; i < list.length; ++i ) {
-            let token = String( list[ i ].symbol || '' ).toUpperCase();
-            let name  = String( list[ i ].name || '' ).replace( /[^\w\.\-]+/g, ' ' ).replace( /[\.]+/g, '.' ).replace( /[\-]+/g, '-' ).replace( /[\n\r\t\s]+/g, ' ' ).trim();
-            if ( token === 'BCH' ) token = 'BCHABC';
-            if ( token === 'BSV' ) token = 'BCHSV';
-            if ( token === 'MIOTA' ) token = 'IOTA';
-            if ( token === 'YOYO' ) token = 'YOYOW';
-            if ( token && name ) data[ token ] = name;
-          }
-          this.$binance.setNames( data );
-          this.coinsData = data;
-        }
-      });
-    },
-
     // hide initial page spinner
     hideInitSpinner() {
       const spinner = document.querySelector( '#_spnr' );
@@ -482,12 +484,13 @@ export default {
     this.setupOptionsHandlers();
     this.setupSorterHandlers();
     this.setupGlobalHandlers();
-    this.setupTickerHandlers();
     this.setupAlarmsHandlers();
     this.setupHistoryHandlers();
     this.setupNewsHandlers();
     this.setupMessengerHandlers();
     this.setupScrollHandlers();
+    this.setupCoincapHandlers();
+    this.setupTickerHandlers();
     this.setupRoutes();
   },
 
@@ -495,7 +498,6 @@ export default {
   mounted() {
     this.$router.trigger( window.location.hash || '/' );
     this.fetchSentimentWords();
-    this.fetchCoinsData();
     this.hideInitSpinner();
   },
 

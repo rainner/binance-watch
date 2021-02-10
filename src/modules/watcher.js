@@ -12,7 +12,7 @@ export default class Watcher {
     this._options = {
       // pair
       token: '', // token symbol
-      asset: 'BTC', // trading asset symbol
+      market: 'BTC', // trading market symbol
       // price
       priceType: 'change', // change, gain, loss
       priceChange: '2', // change percent
@@ -58,14 +58,14 @@ export default class Watcher {
   updateSnapshot( tickerlist ) {
     let checked    = Date.now();
     let tokenCheck = String( this._options.token || '' );
-    let assetCheck = String( this._options.asset || '' );
+    let assetCheck = String( this._options.market || '' );
     this._snapshot = {};
 
     for ( let i = 0; i < tickerlist.length; ++i ) {
-      let { symbol, token, asset, close, assetVolume } = tickerlist[ i ];
+      let { symbol, token, market, close, marketVolume } = tickerlist[ i ];
       if ( tokenCheck && token !== tokenCheck ) continue;
-      if ( assetCheck && asset !== assetCheck ) continue;
-      this._snapshot[ symbol ] = { symbol, token, asset, close, assetVolume, checked };
+      if ( assetCheck && market !== assetCheck ) continue;
+      this._snapshot[ symbol ] = { symbol, token, market, close, marketVolume, checked };
     }
   }
 
@@ -81,7 +81,7 @@ export default class Watcher {
     if ( !pair ) return;
 
     this._snapshot[ symbol ].close = pair.close;
-    this._snapshot[ symbol ].assetVolume = pair.assetVolume;
+    this._snapshot[ symbol ].marketVolume = pair.marketVolume;
     this._snapshot[ symbol ].checked = Date.now();
   }
 
@@ -91,7 +91,7 @@ export default class Watcher {
    */
   pairCheck( p ) {
     let token           = String( this._options.token || '' );
-    let asset           = String( this._options.asset || '' );
+    let market          = String( this._options.market || '' );
     let priceCheck      = String( this._options.priceCheck || '' );
     let price           = Number( this._options.price || 0 );
     let volumeCheck     = String( this._options.volumeCheck || '' );
@@ -105,7 +105,7 @@ export default class Watcher {
     let filterType      = String( this._options.filterType || '' );
 
     if ( token && p.token !== token ) return false;
-    if ( asset && p.asset !== asset ) return false;
+    if ( market && p.market !== market ) return false;
 
     if ( this._reg && filterType === 'allow' && !this._reg.test( p.token ) ) return false;
     if ( this._reg && filterType === 'deny' && this._reg.test( p.token ) ) return false;
@@ -113,8 +113,8 @@ export default class Watcher {
     if ( price && priceCheck === 'above' && p.close < price ) return false;
     if ( price && priceCheck === 'below' && p.close > price ) return false;
 
-    if ( volume && volumeCheck === 'above' && p.assetVolume < volume ) return false;
-    if ( volume && volumeCheck === 'below' && p.assetVolume > volume ) return false;
+    if ( volume && volumeCheck === 'above' && p.marketVolume < volume ) return false;
+    if ( volume && volumeCheck === 'below' && p.marketVolume > volume ) return false;
 
     if ( change && changeCheck === 'above' && p.percent < change ) return false;
     if ( change && changeCheck === 'below' && p.percent > change ) return false;
@@ -170,7 +170,7 @@ export default class Watcher {
 
       // calculate price and volume change
       let pc = this._calcPercent( p.close, s.close );
-      let vc = this._calcPercent( p.assetVolume, s.assetVolume );
+      let vc = this._calcPercent( p.marketVolume, s.marketVolume );
       let t  = ( now - s.checked ) / 1000;
 
       // check price change
@@ -187,7 +187,7 @@ export default class Watcher {
       }
       // update snapshot data
       this._snapshot[ p.symbol ].close = p.close;
-      this._snapshot[ p.symbol ].assetVolume = p.assetVolume;
+      this._snapshot[ p.symbol ].marketVolume = p.marketVolume;
       this._snapshot[ p.symbol ].checked = now;
 
       // check time options

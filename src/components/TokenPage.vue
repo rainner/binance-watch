@@ -17,8 +17,8 @@
       </div>
 
       <div class="text-nowrap text-right push-right">
-        <div class="form-label">{{ modalData.asset }} Price</div>
-        <big class="text-bright">{{ modalData.close | toFixed( modalData.asset ) }}</big>
+        <div class="form-label">{{ modalData.market }} Price</div>
+        <big class="text-bright">{{ modalData.close | toFixed( modalData.market ) }}</big>
       </div>
 
       <div class="text-nowrap text-right push-right">
@@ -38,17 +38,17 @@
 
       <div class="flex-1 well text-nowrap">
         <div class="form-label">High 24h</div>
-        <big class="text-bright">{{ modalData.high | toFixed( modalData.asset ) }}</big>
+        <big class="text-bright">{{ modalData.high | toFixed( modalData.market ) }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
         <div class="form-label">Low 24h</div>
-        <big class="text-bright">{{ modalData.low | toFixed( modalData.asset ) }}</big>
+        <big class="text-bright">{{ modalData.low | toFixed( modalData.market ) }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
-        <div class="form-label">{{ modalData.asset }} Vol 24h</div>
-        <big class="text-bright">{{ modalData.assetVolume | toMoney }}</big>
+        <div class="form-label">{{ modalData.market }} Vol 24h</div>
+        <big class="text-bright">{{ modalData.marketVolume | toMoney }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
@@ -57,22 +57,22 @@
       </div>
 
       <div class="flex-1 well text-nowrap">
-        <div class="form-label">Market Cap</div>
+        <div class="form-label">Market Cap USD</div>
         <big class="text-bright">{{ marketCap | toMoney }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
-        <div class="form-label">Supply</div>
+        <div class="form-label">Current Supply</div>
         <big class="text-bright">{{ totalSupply | toMoney }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
-        <div class="form-label">Total Volume</div>
+        <div class="form-label">Volume USD 24H</div>
         <big class="text-bright">{{ totalVolume | toMoney }}</big>
       </div>
 
       <div class="flex-1 well text-nowrap">
-        <div class="form-label">USD Value</div>
+        <div class="form-label">Price USD</div>
         <big class="text-bright">${{ usdPrice | toMoney( 3 ) }}</big>
       </div>
 
@@ -126,10 +126,10 @@ export default {
   // comonent data
   data() {
     return {
-      coinRank: 0,
-      marketCap: 0,
-      totalSupply: 0,
-      totalVolume: 0,
+      coinRank: this.modalData.rank,
+      marketCap: this.modalData.capusd,
+      totalSupply: this.modalData.supply,
+      totalVolume: this.modalData.marketVolume,
       curPrice: this.modalData.close,
       usdPrice: 0,
       alarmsCount: 0,
@@ -156,8 +156,8 @@ export default {
 
     // lick to binance site with ref id added
     tradeLink() {
-      let { token, asset } = this.modalData;
-      this.$bus.emit( 'handleClick', 'binance', '/en/trade/'+ token +'_'+ asset +'/', '_blank' );
+      let { token, market } = this.modalData;
+      this.$bus.emit( 'handleClick', 'binance', '/en/trade/'+ token +'_'+ market +'/', '_blank' );
     },
 
     // update alarms count for this token
@@ -178,50 +178,26 @@ export default {
 
     // fetch token data from api
     fetchGlobalData() {
-      let token = this.modalData.token;
-      token = ( token === 'BCC' )  ? 'BCH'   : token;
-      token = ( token === 'IOTA' ) ? 'IOT'   : token;
-      token = ( token === 'YOYO' ) ? 'YOYOW' : token;
-
-      this.$ajax.get( 'https://coincap.io/page/'+ token, {
-        type: 'json',
-        cache: 600,
-        proxy: false,
-
-        success: ( xhr, status, response ) => {
-          if ( !response || !response.id ) return;
-          if ( response.rank )         this.coinRank    = response.rank;
-          if ( response.market_cap )   this.marketCap   = response.market_cap;
-          if ( response.supply )       this.totalSupply = response.supply;
-          if ( response.volume )       this.totalVolume = response.volume;
-          if ( response.price_usd )    this.usdPrice    = response.price_usd;
-        },
-        error: ( xhr, status, error ) => {
-          this.$bus.emit( 'showNotice', error, 'warning' );
-        }
+      this.$coincap.fetchCoin( this.modalData.id, data => {
+        let { rank, marketCapUsd, supply, volumeUsd24Hr, priceUsd } = data;
+        this.coinRank     = rank || this.coinRank;
+        this.marketCap    = marketCapUsd || this.marketCap;
+        this.totalSupply  = supply || this.totalSupply;
+        this.totalVolume  = volumeUsd24Hr || this.totalVolume;
+        this.usdPrice     = priceUsd || this.usdPrice;
       });
     },
 
     // fetch last 24h candle data
     fetchChartData() {
       let symbol = this.modalData.symbol;
-      let endpoint = 'https://api.binance.com/api/v1/klines?symbol='+ symbol +'&interval=1h&limit=168';
-      this.spinner( 'chartSpinner', 'show', 'loading chart data' );
-
-      this.$ajax.get( endpoint, {
-        type: 'json',
-        cache: 600,
-
-        success: ( xhr, status, response ) => {
+      this.spinner( 'chartSpinner', 'show', 'Loading chart data' );
+      this.$binance.fetchChartData( symbol, prices => {
+        if ( prices.length ) {
           this.spinner( 'chartSpinner', 'hide' );
-          this.chartData = [];
-          for ( let i = 0; i < response.length; ++i ) {
-            this.chartData.push( parseFloat( response[ i ][ 4 ] ) ); // close price
-          }
-        },
-        error: ( xhr, status, error ) => {
-          this.spinner( 'chartSpinner', 'error', 'No chart for '+ symbol );
-          this.$bus.emit( 'showNotice', error, 'warning' );
+          this.chartData = prices;
+        } else {
+          this.spinner( 'chartSpinner', 'error', 'No data for '+ symbol );
         }
       });
     },

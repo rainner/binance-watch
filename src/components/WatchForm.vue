@@ -27,7 +27,7 @@
           <div class="flex-grid flex-grid-md flex-middle">
 
             <div class="form-input text-nowrap">
-              <SelectMenu class="flex-1" :options="assetOptions" v-model="watchOptions.asset" @change="formChange"></SelectMenu>
+              <SelectMenu class="flex-1" :options="marketOptions" v-model="watchOptions.market" @change="formChange"></SelectMenu>
             </div>
 
              <div class="form-input text-nowrap">
@@ -56,7 +56,7 @@
                 <option value="below">Price below</option>
               </SelectMenu>
               <input class="flex-1 push-right" type="text" placeholder="0.00000000" v-model="watchOptions.price" @keyup="numInput" @change="formChange" />
-              <div class="text-secondary">{{ watchOptions.asset }}</div>
+              <div class="text-secondary">{{ watchOptions.market }}</div>
             </div>
 
             <div class="form-input text-nowrap">
@@ -65,7 +65,7 @@
                 <option value="below">Volume below</option>
               </SelectMenu>
               <input class="flex-1 push-right" type="text" placeholder="0000" v-model="watchOptions.volume" @keyup="numInput" @change="formChange" />
-              <div class="text-secondary">{{ watchOptions.asset }}</div>
+              <div class="text-secondary">{{ watchOptions.market }}</div>
             </div>
 
             <div class="form-input text-nowrap">
@@ -149,6 +149,7 @@ export default {
     tickerStatus: { type: Number, default: 0, required: true },
     priceData: { type: Array, default() { return [] }, required: true },
     assetsList: { type: Array, default() { return [] }, required: true },
+    marketsData: { type: Object, default() { return {} }, required: true },
   },
 
   // comonent data
@@ -169,7 +170,7 @@ export default {
       watchPreset: '', // selected name
       watchPresets: watchPresets,
       watchOptions: {
-        asset: 'BTC', // asset pair
+        market: 'BTC', // market pair
         priceType: 'change', // change, gain, loss
         priceChange: '2', // change percent
         priceCheck: 'below', // above, below
@@ -205,11 +206,15 @@ export default {
   // computed methods
   computed: {
 
-    // build assets select options
-    assetOptions() {
-      return this.assetsList.map( a => {
-        return { value: a, text: a + ' pairs' };
-      });
+    // build markets select options
+    marketOptions() {
+      let options = [];
+      for ( let key in this.marketsData ) {
+        if ( !this.marketsData.hasOwnProperty( key ) ) continue;
+        let { token, count } = this.marketsData[ key ];
+        options.push( { value: token, text: `${token} Pairs (${count})` } );
+      }
+      return options;
     },
 
     // get presets list
@@ -340,9 +345,9 @@ export default {
     // count total pairs for select option
     updateWatchCount() {
       if ( !this.visible ) return;
-      let asset = String( this.watchOptions.asset || '' );
+      let market = String( this.watchOptions.market || '' );
       let count = this.watcher.watchCount( this.priceData );
-      this.countInfo = this.$utils.noun( count, asset +' pair', asset +' pairs' );
+      this.countInfo = this.$utils.noun( count, market +' pair', market +' pairs' );
       this.elapsed = this.$utils.elapsed( ( Date.now() - this.start ) / 1000 ) || '0s';
     },
 
@@ -353,8 +358,8 @@ export default {
 
         let pricePerc = pc.sign + Number( pc.percent ).toFixed( 2 ) + '%';
         let volPerc   = vc.sign + Number( vc.percent ).toFixed( 2 ) + '%';
-        let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.asset +')';
-        let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ this.$utils.money( p.assetVolume, 0 ) +' '+ p.asset +')';
+        let curPrice  = 'Price '+ pc.arrow +' '+ pricePerc +' ('+ Number( p.close ).toFixed( 8 ) +' '+ p.market +')';
+        let curVol    = 'Volume '+ vc.arrow +' '+ volPerc +' ('+ this.$utils.money( p.assetVolume, 0 ) +' '+ p.market +')';
         let curVolat  = 'Volatility ● '+ Number( p.volatility ).toFixed( 1 ) +'% 24h';
         let elapsed   = 'Last ● '+ this.$utils.elapsed( t );
         let title     = [ p.name, '('+ p.pair +')', p.sign + Number( p.percent ).toFixed( 2 ) +'%' ].join( ' ' );

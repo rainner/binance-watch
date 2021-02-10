@@ -103,7 +103,7 @@ module.exports = {
   // fixed numbers
   fixed( num, decimals ) {
     if ( typeof decimals === 'number' ) return Number( num ).toFixed( decimals );
-    if ( /^(T?USDT?|PAX|DAI)$/.test( decimals ) ) return this.money( num, 3 );
+    if ( /(USD|PAX|DAI)/.test( decimals ) ) return this.money( num, 3 );
     return Number( num ).toFixed( 8 );
   },
 

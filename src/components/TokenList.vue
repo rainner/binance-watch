@@ -21,19 +21,19 @@
                 <li class="heading">
                   <span class="form-label">List Limit Options</span>
                 </li>
-                <li class="clickable" @click="limitList( 10 )">
+                <li class="clickable" :class="{ 'active': activeLimit( 10 ) }" @click="limitList( 10 )">
                   <i class="icon-list-add iconLeft"></i> 10 tokens
                 </li>
-                <li class="clickable" @click="limitList( 20 )">
+                <li class="clickable" :class="{ 'active': activeLimit( 20 ) }"  @click="limitList( 20 )">
                   <i class="icon-list-add iconLeft"></i> 20 tokens
                 </li>
-                <li class="clickable" @click="limitList( 50 )">
+                <li class="clickable" :class="{ 'active': activeLimit( 50 ) }"  @click="limitList( 50 )">
                   <i class="icon-list-add iconLeft"></i> 50 tokens
                 </li>
-                <li class="clickable" @click="limitList( 100 )">
+                <li class="clickable" :class="{ 'active': activeLimit( 100 ) }"  @click="limitList( 100 )">
                   <i class="icon-list-add iconLeft"></i> 100 tokens
                 </li>
-                <li class="clickable" @click="limitList( 0 )">
+                <li class="clickable" :class="{ 'active': activeLimit( 0 ) }"  @click="limitList( 0 )">
                   <i class="icon-list-add iconLeft"></i> All tokens
                 </li>
               </ul>
@@ -47,43 +47,48 @@
                 <li class="heading">
                   <span class="form-label">List Sorting Options</span>
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'token', 'asc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'token' ) }" @click="$sorter.sortOrder( 'ticker', 'token', 'asc' )">
                   <i class="icon-bitcoin iconLeft"></i> Token
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'percent', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'percent' ) }" @click="$sorter.sortOrder( 'ticker', 'percent', 'desc' )">
                   <i class="icon-percent iconLeft"></i> Percent
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'close', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'close' ) }" @click="$sorter.sortOrder( 'ticker', 'close', 'desc' )">
                   <i class="icon-chart-line iconLeft"></i> Price
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'volatility', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'volatility' ) }" @click="$sorter.sortOrder( 'ticker', 'volatility', 'desc' )">
                   <i class="icon-chart-line iconLeft"></i> Volatility
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'danger', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'danger' ) }" @click="$sorter.sortOrder( 'ticker', 'danger', 'desc' )">
                   <i class="icon-alert iconLeft"></i> Danger
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'change', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'change' ) }" @click="$sorter.sortOrder( 'ticker', 'change', 'desc' )">
                   <i class="icon-clock iconLeft"></i> Change
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'assetVolume', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'marketVolume' ) }" @click="$sorter.sortOrder( 'ticker', 'marketVolume', 'desc' )">
                   <i class="icon-chart-area iconLeft"></i> Volume
                 </li>
-                <li class="clickable" @click="$sorter.sortOrder( 'ticker', 'trades', 'desc' )">
+                <li class="clickable" :class="{ 'active': activeSort( 'trades' ) }" @click="$sorter.sortOrder( 'ticker', 'trades', 'desc' )">
                   <i class="icon-reload iconLeft"></i> Trades
                 </li>
               </ul>
             </Dropdown>&nbsp;
 
             <Dropdown>
-              <button slot="trigger" class="form-btn bg-primary-hover icon-star iconLeft" v-text="options.prices.asset"></button>
-              <ul slot="list">
-                <li class="heading">
+              <button slot="trigger" class="form-btn bg-primary-hover icon-star iconLeft" v-text="options.prices.market"></button>
+              <div slot="list">
+                <div class="pad-h push-bottom">
                   <span class="form-label">Filter by Market</span>
-                </li>
-                <li class="clickable" v-for="asset in assetsList" :key="asset" @click="toggleAsset( asset )">
-                  <i class="icon-star iconLeft"></i> {{ asset }}
-                </li>
-              </ul>
+                </div>
+                <div class="tablelist-wrap">
+                  <div class="tablelist-content">
+                    <div class="tablelist-row flex-row flex-middle flex-stretch clickable" v-for="m of marketsData" :key="m.token" :class="{ 'active': activeMarket( m.token ) }" @click="toggleMarket( m.token )">
+                      <div class="flex-1"><i class="icon-star iconLeft"></i> {{ m.token }}</div>
+                      <div class="pad-left">{{ m.count }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Dropdown>&nbsp;
 
             <Dropdown>
@@ -130,7 +135,7 @@
           <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'close', 'desc' )">Price</span></div>
           <div class="well push-right flex-1 if-medium disabled" v-if="options.prices.chart"></div>
           <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'percent', 'desc' )">Percent</span></div>
-          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'assetVolume', 'desc' )">Volume</span></div>
+          <div class="push-right text-clip flex-1"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'marketVolume', 'desc' )">Volume</span></div>
           <div class="text-right text-clip flex-1 if-large"><span class="clickable" @click="$sorter.sortOrder( 'ticker', 'trades', 'desc' )">Book</span></div>
         </div>
 
@@ -146,8 +151,8 @@
           </div>
 
           <div class="push-right text-clip flex-1">
-            <big class="text-nowrap text-bright">{{ p.close | toFixed( p.asset ) }} <span class="text-info">{{ p.asset }}</span></big> <br />
-            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toFixed( p.asset ) }} <span class="text-info">24H</span></span>
+            <big class="text-nowrap text-bright">{{ p.close | toFixed( p.market ) }} <span class="text-info">{{ p.market }}</span></big> <br />
+            <span class="text-nowrap color">{{ p.sign }}{{ p.change | toFixed( p.market ) }} <span class="text-info">24H</span></span>
           </div>
 
           <div class="well push-right flex-1 if-medium" v-if="options.prices.chart">
@@ -160,13 +165,13 @@
           </div>
 
           <div class="push-right text-clip flex-1">
-            <big class="text-nowrap text-bright">{{ p.assetVolume | toMoney }} <span class="text-nowrap text-info">{{ p.asset }}</span></big> <br />
+            <big class="text-nowrap text-bright">{{ p.marketVolume | toMoney }} <span class="text-nowrap text-info">{{ p.market }}</span></big> <br />
             <span class="text-nowrap text-default">{{ p.tokenVolume | toMoney }} <span class="text-nowrap text-info">{{ p.token }}</span></span>
           </div>
 
           <div class="text-right text-clip flex-1 if-large">
             <big class="text-nowrap text-bright">{{ p.trades | toMoney }}</big> <br />
-            <button class="text-primary-hover" @click.stop="tradeLink( p.token, p.asset )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
+            <button class="text-primary-hover" @click.stop="tradeLink( p.token, p.market )" :title="'Trade '+ p.token" v-tooltip>Trades</button>
           </div>
 
         </div>
@@ -206,7 +211,7 @@ export default {
     options: { type: Object, default() { return {} }, required: true },
     sortData: { type: Object, default() { return {} }, required: true },
     priceData: { type: Array, default() { return [] }, required: true },
-    assetsList: { type: Array, default() { return [] }, required: true },
+    marketsData: { type: Object, default() { return {} }, required: true },
     tickerStatus: { type: Number, default: 0 },
   },
 
@@ -235,7 +240,7 @@ export default {
 
     // get filtered and sorted ticker list for display
     tickerList() {
-      let { asset } = this.options.prices;
+      let { market } = this.options.prices;
       let { column, order } = this.sortData.ticker;
 
       let limit = parseInt( this.options.prices.limit ) | 0;
@@ -246,7 +251,7 @@ export default {
       // filter the list
       while ( count-- ) {
         let p = this.priceData[ count ];
-        if ( asset && p.asset !== asset ) continue;
+        if ( market && p.market !== market ) continue;
         if ( regex && !( regex.test( p.token ) || regex.test( p.name ) ) ) continue;
         list.push( p );
       }
@@ -270,16 +275,16 @@ export default {
     sortByLabel() {
       let { column } = this.sortData.ticker;
       switch ( column ) {
-        case 'token'       :  return 'Token';
-        case 'percent'     :  return 'Percent';
-        case 'close'       :  return 'Price';
-        case 'volatility'  :  return 'Volatility';
-        case 'danger'      :  return 'Danger';
-        case 'change'      :  return 'Change';
-        case 'assetVolume' :  return 'Volume';
-        case 'tokenVolume' :  return 'Volume';
-        case 'trades'      :  return 'Trades';
-        default            :  return 'Default';
+        case 'token'        :  return 'Token';
+        case 'percent'      :  return 'Percent';
+        case 'close'        :  return 'Price';
+        case 'volatility'   :  return 'Volatility';
+        case 'danger'       :  return 'Danger';
+        case 'change'       :  return 'Change';
+        case 'marketVolume' :  return 'Volume';
+        case 'tokenVolume'  :  return 'Volume';
+        case 'trades'       :  return 'Trades';
+        default             :  return 'Default';
       }
     },
 
@@ -294,9 +299,9 @@ export default {
     listLeftText() {
       let total  = this.listCount;
       let remain = this.listLeft;
-      let asset  = this.options.prices.asset;
+      let market = this.options.prices.market;
       let limit  = this.options.prices.limit;
-      let count  = this.$utils.noun( total, asset +' token pair', asset +' token pairs' );
+      let count  = this.$utils.noun( total, market +' token pair', market +' token pairs' );
       if ( remain ) return 'Showing '+ limit +' of '+ count;
       return 'Showing all '+ count;
     },
@@ -304,6 +309,21 @@ export default {
 
   // custom mounted
   methods: {
+
+    // check if key is active sort option
+    activeSort( column ) {
+      return ( this.sortData.ticker.column === column );
+    },
+
+    // check if num is active list limit option
+    activeLimit( limit ) {
+      return ( this.options.prices.limit === limit );
+    },
+
+    // check if market is active selected market
+    activeMarket( market ) {
+      return ( this.options.prices.market === market );
+    },
 
     // apply options
     saveOptions() {
@@ -316,8 +336,8 @@ export default {
     },
 
     // lick to binance site with ref id added
-    tradeLink( token, asset ) {
-      this.$bus.emit( 'handleClick', 'binance', '/en/trade/'+ token +'_'+ asset +'/', '_blank' );
+    tradeLink( token, market ) {
+      this.$bus.emit( 'handleClick', 'binance', '/en/trade/'+ token +'_'+ market +'/', '_blank' );
     },
 
     // set list limit value
@@ -327,8 +347,8 @@ export default {
     },
 
     // filter by asset
-    toggleAsset( asset ) {
-      this.options.prices.asset = String( asset || 'BTC' );
+    toggleMarket( market ) {
+      this.options.prices.market = String( market || 'USDT' );
       this.saveOptions();
     },
 

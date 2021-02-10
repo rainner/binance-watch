@@ -6,14 +6,15 @@ window.DEBUG = false;
 // app dependencies
 import defOpts from './configs/defaultOptions';
 import Options from './modules/options';
+import Ajax from './modules/ajax';
 import Binance from './modules/binance';
+import Coincap from './modules/coincap';
 import Alarms from './modules/alarms';
 import History from './modules/history';
 import Notify from './modules/notify';
 import News from './modules/news';
 import Messenger from './modules/messenger';
 import Router from './modules/router';
-import Ajax from './modules/ajax';
 import Bus from './modules/bus';
 import Sorter from './modules/sorter';
 import Scroller from './modules/scroller';
@@ -26,14 +27,15 @@ import Vue from 'vue';
 
 // setup common helper classes
 const _options = new Options( defOpts );
+const _ajax = new Ajax();
 const _binance = new Binance();
+const _coincap = new Coincap();
 const _alarms = new Alarms();
 const _history = new History();
 const _notify = new Notify();
 const _news = new News();
 const _messenger = new Messenger();
 const _router = new Router();
-const _ajax = new Ajax();
 const _bus = new Bus();
 const _sorter = new Sorter();
 const _scroller = new Scroller();
@@ -42,14 +44,15 @@ const _tooltip = new Tooltip();
 // create custom global vue properties
 Object.defineProperties( Vue.prototype, {
   $opts: { get() { return _options; } },
+  $ajax: { get() { return _ajax; } },
   $binance: { get() { return _binance; } },
+  $coincap: { get() { return _coincap; } },
   $alarms: { get() { return _alarms; } },
   $history: { get() { return _history; } },
   $notify: { get() { return _notify; } },
   $news: { get() { return _news; } },
   $messenger: { get() { return _messenger; } },
   $router: { get() { return _router; } },
-  $ajax: { get() { return _ajax; } },
   $scroller: { get() { return _scroller; } },
   $bus: { get() { return _bus; } },
   $sorter: { get() { return _sorter; } },

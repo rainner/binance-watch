@@ -222,21 +222,23 @@ export default {
       & > li {
         display: block;
         margin: 0;
-        padding: ( $padSpace * .6 ) $padSpace;
-        background-color: rgba( black, 0.1 );
-        color: $colorBright;
+        padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
+        background-color: rgba( black, 0 );
+        line-height: 1.2rem;
         cursor: pointer;
 
         & + li {
-          margin-top: 1px;
+          margin-top: $lineWidth;
+        }
+        &:hover {
+          background-color: rgba( black, .1 );
+        }
+        &.active {
+          background-color: rgba( black, .2 );
+          color: $colorPrimary;
         }
       }
-      & > li:hover {
-        background-color: rgba( black, 0.2 );
-      }
-      & > li.active {
-        background-color: rgba( black, 0.3 );
-      }
+
     }
   }
 
