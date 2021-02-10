@@ -47,6 +47,23 @@ html {
   overflow: hidden;
   overflow-y: scroll;
 }
+html * {
+  scrollbar-width: thin;
+  scrollbar-color: $colorScrollThumb $colorScrollTrack;
+}
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background-color: $colorScrollTrack;
+  // border-radius: $lineJoin;
+}
+::-webkit-scrollbar-thumb {
+  background-color: $colorScrollThumb;
+  border-radius: $lineJoin;
+  border: 2px solid $colorScrollTrack;
+}
+
 body {
   font-family: $fontFamily;
   font-weight: $fontWeight;

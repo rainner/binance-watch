@@ -136,7 +136,7 @@
 // common table-like lists
 .tablelist-wrap {
   position: relative;
-  min-width: 320px;
+  min-width: 300px;
 
   .tablelist-header {
     padding: 1em;
@@ -149,14 +149,20 @@
     border-bottom: $lineWidth $lineStyle $lineColor;
 
     & > .tablelist-row {
-      padding: ( $padSpace * .2 ) 1em;
-      background-color: rgba( black, 0.11 );
-    }
-    & > .tablelist-row:nth-child( odd ) {
-      background-color: rgba( black, 0.15 );
-    }
-    & > .tablelist-row:hover {
-      background-color: rgba( black, 0.25 );
+      padding: ( $padSpace / 2 ) ( $padSpace * 1.6 );
+      background-color: rgba( black, 0 );
+      line-height: 1.2rem;
+
+      & + .tablelist-row {
+        margin-top: $lineWidth;
+      }
+      &:hover {
+        background-color: rgba( black, .1 );
+      }
+      &.active {
+        background-color: rgba( black, .2 );
+        color: $colorPrimary;
+      }
     }
   }
   @for $i from 1 through 10 {

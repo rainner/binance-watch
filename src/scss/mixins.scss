@@ -55,7 +55,7 @@
   opacity: 0;
   margin: 0;
   padding: 0;
-  background-color: lighten( $colorDocument, 8% );
+  background-color: lighten( $colorDocument, 3% );
   border-radius: $lineJoin;
   box-shadow: $shadowBold;
   z-index: ( $zindexAlerts + 10 );

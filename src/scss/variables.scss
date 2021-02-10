@@ -7,7 +7,7 @@ $iconSize: 46px;
 // spacing and padding
 $padSpace: 1em;
 $padSpaceSmall: $padSpace / 2;
-$colSpace: 1.0em;
+$colSpace: 1.2em;
 $rowSpace: 1.2em;
 $listSpace: 0.4em;
 
@@ -35,6 +35,10 @@ $colorDocument: #192029;
 $colorDocumentText: #babbbc;
 $colorDocumentLight: lighten( $colorDocument, 3% );
 $colorDocumentDark: darken( $colorDocument, 6% );
+
+//scrollbar colors
+$colorScrollTrack: lighten( $colorDocument, 3% );
+$colorScrollThumb: darken( $colorDocument, 3% );
 
 // default colors
 $colorDefault: lightgray;
