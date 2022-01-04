@@ -73,6 +73,7 @@ export default class Tooltip {
       document.body.removeChild( this._tooltip );
     }
     window.removeEventListener( 'scroll', this._onScroll );
+    window.removeEventListener( 'touchmove', this._onScroll );
     this._elements = [];
     this._tooltip = null;
   }
@@ -87,18 +88,20 @@ export default class Tooltip {
     this._hideTooltip();
     document.body.appendChild( this._tooltip );
     window.addEventListener( 'scroll', this._onScroll );
+    window.addEventListener( 'touchmove', this._onScroll );
   }
 
   // set an element to have tooltip, if not alredy setup
   _setupItem( item ) {
     if ( item && item instanceof Element ) {
       if ( item.hasAttribute( 'title' ) ) {
+        const _passive = { passive: true };
         item.setAttribute( 'data-tip', item.getAttribute( 'title' ) || '' );
         item.removeAttribute( 'title' );
-        item.addEventListener( 'mouseenter', e => { this._onEnter( e ); } );
-        item.addEventListener( 'touchstart', e => { this._onEnter( e ); } );
-        item.addEventListener( 'mouseleave', e => { this._onLeave( e ); } );
-        item.addEventListener( 'touchend', e => { this._onLeave( e ); } );
+        item.addEventListener( 'mouseenter', e => { this._onEnter( e ); }, _passive );
+        item.addEventListener( 'touchstart', e => { this._onEnter( e ); }, _passive );
+        item.addEventListener( 'mouseleave', e => { this._onLeave( e ); }, _passive );
+        item.addEventListener( 'touchend', e => { this._onLeave( e ); }, _passive );
       }
     }
   }
@@ -120,37 +123,42 @@ export default class Tooltip {
   // decides where to place the tooltip in relation to item and screen bounds
   _showTooltip() {
     if ( this._tooltip && this._hovItem ) {
+      let box         = this._hovItem.getBoundingClientRect();
+      let centerX     = box.left + ( this._hovItem.offsetWidth - this._tooltip.offsetWidth ) / 2;
+      let centerY     = box.top + ( this._hovItem.offsetHeight - this._tooltip.offsetHeight ) / 2;
+      let leftPos     = box.left - this._tooltip.offsetWidth;
+      let rightPos    = box.left + this._hovItem.offsetWidth;
+      let topPos      = box.top - this._tooltip.offsetHeight;
+      let bottomPos   = box.top + this._hovItem.offsetHeight;
+      let tipHalf     = this._tooltip.offsetWidth / 2;
+      let boxCenter   = box.top - ( this._hovItem.offsetHeight / 2 );
+      let halfScreen  = window.innerHeight / 2;
+      let isNearLeft  = ( box.left < tipHalf );
+      let isNearRight = ( ( Viewport.clientWidth() - rightPos ) < tipHalf );
 
-      let box       = this._hovItem.getBoundingClientRect(),
-          centerX   = box.left + ( this._hovItem.offsetWidth - this._tooltip.offsetWidth ) / 2,
-          centerY   = box.top + ( this._hovItem.offsetHeight - this._tooltip.offsetHeight ) / 2,
-          leftPos   = box.left - this._tooltip.offsetWidth,
-          rightPos  = box.left + this._hovItem.offsetWidth,
-          topPos    = box.top - this._tooltip.offsetHeight,
-          bottomPos = box.top + this._hovItem.offsetHeight,
-          tipHalf   = this._tooltip.offsetWidth / 2,
-          clss      = this._options.topClass,
-          left      = centerX,
-          top       = topPos;
+      let clss = this._options.topClass;
+      let left = centerX;
+      let top  = topPos;
 
+      // move to the bottom
+      if ( boxCenter < halfScreen ) {
+        clss = this._options.bottomClass;
+        left = centerX;
+        top  = bottomPos;
+      }
       // move to the right
-      if ( box.left < tipHalf ) {
+      if ( isNearLeft && !isNearRight ) {
         clss = this._options.rightClass;
         left = rightPos;
         top  = centerY;
       }
       // move to the left
-      else if ( ( Viewport.clientWidth() - rightPos ) < tipHalf ) {
+      if ( isNearRight && !isNearLeft ) {
         clss = this._options.leftClass;
         left = leftPos;
         top  = centerY;
       }
-      // move to the bottom
-      else if( topPos < 0 ) {
-        clss = this._options.bottomClass;
-        left = centerX;
-        top  = bottomPos;
-      }
+      // show tooltip
       if ( left > 1 && top > 1 && this._tooltip.innerHTML ) {
         this._tooltip.className = this._options.tipClass + ' ' + clss;
         this._tooltip.style['left'] = ( Viewport.scrollLeft() + left ) +'px';
@@ -201,7 +209,7 @@ export default class Tooltip {
   // hide tooltip over fixed elements when scrolled
   _onScroll( e ) {
     if ( this._visible ) {
-        this._hideTooltip();
+      this._hideTooltip();
     }
   }
 

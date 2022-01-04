@@ -90,14 +90,16 @@
     </div>
 
     <!-- events and alarms -->
-    <Tabs class="tokenpage-tabs" :data="{ alarmsCount, newsCount }">
+    <!-- <Tabs class="tokenpage-tabs" :data="{ alarmsCount, newsCount }">
       <section btn-class="icon-alarm iconLeft" :btn-name="[ 'Alarms ('+ alarmsCount +')' ]" active>
         <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
       </section>
       <section btn-class="icon-calendar iconLeft" :btn-name="[ 'News ('+ newsCount +')' ]">
         <NewsList :newsEntries="newsEntries" :pairData="modalData" @listCount="onNewsCount"></NewsList>
       </section>
-    </Tabs>
+    </Tabs> -->
+
+    <AlarmsList :alarmsData="alarmsData" :pairData="modalData" @listCount="onAlarmsCount"></AlarmsList>
 
   </section>
 </template>
@@ -108,13 +110,20 @@ import Tabs from './Tabs.vue';
 import TokenIcon from './TokenIcon.vue';
 import LineChart from './LineChart.vue';
 import AlarmsList from './AlarmsList.vue';
-import NewsList from './NewsList.vue';
+// import NewsList from './NewsList.vue';
 
 // component
 export default {
 
   // component list
-  components: { Spinner, Tabs, TokenIcon, LineChart, AlarmsList, NewsList },
+  components: {
+    Spinner,
+    Tabs,
+    TokenIcon,
+    LineChart,
+    AlarmsList,
+    // NewsList,
+  },
 
   // component props
   props: {

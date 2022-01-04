@@ -28,7 +28,7 @@ export default {
   // search options
   search: {
     fullword: false,  // must type full search words
-    fullcase: true,   // must type correct word upper/lower case letters
+    fullcase: false,  // must type correct word upper/lower case letters
   },
 
   // live price options

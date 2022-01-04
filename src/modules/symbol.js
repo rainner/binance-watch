@@ -42,7 +42,7 @@ export default class Symbol {
   splitSymbol( markets = [] ) {
     if ( this.token || this.market || !markets.length ) return;
     const quotes = markets.join( '|' );
-    const regexp = new RegExp( `^([A-Z]+)(${quotes})$` );
+    const regexp = new RegExp( `^([A-Z0-9]+)(${quotes})$` );
     this.token   = this.symbol.replace( regexp, '$1' ) || this.token;
     this.market  = this.symbol.replace( regexp, '$2' ) || this.market;
     this.name    = this.token;

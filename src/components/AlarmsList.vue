@@ -7,7 +7,7 @@
         <input class="push-right" placeholder="0.00000000" name="price" v-model="curPrice" />
         <div class="text-grey">{{ pairData.asset }}</div>
       </div>
-      <button type="submit" class="form-btn bg-info-hover icon-add iconLeft">Create</button>
+      <button type="submit" class="form-btn bg-success-hover icon-add iconLeft">Set Alarm</button>
     </form>
 
     <div class="flex-list">

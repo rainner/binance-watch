@@ -93,7 +93,7 @@ import Modal from './Modal.vue';
 import Notify from './Notify.vue';
 import WatchForm from './WatchForm.vue';
 import TokenList from './TokenList.vue';
-import NewsPage from './NewsPage.vue';
+// import NewsPage from './NewsPage.vue';
 import TradePage from './TradePage.vue';
 import AboutPage from './AboutPage.vue';
 import OptionsPage from './OptionsPage.vue';
@@ -115,7 +115,7 @@ export default {
     HistoryPage,
     TokenList,
     AlarmsList,
-    NewsPage,
+    // NewsPage,
     TradePage,
     TokenPage,
   },
@@ -217,7 +217,7 @@ export default {
       this.$router.on( '/about', () => { this.showModal( 'AboutPage', 'About This App' ) } );
       this.$router.on( '/options', () => { this.showModal( 'OptionsPage', 'Options & Settings' ) } );
       // symbol modal route
-      this.$router.on( '/symbol/([A-Z]+)', symbol => {
+      this.$router.on( '/symbol/([A-Z0-9]+)', symbol => {
         let d = this.priceData.filter( p => p.symbol === symbol ).shift();
         if ( d ) return this.showModal( 'TokenPage', d.pair +' Info ', d );
         this.$router.setRoute( '/' );

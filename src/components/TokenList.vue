@@ -243,10 +243,11 @@ export default {
       let { market } = this.options.prices;
       let { column, order } = this.sortData.ticker;
 
-      let limit = parseInt( this.options.prices.limit ) | 0;
-      let regex = ( this.searchStr.length > 1 ) ? new RegExp( '^('+ this.searchStr +')', 'i' ) : null;
-      let count = this.priceData.length;
-      let list  = [];
+      let limit  = parseInt( this.options.prices.limit ) | 0;
+      let search = String( this.searchStr ).replace( /[^A-Z0-9]+/gi, '' );
+      let regex  = ( search.length > 1 ) ? new RegExp( search, 'i' ) : null;
+      let count  = this.priceData.length;
+      let list   = [];
 
       // filter the list
       while ( count-- ) {

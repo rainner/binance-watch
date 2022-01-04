@@ -65,9 +65,9 @@
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/' )">
                 <i class="icon-chart-line iconLeft"></i> Live Ticker
               </li>
-              <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/news' )">
+              <!-- <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/news' )">
                 <i class="icon-feedback iconLeft"></i> Twitter News <span class="text-grey" v-if="newsCount">({{ newsCount }})</span>
-              </li>
+              </li> -->
               <li class="clickable text-bright-hover text-nowrap" @click="setRoute( '/alarms' )">
                 <i class="icon-alarm iconLeft"></i> Saved Alarms <span class="text-grey" v-if="alarmsData.length">({{ alarmsData.length }})</span>
               </li>
